@@ -27,4 +27,13 @@ public class RegisterRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    // Alias username for backward-compatible tests
+    public String getUsername() {
+        return email;
+    }
+
+    public void setUsername(String username) {
+        this.email = username;
+    }
 }

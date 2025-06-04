@@ -27,4 +27,13 @@ public class AuthResponse {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    // Alias username for backward-compatible tests
+    public String getUsername() {
+        return email;
+    }
+
+    public void setUsername(String username) {
+        this.email = username;
+    }
 }
