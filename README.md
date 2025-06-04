@@ -2,7 +2,6 @@
 
 ## Estructura del Proyecto
 
-Se ha reorganizado la estructura del proyecto para hacerlo más escalable, mantenible y coherente con un enfoque de microservicios y arquitectura multicapa:
 
 ```
 thelarte/
