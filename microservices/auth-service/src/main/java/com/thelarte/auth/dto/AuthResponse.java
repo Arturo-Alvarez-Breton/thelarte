@@ -29,6 +29,7 @@ public class AuthResponse {
     }
 
     // Alias username for backward-compatible tests
+    @JsonIgnore
     public String getUsername() {
         return email;
     }
