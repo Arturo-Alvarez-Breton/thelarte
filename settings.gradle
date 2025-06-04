@@ -1,1 +1,13 @@
 rootProject.name = 'thelarte'
+
+// Include API Gateway
+include 'api-gateway'
+
+// Include microservices
+include 'microservices:auth-service'
+include 'microservices:inventory-service'
+include 'microservices:sales-service'
+include 'microservices:billing-service'
+
+// Include shared library
+include 'shared-library'
