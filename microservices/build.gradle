@@ -1,0 +1,5 @@
+// Microservices parent project - no executable jar needed
+jar.enabled = true
+bootJar.enabled = false
+
+// This is just a container for microservices, no main class needed

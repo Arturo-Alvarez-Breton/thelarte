@@ -1,7 +1,6 @@
 package com.thelarte.auth.entity;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -10,17 +9,25 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Document(collection = "users")
+@Entity
+@Table(name = "users")
 public class User implements UserDetails {
     
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;    @Column(unique = true, nullable = false)
     private String email;
+    
+    @Column(nullable = false)
     private String password;
+    
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role")
     private List<String> roles;
-    private boolean active;
-
-    // Constructores
+    
+    @Column(nullable = false)
+    private boolean active;    // Constructores
     public User() {
     }
     
@@ -29,14 +36,12 @@ public class User implements UserDetails {
         this.password = password;
         this.roles = roles;
         this.active = active;
-    }
-
-    // Getters y Setters
-    public String getId() {
+    }// Getters y Setters
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
