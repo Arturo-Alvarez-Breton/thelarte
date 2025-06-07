@@ -1,6 +1,90 @@
-# The Larte - Arquitectura de Microservicios
+# TheLarte - Microservices Architecture
 
-## Estructura del Proyecto
+TheLarte is a furniture store management system built with a microservices architecture, designed to be run exclusively with Docker.
+
+## Architecture Overview
+
+The system is composed of several microservices:
+
+- **Discovery Service**: Eureka service registry for service discovery
+- **API Gateway**: Routes requests to appropriate microservices
+- **Auth Service**: Handles authentication and authorization using PostgreSQL
+- **User Service**: Manages employee and customer data
+- **Inventory Service**: Manages furniture inventory
+- **Sales Service**: Handles sales operations
+- **Billing Service**: Manages invoicing and payments
+
+All services use PostgreSQL database with separate schemas for data isolation.
+
+## Running the Application
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Git (to clone the repository)
+
+### Running in Development Mode
+
+Run the following commands from PowerShell:
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Run all services in development mode with H2 database
+docker compose --profile dev up -d
+```
+
+### Running in Production Mode
+
+For production mode with PostgreSQL, secure passwords are required:
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Set secure passwords as environment variables for PostgreSQL and JWT
+$Env:POSTGRES_PASSWORD = "your_secure_password"
+$Env:JWT_SECRET = "your_secure_jwt_secret"
+
+# Run all services in production mode
+docker compose --profile prod up -d
+```
+
+### Stopping the Application
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Stop all services
+docker compose down
+```
+
+### Access Points
+
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+
+## Environment Profiles
+
+### Development Profile (`dev`)
+
+- H2 in-memory database for quick setup and testing
+- Automatic database schema creation (`spring.jpa.hibernate.ddl-auto=update`)
+- H2 console accessible at `/h2-console` for each service
+- Detailed SQL logging
+- Debug level logging
+
+### Production Profile (`prod`)
+
+- PostgreSQL database with schema separation
+- No automatic schema changes (`spring.jpa.hibernate.ddl-auto=validate`)
+- Environment variable based secure passwords
+- Minimal SQL logging
+- Appropriate log levels for production
+
+## Project Structure
 
 
 ```

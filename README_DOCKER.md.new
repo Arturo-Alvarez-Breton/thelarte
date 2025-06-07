@@ -1,0 +1,154 @@
+<!-- filepath: c:\Users\edwin\Desktop\integrador\thelarte\README_DOCKER.md -->
+# Docker Commands for TheLarte
+
+This document contains the direct Docker commands to run TheLarte microservices system. All operations are performed from the `infra` directory.
+
+## Basic Docker Operations
+
+### Running in Development Mode
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Start all services in development mode with H2 in-memory databases
+docker compose --profile dev up -d
+```
+
+### Running in Production Mode
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Set environment variables for production
+$Env:POSTGRES_PASSWORD = "your-secure-password"
+$Env:JWT_SECRET = "your-secure-jwt-secret"
+
+# Start all services in production mode
+docker compose --profile prod up -d
+```
+
+### Stopping All Services
+
+```powershell
+# Navigate to the infra directory
+cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+
+# Stop all services
+docker compose down
+```
+
+## Advanced Docker Operations
+
+### View Service Logs
+
+```powershell
+# View logs for all services
+docker compose logs
+
+# View logs for a specific service (e.g., auth-service)
+docker compose logs auth-service
+
+# Follow logs in real-time
+docker compose logs -f
+```
+
+### Rebuild Services
+
+If you make changes to source code and need to rebuild the services:
+
+```powershell
+# Rebuild a specific service (e.g., auth-service)
+docker compose build auth-service
+
+# Rebuild all services
+docker compose build
+
+# Rebuild and restart a service
+docker compose up -d --build auth-service
+```
+
+### View Container Status
+
+```powershell
+# List all running containers for the project
+docker compose ps
+```
+
+### Access Container Shell
+
+```powershell
+# Access shell in a running container (e.g., auth-service)
+docker compose exec auth-service sh
+```
+
+### Available Services
+
+1. **Discovery Service**: Service registry using Eureka (port 8761)
+2. **API Gateway**: Spring Cloud Gateway for routing requests (port 8080)
+3. **Auth Service**: Handles authentication and authorization
+4. **User Service**: Manages user data (employees, customers)
+5. **Inventory Service**: Manages furniture inventory
+6. **Sales Service**: Handles sales transactions
+7. **Billing Service**: Manages billing and payments
+
+### Accessing Services
+
+- **Eureka Dashboard**: http://localhost:8761
+- **API Gateway**: http://localhost:8080
+
+## Architecture
+
+The system follows a microservices architecture pattern:
+
+- All services register with the Discovery Service (Eureka)
+- The API Gateway routes requests to the appropriate microservice
+- All microservices use PostgreSQL for persistence (separate schemas)
+- Communication between services is done through REST APIs
+
+## Database Schema
+
+The PostgreSQL database is divided into schemas:
+- `auth`: Authentication and authorization data
+- `user_service`: User-related data
+- `inventory`: Inventory-related data
+- `sales`: Sales-related data
+- `billing`: Billing and payment data
+
+## Database Operations
+
+### PostgreSQL Database (Production Mode)
+
+PostgreSQL container is only used in production mode and stores data in a Docker volume.
+
+```powershell
+# Access the PostgreSQL shell
+docker compose exec postgres psql -U thelarte -d thelarte
+
+# Backup the database
+docker compose exec postgres pg_dump -U thelarte thelarte > thelarte_backup.sql
+
+# View PostgreSQL logs
+docker compose logs postgres
+```
+
+### H2 Database (Development Mode)
+
+In development mode, each service uses its own H2 in-memory database with console access:
+
+- Auth Service: http://localhost:[port]/h2-console
+- User Service: http://localhost:[port]/h2-console
+- Other services: http://localhost:[port]/h2-console
+
+JDBC URL for H2 console: `jdbc:h2:mem:thelarte`
+Username: `sa`
+Password: `password`
+
+## Environment Variables
+
+The following environment variables can be set to customize the deployment:
+
+- `POSTGRES_PASSWORD`: Password for PostgreSQL database (required for production mode)
+- `JWT_SECRET`: Secret key for JWT token generation/verification (required for production mode)
+- `SPRING_PROFILES_ACTIVE`: Set automatically by Docker Compose profiles to either "dev" or "prod"

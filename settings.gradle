@@ -3,6 +3,9 @@ rootProject.name = 'thelarte'
 // Include API Gateway
 include 'api-gateway'
 
+// Include Service Discovery
+include 'discovery-service'
+
 // Include microservices
 include 'microservices:auth-service'
 include 'microservices:inventory-service'

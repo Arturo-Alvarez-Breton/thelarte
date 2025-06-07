@@ -1,0 +1,259 @@
+version: '3.8'
+
+# Common configuration to be extended
+x-service-common: &service-common
+  networks:
+    - thelarte-network
+  restart: unless-stopped
+
+# Development environment variables
+x-env-dev: &env-dev
+  SPRING_PROFILES_ACTIVE: dev
+  SPRING_DATASOURCE_URL: jdbc:h2:mem:thelarte;DB_CLOSE_DELAY=-1
+  SPRING_DATASOURCE_USERNAME: sa
+  SPRING_DATASOURCE_PASSWORD: password
+  SPRING_H2_CONSOLE_ENABLED: true
+  SPRING_H2_CONSOLE_PATH: /h2-console
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+
+# Production environment variables
+x-env-prod: &env-prod
+  SPRING_PROFILES_ACTIVE: prod
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/thelarte
+  SPRING_DATASOURCE_USERNAME: thelarte
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-thelartepwd}
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+  SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: thelarte-postgres
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thelartepwd}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - thelarte-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - prod
+
+  # Service Discovery
+  discovery-service:
+    <<: *service-common
+    build:
+      context: ../discovery-service
+    container_name: thelarte-discovery
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - dev
+      - prod
+
+  # API Gateway
+  api-gateway:
+    <<: *service-common
+    build:
+      context: ../api-gateway
+    container_name: thelarte-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - dev
+      - prod
+
+  # Authentication Service (Dev)
+  auth-service:
+    <<: *service-common
+    build:
+      context: ../microservices/auth-service
+    container_name: thelarte-auth
+    environment:
+      <<: *env-dev
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # Authentication Service (Prod)
+  auth-service-prod:
+    <<: *service-common
+    build:
+      context: ../microservices/auth-service
+    container_name: thelarte-auth
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod
+
+  # User Service (Dev)
+  user-service:
+    <<: *service-common
+    build:
+      context: ../microservices/user-service
+    container_name: thelarte-user
+    environment:
+      <<: *env-dev
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # User Service (Prod)
+  user-service-prod:
+    <<: *service-common
+    build:
+      context: ../microservices/user-service
+    container_name: thelarte-user
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod
+
+  # Inventory Service (Dev)
+  inventory-service:
+    <<: *service-common
+    build:
+      context: ../microservices/inventory-service
+    container_name: thelarte-inventory
+    environment:
+      <<: *env-dev
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # Inventory Service (Prod)
+  inventory-service-prod:
+    <<: *service-common
+    build:
+      context: ../microservices/inventory-service
+    container_name: thelarte-inventory
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod
+
+  # Sales Service (Dev)
+  sales-service:
+    <<: *service-common
+    build:
+      context: ../microservices/sales-service
+    container_name: thelarte-sales
+    environment:
+      <<: *env-dev
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    profiles:
+      - dev
+
+  # Sales Service (Prod)
+  sales-service-prod:
+    <<: *service-common
+    build:
+      context: ../microservices/sales-service
+    container_name: thelarte-sales
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      inventory-service-prod:
+        condition: service_started
+      user-service-prod:
+        condition: service_started
+    profiles:
+      - prod
+
+  # Billing Service (Dev)
+  billing-service:
+    <<: *service-common
+    build:
+      context: ../microservices/billing-service
+    container_name: thelarte-billing
+    environment:
+      <<: *env-dev
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      sales-service:
+        condition: service_started
+    profiles:
+      - dev
+
+  # Billing Service (Prod)
+  billing-service-prod:
+    <<: *service-common
+    build:
+      context: ../microservices/billing-service
+    container_name: thelarte-billing
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      sales-service-prod:
+        condition: service_started
+    profiles:
+      - prod
+
+networks:
+  thelarte-network:
+    name: thelarte-network
+
+volumes:
+  postgres_data:
+    name: thelarte-postgres-data
