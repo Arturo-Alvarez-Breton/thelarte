@@ -7,8 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class GatewayConfig {
-    
-    @Bean
+      @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
             .route("auth-service", r -> r
@@ -23,6 +22,9 @@ public class GatewayConfig {
             .route("billing-service", r -> r
                 .path("/billing/**")
                 .uri("lb://billing-service"))
+            .route("user-service", r -> r
+                .path("/api/empleados/**", "/api/clientes/**", "/api/personas/**")
+                .uri("lb://user-service"))
             .build();
     }
 }

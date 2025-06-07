@@ -71,19 +71,50 @@ thelarte/
 │   │           └── resources/
 │   │               └── application.properties
 │   │
-│   └── billing-service/      # Servicio de facturación y pagos
+│   ├── billing-service/      # Servicio de facturación y pagos
+│   │   ├── build.gradle
+│   │   └── src/
+│   │       └── main/
+│   │           ├── java/com/thelarte/billing/
+│   │           │   ├── config/
+│   │           │   ├── controller/
+│   │           │   ├── dto/
+│   │           │   ├── entity/
+│   │           │   ├── exception/
+│   │           │   ├── repository/
+│   │           │   ├── service/
+│   │           │   └── BillingServiceApplication.java
+│   │           └── resources/
+│   │               └── application.properties
+│   │
+│   └── user-service/        # Servicio de gestión de usuarios (empleados y clientes)
 │       ├── build.gradle
 │       └── src/
 │           └── main/
-│               ├── java/com/thelarte/billing/
-│               │   ├── config/
+│               ├── java/com/thelarte/user/
 │               │   ├── controller/
-│               │   ├── dto/
-│               │   ├── entity/
-│               │   ├── exception/
+│               │   │   ├── ClienteController.java
+│               │   │   ├── EmpleadoController.java
+│               │   │   └── PersonaController.java
+│               │   ├── model/
+│               │   │   ├── Cliente.java
+│               │   │   ├── Empleado.java
+│               │   │   └── Persona.java
 │               │   ├── repository/
+│               │   │   ├── ClienteRepository.java
+│               │   │   ├── EmpleadoRepository.java
+│               │   │   └── PersonaRepository.java
 │               │   ├── service/
-│               │   └── BillingServiceApplication.java
+│               │   │   ├── ClienteService.java
+│               │   │   ├── EmpleadoService.java
+│               │   │   ├── PersonaService.java
+│               │   │   └── impl/
+│               │   │       ├── ClienteServiceImpl.java
+│               │   │       ├── EmpleadoServiceImpl.java
+│               │   │       └── PersonaServiceImpl.java
+│               │   ├── util/
+│               │   │   └── Rol.java
+│               │   └── UserServiceApplication.java
 │               └── resources/
 │                   └── application.properties
 │

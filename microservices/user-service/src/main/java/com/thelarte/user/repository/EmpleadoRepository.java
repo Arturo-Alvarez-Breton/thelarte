@@ -1,8 +1,11 @@
-package thelarte.services.common.repository;
+package com.thelarte.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import thelarte.services.common.model.Empleado;
+import com.thelarte.user.model.Empleado;
+import com.thelarte.user.util.Rol;
+
+import java.util.List;
 
 /**
  * Repositorio para Empleado.
@@ -10,5 +13,8 @@ import thelarte.services.common.model.Empleado;
  */
 @Repository
 public interface EmpleadoRepository extends JpaRepository<Empleado, String> {
-    // Métodos personalizados para Empleado pueden agregarse aquí
+    /**
+     * Encuentra empleados por su rol.
+     */
+    List<Empleado> findByRol(Rol rol);
 }

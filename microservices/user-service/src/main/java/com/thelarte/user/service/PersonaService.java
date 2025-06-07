@@ -1,7 +1,6 @@
-package thelarte.services.common.service;
+package com.thelarte.user.service;
 
-import thelarte.services.common.model.Persona;
-
+import com.thelarte.user.model.Persona;
 import java.util.List;
 
 /**

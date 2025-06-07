@@ -8,6 +8,7 @@ include 'microservices:auth-service'
 include 'microservices:inventory-service'
 include 'microservices:sales-service'
 include 'microservices:billing-service'
+include 'microservices:user-service'
 
 // Include shared library
 include 'shared-library'

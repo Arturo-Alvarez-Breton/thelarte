@@ -1,13 +1,13 @@
-package thelarte.services.common.controller;
+package com.thelarte.user.controller;
 
-import jakarta.validation.Valid;
+import com.thelarte.user.model.Cliente;
+import com.thelarte.user.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import thelarte.services.common.model.Cliente;
-import thelarte.services.common.service.ClienteService;
 
-import java.net.URI;
+import jakarta.validation.Valid;
 import java.util.List;
 
 /**
@@ -28,52 +28,48 @@ public class ClienteController {
     /**
      * POST /api/clientes
      * Crea un nuevo Cliente.
-     * Retorna 201 Created y añade Location: /api/clientes/{cedula}.
      */
     @PostMapping
     public ResponseEntity<Cliente> crearCliente(@Valid @RequestBody Cliente cliente) {
-        Cliente creado = clienteService.crearCliente(cliente);
-        URI ubicacion = URI.create("/api/clientes/" + creado.getCedula());
-        return ResponseEntity.created(ubicacion).body(creado);
+        Cliente nuevoCliente = clienteService.crearCliente(cliente);
+        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
     }
 
     /**
      * GET /api/clientes
-     * Devuelve la lista de todos los Clientes.
+     * Obtiene lista de todos los clientes.
      */
     @GetMapping
     public ResponseEntity<List<Cliente>> listarClientes() {
-        List<Cliente> lista = clienteService.listarClientes();
-        return ResponseEntity.ok(lista);
+        List<Cliente> clientes = clienteService.listarClientes();
+        return ResponseEntity.ok(clientes);
     }
 
     /**
      * GET /api/clientes/{cedula}
-     * Obtiene un Cliente por su cédula. Si no existe, lanza 404.
+     * Obtiene un cliente por su cédula.
      */
     @GetMapping("/{cedula}")
-    public ResponseEntity<Cliente> obtenerCliente(@PathVariable String cedula) {
-        Cliente c = clienteService.obtenerClientePorCedula(cedula);
-        return ResponseEntity.ok(c);
+    public ResponseEntity<Cliente> obtenerClientePorCedula(@PathVariable String cedula) {
+        Cliente cliente = clienteService.obtenerClientePorCedula(cedula);
+        return ResponseEntity.ok(cliente);
     }
 
     /**
      * PUT /api/clientes/{cedula}
-     * Actualiza los datos de un Cliente existente.
-     * Si no existe, lanza 404.
+     * Actualiza un cliente existente.
      */
     @PutMapping("/{cedula}")
     public ResponseEntity<Cliente> actualizarCliente(
             @PathVariable String cedula,
-            @Valid @RequestBody Cliente datosActualizados) {
-
-        Cliente actualizado = clienteService.actualizarCliente(cedula, datosActualizados);
-        return ResponseEntity.ok(actualizado);
+            @Valid @RequestBody Cliente cliente) {
+        Cliente clienteActualizado = clienteService.actualizarCliente(cedula, cliente);
+        return ResponseEntity.ok(clienteActualizado);
     }
 
     /**
      * DELETE /api/clientes/{cedula}
-     * Elimina un Cliente por su cédula. Si no existe, lanza 404.
+     * Elimina un cliente.
      */
     @DeleteMapping("/{cedula}")
     public ResponseEntity<Void> eliminarCliente(@PathVariable String cedula) {

@@ -1,8 +1,8 @@
-package thelarte.services.common.repository;
+package com.thelarte.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import thelarte.services.common.model.Cliente;
+import com.thelarte.user.model.Cliente;
 
 import java.util.Optional;
 

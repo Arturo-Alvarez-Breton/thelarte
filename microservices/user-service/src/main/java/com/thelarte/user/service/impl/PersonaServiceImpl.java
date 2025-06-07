@@ -1,18 +1,19 @@
-package thelarte.services.common.service;
+package com.thelarte.user.service.impl;
 
+import com.thelarte.user.model.Persona;
+import com.thelarte.user.repository.PersonaRepository;
+import com.thelarte.user.service.PersonaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import thelarte.services.common.exception.ResourceNotFoundException;
-import thelarte.services.common.model.Persona;
-import thelarte.services.common.repository.PersonaRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * Implementación de PersonaService. Se encarga de listar y
- * obtener cualquier Persona (Empleado o Cliente) por cédula.
+ * Implementación de PersonaService.
  */
 @Service
+@Transactional
 public class PersonaServiceImpl implements PersonaService {
 
     private final PersonaRepository personaRepository;
@@ -23,14 +24,15 @@ public class PersonaServiceImpl implements PersonaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Persona> listarPersonas() {
         return personaRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Persona obtenerPersonaPorCedula(String cedula) {
         return personaRepository.findById(cedula)
-                .orElseThrow(() ->
-                    new ResourceNotFoundException("Persona no encontrada con cédula: " + cedula));
+                .orElseThrow(() -> new RuntimeException("Persona no encontrada con cédula: " + cedula));
     }
 }

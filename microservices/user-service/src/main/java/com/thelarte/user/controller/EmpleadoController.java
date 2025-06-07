@@ -1,13 +1,13 @@
-package thelarte.services.common.controller;
+package com.thelarte.user.controller;
 
-import jakarta.validation.Valid;
+import com.thelarte.user.model.Empleado;
+import com.thelarte.user.service.EmpleadoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import thelarte.services.common.model.Empleado;
-import thelarte.services.common.service.EmpleadoService;
 
-import java.net.URI;
+import jakarta.validation.Valid;
 import java.util.List;
 
 /**
@@ -28,52 +28,48 @@ public class EmpleadoController {
     /**
      * POST /api/empleados
      * Crea un nuevo Empleado.
-     * Retorna 201 Created y añade Location: /api/empleados/{cedula}.
      */
     @PostMapping
     public ResponseEntity<Empleado> crearEmpleado(@Valid @RequestBody Empleado empleado) {
-        Empleado creado = empleadoService.crearEmpleado(empleado);
-        URI ubicacion = URI.create("/api/empleados/" + creado.getCedula());
-        return ResponseEntity.created(ubicacion).body(creado);
+        Empleado nuevoEmpleado = empleadoService.crearEmpleado(empleado);
+        return new ResponseEntity<>(nuevoEmpleado, HttpStatus.CREATED);
     }
 
     /**
      * GET /api/empleados
-     * Devuelve la lista de todos los Empleados.
+     * Obtiene lista de todos los empleados.
      */
     @GetMapping
     public ResponseEntity<List<Empleado>> listarEmpleados() {
-        List<Empleado> lista = empleadoService.listarEmpleados();
-        return ResponseEntity.ok(lista);
+        List<Empleado> empleados = empleadoService.listarEmpleados();
+        return ResponseEntity.ok(empleados);
     }
 
     /**
      * GET /api/empleados/{cedula}
-     * Obtiene un Empleado por su cédula. Si no existe, lanza 404.
+     * Obtiene un empleado por su cédula.
      */
     @GetMapping("/{cedula}")
-    public ResponseEntity<Empleado> obtenerEmpleado(@PathVariable String cedula) {
-        Empleado e = empleadoService.obtenerEmpleadoPorCedula(cedula);
-        return ResponseEntity.ok(e);
+    public ResponseEntity<Empleado> obtenerEmpleadoPorCedula(@PathVariable String cedula) {
+        Empleado empleado = empleadoService.obtenerEmpleadoPorCedula(cedula);
+        return ResponseEntity.ok(empleado);
     }
 
     /**
      * PUT /api/empleados/{cedula}
-     * Actualiza los datos de un Empleado existente.
-     * Si no existe, lanza 404.
+     * Actualiza un empleado existente.
      */
     @PutMapping("/{cedula}")
     public ResponseEntity<Empleado> actualizarEmpleado(
             @PathVariable String cedula,
-            @Valid @RequestBody Empleado datosActualizados) {
-
-        Empleado actualizado = empleadoService.actualizarEmpleado(cedula, datosActualizados);
-        return ResponseEntity.ok(actualizado);
+            @Valid @RequestBody Empleado empleado) {
+        Empleado empleadoActualizado = empleadoService.actualizarEmpleado(cedula, empleado);
+        return ResponseEntity.ok(empleadoActualizado);
     }
 
     /**
      * DELETE /api/empleados/{cedula}
-     * Elimina un Empleado por su cédula. Si no existe, lanza 404.
+     * Elimina un empleado.
      */
     @DeleteMapping("/{cedula}")
     public ResponseEntity<Void> eliminarEmpleado(@PathVariable String cedula) {
