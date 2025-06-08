@@ -1,6 +1,5 @@
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.postgresql:postgresql'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
@@ -9,5 +8,5 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'com.h2database:h2'
+    runtimeOnly 'com.h2database:h2'
 }

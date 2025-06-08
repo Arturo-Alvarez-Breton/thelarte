@@ -15,7 +15,6 @@ import java.time.LocalDate;
  */
 @Entity
 @DiscriminatorValue("CLIENTE")
-@Table(name = "clientes")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -1,5 +1,7 @@
 package com.thelarte.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class AuthResponse {
     private String token;
     private String email;

@@ -16,7 +16,6 @@ import java.time.LocalDate;
  */
 @Entity
 @DiscriminatorValue("EMPLEADO")
-@Table(name = "empleados")
 @Getter
 @Setter
 @NoArgsConstructor
