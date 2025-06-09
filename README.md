@@ -8,255 +8,69 @@ The system is composed of several microservices:
 
 - **Discovery Service**: Eureka service registry for service discovery
 - **API Gateway**: Routes requests to appropriate microservices
-- **Auth Service**: Handles authentication and authorization using PostgreSQL
+- **Auth Service**: Handles authentication and authorization
 - **User Service**: Manages employee and customer data
 - **Inventory Service**: Manages furniture inventory
 - **Sales Service**: Handles sales operations
 - **Billing Service**: Manages invoicing and payments
 
-All services use PostgreSQL database with separate schemas for data isolation.
-
 ## Running the Application
 
 ### Prerequisites
 
-- Docker and Docker Compose installed
+Ensure the following tools are installed:
+
+- Docker and Docker Compose
 - Git (to clone the repository)
 
-### Running in Development Mode
+### Steps to Run the Project
 
-Run the following commands from PowerShell:
+1. Clone the repository:
 
-```powershell
-# Navigate to the infra directory
-cd C:\Users\edwin\Desktop\integrador\thelarte\infra
+   ```bash
+   git clone https://github.com/your-repo/thelarte.git
+   cd thelarte
+   ```
 
-# Run all services in development mode with H2 database
-docker compose --profile dev up -d
-```
+2. Run the application:
 
-### Running in Production Mode
+   - **Development Mode** (uses H2 database):
+     ```bash
+     docker compose --profile dev up -d
+     ```
 
-For production mode with PostgreSQL, secure passwords are required:
+   - **Production Mode** (uses PostgreSQL):
+     Set secure environment variables for PostgreSQL and JWT secrets:
+     ```bash
+     export POSTGRES_PASSWORD="your_secure_password"
+     export JWT_SECRET="your_secure_jwt_secret"
+     docker compose --profile prod up -d
+     ```
 
-```powershell
-# Navigate to the infra directory
-cd C:\Users\edwin\Desktop\integrador\thelarte\infra
-
-# Set secure passwords as environment variables for PostgreSQL and JWT
-$Env:POSTGRES_PASSWORD = "your_secure_password"
-$Env:JWT_SECRET = "your_secure_jwt_secret"
-
-# Run all services in production mode
-docker compose --profile prod up -d
-```
-
-### Stopping the Application
-
-```powershell
-# Navigate to the infra directory
-cd C:\Users\edwin\Desktop\integrador\thelarte\infra
-
-# Stop all services
-docker compose down
-```
+3. Stop the application:
+   ```bash
+   docker compose down
+   ```
 
 ### Access Points
 
-- **Eureka Dashboard**: http://localhost:8761
-- **API Gateway**: http://localhost:8080
+Once the application is running, you can access the following:
 
-## Environment Profiles
+- **Eureka Dashboard**: [http://localhost:8761](http://localhost:8761)
+- **API Gateway**: [http://localhost:8080](http://localhost:8080)
 
-### Development Profile (`dev`)
+### Environment Profiles
 
-- H2 in-memory database for quick setup and testing
-- Automatic database schema creation (`spring.jpa.hibernate.ddl-auto=update`)
-- H2 console accessible at `/h2-console` for each service
-- Detailed SQL logging
-- Debug level logging
+- **Development (`dev`)**:
+  - Uses H2 in-memory database for quick setup.
+  - Automatic schema creation and detailed logging.
+  - Accessible H2 console at `/h2-console`.
 
-### Production Profile (`prod`)
-
-- PostgreSQL database with schema separation
-- No automatic schema changes (`spring.jpa.hibernate.ddl-auto=validate`)
-- Environment variable based secure passwords
-- Minimal SQL logging
-- Appropriate log levels for production
+- **Production (`prod`)**:
+  - Uses PostgreSQL with secure credentials.
+  - Validates schema without automatic changes.
+  - Optimized logging for production.
 
 ## Project Structure
 
-
-```
-thelarte/
-│
-├── build.gradle                # Configuración de construcción del proyecto raíz
-├── settings.gradle             # Configuración de módulos del proyecto
-├── gradlew                     # Scripts del wrapper de Gradle
-├── gradlew.bat
-│
-├── api-gateway/               # Servicio API Gateway
-│   ├── build.gradle
-│   └── src/
-│       └── main/
-│           ├── java/com/thelarte/gateway/
-│           │   ├── config/
-│           │   └── GatewayApplication.java
-│           └── resources/
-│               └── application.properties
-│
-├── microservices/            # Carpeta que contiene todos los microservicios
-│   │
-│   ├── auth-service/         # Servicio de autenticación
-│   │   ├── build.gradle
-│   │   └── src/
-│   │       └── main/
-│   │           ├── java/com/thelarte/auth/
-│   │           │   ├── config/
-│   │           │   ├── controller/
-│   │           │   ├── dto/
-│   │           │   ├── entity/
-│   │           │   ├── repository/
-│   │           │   ├── service/
-│   │           │   ├── util/
-│   │           │   └── AuthServiceApplication.java
-│   │           └── resources/
-│   │               └── application.properties
-│   │
-│   ├── inventory-service/    # Servicio de gestión de inventario
-│   │   ├── build.gradle
-│   │   └── src/
-│   │       └── main/
-│   │           ├── java/com/thelarte/inventory/
-│   │           │   ├── config/
-│   │           │   ├── controller/
-│   │           │   ├── dto/
-│   │           │   ├── entity/
-│   │           │   ├── exception/
-│   │           │   ├── repository/
-│   │           │   ├── service/
-│   │           │   └── InventoryServiceApplication.java
-│   │           └── resources/
-│   │               └── application.properties
-│   │
-│   ├── sales-service/        # Servicio de gestión de ventas
-│   │   ├── build.gradle
-│   │   └── src/
-│   │       └── main/
-│   │           ├── java/com/thelarte/sales/
-│   │           │   ├── config/
-│   │           │   ├── controller/
-│   │           │   ├── dto/
-│   │           │   ├── entity/
-│   │           │   ├── exception/
-│   │           │   ├── repository/
-│   │           │   ├── service/
-│   │           │   └── SalesServiceApplication.java
-│   │           └── resources/
-│   │               └── application.properties
-│   │
-│   ├── billing-service/      # Servicio de facturación y pagos
-│   │   ├── build.gradle
-│   │   └── src/
-│   │       └── main/
-│   │           ├── java/com/thelarte/billing/
-│   │           │   ├── config/
-│   │           │   ├── controller/
-│   │           │   ├── dto/
-│   │           │   ├── entity/
-│   │           │   ├── exception/
-│   │           │   ├── repository/
-│   │           │   ├── service/
-│   │           │   └── BillingServiceApplication.java
-│   │           └── resources/
-│   │               └── application.properties
-│   │
-│   └── user-service/        # Servicio de gestión de usuarios (empleados y clientes)
-│       ├── build.gradle
-│       └── src/
-│           └── main/
-│               ├── java/com/thelarte/user/
-│               │   ├── controller/
-│               │   │   ├── ClienteController.java
-│               │   │   ├── EmpleadoController.java
-│               │   │   └── PersonaController.java
-│               │   ├── model/
-│               │   │   ├── Cliente.java
-│               │   │   ├── Empleado.java
-│               │   │   └── Persona.java
-│               │   ├── repository/
-│               │   │   ├── ClienteRepository.java
-│               │   │   ├── EmpleadoRepository.java
-│               │   │   └── PersonaRepository.java
-│               │   ├── service/
-│               │   │   ├── ClienteService.java
-│               │   │   ├── EmpleadoService.java
-│               │   │   ├── PersonaService.java
-│               │   │   └── impl/
-│               │   │       ├── ClienteServiceImpl.java
-│               │   │       ├── EmpleadoServiceImpl.java
-│               │   │       └── PersonaServiceImpl.java
-│               │   ├── util/
-│               │   │   └── Rol.java
-│               │   └── UserServiceApplication.java
-│               └── resources/
-│                   └── application.properties
-│
-├── shared-library/          # Biblioteca compartida entre servicios
-│   ├── build.gradle
-│   └── src/
-│       └── main/
-│           └── java/com/thelarte/shared/
-│               ├── dto/
-│               ├── exception/
-│               ├── model/
-│               └── util/
-│
-├── frontend/                # Aplicación frontend
-│   ├── package.json
-│   ├── public/
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       ├── services/
-│       └── assets/
-│
-├── infra/                   # Infraestructura como código
-│   ├── docker-compose.yml
-│   ├── kubernetes/
-│   └── ci-cd/
-│
-└── docs/                    # Documentación del proyecto
-    ├── architecture/
-    ├── api/
-    └── user-guides/
-```
-
-## Organización interna de cada microservicio
-
-Cada microservicio sigue una estructura común:
-
-- **config/**: Configuraciones específicas del servicio
-- **controller/**: Controladores REST
-- **dto/**: Objetos de transferencia de datos
-- **entity/**: Entidades específicas del servicio
-- **exception/**: Excepciones personalizadas
-- **repository/**: Repositorios de acceso a datos
-- **service/**: Servicios de negocio
-- **util/**: Utilidades específicas del servicio
-
-## Shared Library
-
-La biblioteca compartida (`shared-library`) contiene modelos de dominio comunes y utilidades compartidas entre servicios:
-
-- **dto/**: DTOs compartidos
-- **exception/**: Excepciones compartidas
-- **model/**: Modelos de dominio compartidos
-- **util/**: Utilidades generales
-
-## Convenciones de nombrado
-
-- Todos los paquetes siguen el formato `com.thelarte.[nombre-modulo]`
-- Las clases de entidad usan nomenclatura singular (ej: Producto, not Productos)
-- Los repositorios siguen la convención de Spring Data (ej: ProductoRepository)
-- Los servicios implementan interfaces y tienen su implementación (ej: ProductoService, ProductoServiceImpl)
+Refer to the detailed project structure in the original documentation for more information.
