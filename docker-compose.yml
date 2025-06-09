@@ -14,14 +14,6 @@ volumes:
 # Environment variables for development (H2)
 x-env-dev: &env-dev
   SPRING_PROFILES_ACTIVE: dev
-  SPRING_DATASOURCE_URL: jdbc:h2:mem:thelarte;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-  SPRING_DATASOURCE_USERNAME: sa
-  SPRING_DATASOURCE_PASSWORD: password
-  SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
-  SPRING_H2_CONSOLE_ENABLED: true
-  SPRING_H2_CONSOLE_PATH: /h2-console
-  SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-  SPRING_JPA_SHOW_SQL: true
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
   EUREKA_INSTANCE_PREFER_IP_ADDRESS: true
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
@@ -118,9 +110,7 @@ services:
       start_period: 60s
     profiles:
       - dev
-      - prod
-
-  # Auth Service - Development
+      - prod  # Auth Service - Development
   auth-service-dev:
     <<: *service-common
     build:
@@ -129,6 +119,9 @@ services:
     container_name: thelarte-auth
     environment:
       <<: *env-dev
+      SERVER_PORT: 8081
+      SERVER_SERVLET_CONTEXT_PATH: /auth
+      SPRING_APPLICATION_NAME: auth-service
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -152,9 +145,7 @@ services:
       discovery-service:
         condition: service_healthy
     profiles:
-      - prod
-
-  # User Service - Development
+      - prod  # User Service - Development
   user-service-dev:
     <<: *service-common
     build:
@@ -163,6 +154,9 @@ services:
     container_name: thelarte-user
     environment:
       <<: *env-dev
+      SERVER_PORT: 8085
+      SERVER_SERVLET_CONTEXT_PATH: /user
+      SPRING_APPLICATION_NAME: user-service
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -186,9 +180,7 @@ services:
       discovery-service:
         condition: service_healthy
     profiles:
-      - prod
-
-  # Inventory Service - Development
+      - prod  # Inventory Service - Development
   inventory-service-dev:
     <<: *service-common
     build:
@@ -197,6 +189,9 @@ services:
     container_name: thelarte-inventory
     environment:
       <<: *env-dev
+      SERVER_PORT: 8082
+      SERVER_SERVLET_CONTEXT_PATH: /inventory
+      SPRING_APPLICATION_NAME: inventory-service
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -220,9 +215,7 @@ services:
       discovery-service:
         condition: service_healthy
     profiles:
-      - prod
-
-  # Sales Service - Development
+      - prod  # Sales Service - Development
   sales-service-dev:
     <<: *service-common
     build:
@@ -231,6 +224,9 @@ services:
     container_name: thelarte-sales
     environment:
       <<: *env-dev
+      SERVER_PORT: 8083
+      SERVER_SERVLET_CONTEXT_PATH: /sales
+      SPRING_APPLICATION_NAME: sales-service
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -256,9 +252,7 @@ services:
     ports:
       - "8083:8083"
     profiles:
-      - prod
-
-  # Billing Service - Development
+      - prod  # Billing Service - Development
   billing-service-dev:
     <<: *service-common
     build:
@@ -267,6 +261,9 @@ services:
     container_name: thelarte-billing
     environment:
       <<: *env-dev
+      SERVER_PORT: 8084
+      SERVER_SERVLET_CONTEXT_PATH: /billing
+      SPRING_APPLICATION_NAME: billing-service
     depends_on:
       discovery-service:
         condition: service_healthy
