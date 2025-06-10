@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
+import thelarte.services.common.util.Rol;
 
 /**
  * Entidad que extiende a Persona para representar Empleados.

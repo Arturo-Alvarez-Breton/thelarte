@@ -1,0 +1,292 @@
+version: '3.8'
+
+# Network configuration
+networks:
+  thelarte-network:
+    name: thelarte-network
+    driver: bridge
+
+# Volume configuration
+volumes:
+  postgres_data:
+    name: thelarte-postgres-data
+
+# Environment variables for development (H2)
+x-env-dev: &env-dev
+  SPRING_PROFILES_ACTIVE: dev
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: true
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+
+# Environment variables for production (PostgreSQL)
+x-env-prod: &env-prod
+  SPRING_PROFILES_ACTIVE: prod
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/thelarte
+  SPRING_DATASOURCE_USERNAME: thelarte
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-thelartepwd}
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+  SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+  SPRING_JPA_SHOW_SQL: false
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: true
+  JWT_SECRET: ${JWT_SECRET:-default-jwt-secret-key-change-in-production}
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+
+# Common service configuration
+x-service-common: &service-common
+  networks:
+    - thelarte-network
+  restart: unless-stopped
+
+services:
+  # PostgreSQL Database (Production only)
+  postgres:
+    image: postgres:16-alpine
+    container_name: thelarte-postgres
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-thelartepwd}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - thelarte-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte -d thelarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - prod
+
+  # Service Discovery (Eureka) - Used in both dev and prod
+  discovery-service:
+    <<: *service-common
+    build:
+      context: .
+      target: discovery-service
+    container_name: thelarte-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: false
+      EUREKA_CLIENT_FETCH_REGISTRY: false
+      EUREKA_SERVER_ENABLE_SELF_PRESERVATION: false
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    profiles:
+      - dev
+      - prod
+
+  # API Gateway - Used in both dev and prod
+  api-gateway:
+    <<: *service-common
+    build:
+      context: .
+      target: api-gateway
+    container_name: thelarte-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    profiles:
+      - dev
+      - prod  # Auth Service - Development
+  auth-service-dev:
+    <<: *service-common
+    build:
+      context: .
+      target: auth-service
+    container_name: thelarte-auth
+    environment:
+      <<: *env-dev
+      SERVER_PORT: 8081
+      SERVER_SERVLET_CONTEXT_PATH: /auth
+      SPRING_APPLICATION_NAME: auth-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    profiles:
+      - dev
+
+  # Auth Service - Production
+  auth-service-prod:
+    <<: *service-common
+    build:
+      context: .
+      target: auth-service
+    container_name: thelarte-auth
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod  # User Service - Development
+  user-service-dev:
+    <<: *service-common
+    build:
+      context: .
+      target: user-service
+    container_name: thelarte-user
+    environment:
+      <<: *env-dev
+      SERVER_PORT: 8085
+      SERVER_SERVLET_CONTEXT_PATH: /user
+      SPRING_APPLICATION_NAME: user-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8085:8085"
+    profiles:
+      - dev
+
+  # User Service - Production
+  user-service-prod:
+    <<: *service-common
+    build:
+      context: .
+      target: user-service
+    container_name: thelarte-user
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod  # Inventory Service - Development
+  inventory-service-dev:
+    <<: *service-common
+    build:
+      context: .
+      target: inventory-service
+    container_name: thelarte-inventory
+    environment:
+      <<: *env-dev
+      SERVER_PORT: 8082
+      SERVER_SERVLET_CONTEXT_PATH: /inventory
+      SPRING_APPLICATION_NAME: inventory-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    profiles:
+      - dev
+
+  # Inventory Service - Production
+  inventory-service-prod:
+    <<: *service-common
+    build:
+      context: .
+      target: inventory-service
+    container_name: thelarte-inventory
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    profiles:
+      - prod  # Sales Service - Development
+  sales-service-dev:
+    <<: *service-common
+    build:
+      context: .
+      target: sales-service
+    container_name: thelarte-sales
+    environment:
+      <<: *env-dev
+      SERVER_PORT: 8083
+      SERVER_SERVLET_CONTEXT_PATH: /sales
+      SPRING_APPLICATION_NAME: sales-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    profiles:
+      - dev
+
+  # Sales Service - Production
+  sales-service-prod:
+    <<: *service-common
+    build:
+      context: .
+      target: sales-service
+    container_name: thelarte-sales
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    profiles:
+      - prod  # Billing Service - Development
+  billing-service-dev:
+    <<: *service-common
+    build:
+      context: .
+      target: billing-service
+    container_name: thelarte-billing
+    environment:
+      <<: *env-dev
+      SERVER_PORT: 8084
+      SERVER_SERVLET_CONTEXT_PATH: /billing
+      SPRING_APPLICATION_NAME: billing-service
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+    profiles:
+      - dev
+
+  # Billing Service - Production
+  billing-service-prod:
+    <<: *service-common
+    build:
+      context: .
+      target: billing-service
+    container_name: thelarte-billing
+    environment:
+      <<: *env-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+    profiles:
+      - prod

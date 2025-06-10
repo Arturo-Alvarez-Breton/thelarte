@@ -38,12 +38,10 @@ public class AuthServiceTests {
     @InjectMocks
     private AuthService authService;
 
-    private User testUser;
-
-    @BeforeEach
+    private User testUser;    @BeforeEach
     void setUp() {
         testUser = new User();
-        testUser.setId("1");
+        testUser.setId(1L);
         testUser.setEmail("test@example.com");
         testUser.setPassword("encoded_password");
     }

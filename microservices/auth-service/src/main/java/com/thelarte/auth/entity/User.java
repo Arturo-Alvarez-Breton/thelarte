@@ -1,26 +1,40 @@
 package com.thelarte.auth.entity;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Document(collection = "users")
+@Entity
+@Table(name = "users", schema = "auth")
 public class User implements UserDetails {
     
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false)
     private String email;
+    
+    @Column(nullable = false)
     private String password;
+    
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "user_roles",
+        schema = "auth",
+        joinColumns = @JoinColumn(name = "user_id")
+    )
+    @Column(name = "role")
     private List<String> roles;
+    
+    @Column(nullable = false)
     private boolean active;
 
-    // Constructores
+    // Constructors
     public User() {
     }
     
@@ -31,12 +45,12 @@ public class User implements UserDetails {
         this.active = active;
     }
 
-    // Getters y Setters
-    public String getId() {
+    // Getters and Setters
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -46,6 +60,11 @@ public class User implements UserDetails {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
     }
 
     public void setPassword(String password) {
@@ -68,17 +87,12 @@ public class User implements UserDetails {
         this.active = active;
     }
 
-    // Implementación de métodos de UserDetails
+    // Implementation of UserDetails methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
+                .toList();
     }
 
     @Override

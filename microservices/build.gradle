@@ -1,0 +1,10 @@
+// This build.gradle is for the 'microservices' parent project.
+// It's not an executable application itself, but a container for other microservice modules.
+// Disable bootJar and jar tasks for this project.
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = false
+}
