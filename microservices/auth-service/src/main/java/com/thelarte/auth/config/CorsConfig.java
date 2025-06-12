@@ -1,19 +1,12 @@
 package com.thelarte.auth.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * CORS configuration is now handled in SecurityConfig.java to avoid conflicts
+ */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
-    
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/auth/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:8080")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
-    }
+    // CORS configuration moved to SecurityConfig.java
 }

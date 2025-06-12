@@ -1,4 +1,4 @@
-package main.java.com.thelarte.discovery;
+package com.thelarte.discovery;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

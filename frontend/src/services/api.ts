@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for the API Gateway - ensure it points to the auth service correctly
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081';
 
 // Create axios instance
 const apiClient = axios.create({
@@ -33,7 +33,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error.response?.data || error.message);
-    
+
     if (error.response?.status === 401) {
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('authToken');
