@@ -13,9 +13,16 @@ export class AuthService {
    */
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<AuthResponse>(AUTH_ENDPOINTS.LOGIN, credentials);
+      // Convert username to the expected format for the backend
+      const loginData = {
+        username: credentials.username,
+        password: credentials.password
+      };
+      
+      const response = await apiClient.post<AuthResponse>(AUTH_ENDPOINTS.LOGIN, loginData);
       return response.data;
     } catch (error: any) {
+      console.error('Login error:', error);
       throw new Error(
         error.response?.data?.message || 
         error.response?.data?.error || 

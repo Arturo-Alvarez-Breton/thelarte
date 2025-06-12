@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import { AuthService } from '../services/authService';
 import { LoginRequest } from '../types/auth';
 import toast from 'react-hot-toast';
 
@@ -11,13 +11,20 @@ export const useAuth = () => {
   const login = useCallback(async (data: LoginRequest) => {
     setIsLoading(true);
     try {
-      const response = await authService.login(data);
-      authService.storeAuthData(response);
+      // Convert the form data to the correct format for the API
+      const loginCredentials = {
+        username: data.username,
+        password: data.password
+      };
+      
+      const response = await AuthService.login(loginCredentials);
+      AuthService.storeAuthData(response);
       toast.success('¡Bienvenido de vuelta!');
       navigate('/dashboard');
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Error al iniciar sesión';
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'Error al iniciar sesión';
       toast.error(errorMessage);
       throw error;
     } finally {
@@ -26,12 +33,12 @@ export const useAuth = () => {
   }, [navigate]);
 
   const logout = useCallback(() => {
-    authService.clearAuthData();
+    AuthService.clearAuthData();
     navigate('/auth/login');
   }, [navigate]);
 
   const isAuthenticated = useCallback(() => {
-    return authService.isAuthenticated();
+    return AuthService.isAuthenticated();
   }, []);
 
   return { 

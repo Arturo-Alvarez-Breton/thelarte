@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import toast from 'react-hot-toast';
 import { loginSchema } from '../schemas/authSchemas';
 import { LoginFormData } from '../types/auth';
-import { authService } from '../services/authService';
+import { AuthService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 export const useLogin = () => {
@@ -20,18 +20,17 @@ export const useLogin = () => {
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
   });
-
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     
     try {
-      const response = await authService.login({
+      const response = await AuthService.login({
         username: data.username,
         password: data.password
       });
       
       // Store auth data using the service method
-      authService.storeAuthData(response);
+      AuthService.storeAuthData(response);
       
       toast.success('¡Bienvenido de vuelta!');
       
@@ -43,14 +42,13 @@ export const useLogin = () => {
       
       // Handle different types of errors
       if (error.response?.status === 401) {
+        // Set error only once for both fields
+        const errorMessage = 'Usuario o contraseña incorrectos';
         setError('username', { 
           type: 'manual', 
-          message: 'Usuario o contraseña incorrectos' 
+          message: errorMessage 
         });
-        setError('password', { 
-          type: 'manual', 
-          message: 'Usuario o contraseña incorrectos' 
-        });
+        // Don't set password error to avoid duplication
       } else if (error.response?.status === 422) {
         // Server validation errors
         const serverErrors = error.response.data.errors;
@@ -61,10 +59,11 @@ export const useLogin = () => {
           });
         });
       } else {
-        toast.error(
-          error.response?.data?.message ?? 
-          'Error al iniciar sesión. Inténtalo de nuevo.'
-        );
+        // For other errors, show a toast instead of field errors
+        const errorMessage = error.response?.data?.message || 
+                           error.message || 
+                           'Error al iniciar sesión. Inténtalo de nuevo.';
+        toast.error(errorMessage);
       }
     } finally {
       setIsLoading(false);

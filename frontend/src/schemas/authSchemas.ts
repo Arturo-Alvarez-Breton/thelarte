@@ -6,15 +6,11 @@ export const loginSchema = yup.object({
     .string()
     .required('El nombre de usuario es requerido')
     .min(3, 'El nombre de usuario debe tener al menos 3 caracteres')
-    .max(50, 'El nombre de usuario no puede exceder 50 caracteres')
-    .matches(
-      /^[a-zA-Z0-9_]+$/,
-      'El nombre de usuario solo puede contener letras, números y guiones bajos'
-    ),
+    .max(50, 'El nombre de usuario no puede exceder 50 caracteres'),
   password: yup
     .string()
     .required('La contraseña es requerida')
-    .min(6, 'La contraseña debe tener al menos 6 caracteres')
+    .min(1, 'La contraseña es requerida')
     .max(100, 'La contraseña no puede exceder 100 caracteres'),
 });
 
