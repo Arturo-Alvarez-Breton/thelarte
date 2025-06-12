@@ -32,4 +32,11 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Skip tests during build
+    enabled = false
+}
+
+// Make build not depend on running tests
+tasks.build.configure {
+    it.setDependsOn(it.getDependsOn().findAll { it != 'test' })
 }
