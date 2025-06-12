@@ -16,7 +16,7 @@ const LoginPage: React.FC = () => {
 
       {/* Welcome Title */}
       <h1 className="text-3xl font-bold text-[#0D1C17] text-center mb-8 font-inter">
-        Welcome back
+        Bienvenido de nuevo
       </h1>
 
       {/* Login Form */}
