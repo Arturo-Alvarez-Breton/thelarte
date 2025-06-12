@@ -31,8 +31,7 @@ public class SuplidorService implements ISuplidorService {
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarTodos() {
         return suplidorRepository.findAll().stream()
-                .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
-                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos()))
+                .map(this::toDto)
                 .collect(Collectors.toList());
     }
     
