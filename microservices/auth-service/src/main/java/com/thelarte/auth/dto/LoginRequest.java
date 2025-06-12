@@ -1,7 +1,14 @@
 package com.thelarte.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class LoginRequest {
+    @JsonProperty("email")
     private String email;
+    
+    @JsonProperty("username")
+    private String username;
+    
     private String password;
 
     public LoginRequest() {
@@ -13,7 +20,8 @@ public class LoginRequest {
     }
 
     public String getEmail() {
-        return email;
+        // Return email if present, otherwise return username as email
+        return email != null ? email : username;
     }
 
     public void setEmail(String email) {
@@ -28,12 +36,16 @@ public class LoginRequest {
         this.password = password;
     }
 
-    // Alias username for backward-compatible tests
+    // Support for username field (treat as email)
     public String getUsername() {
-        return email;
+        return username != null ? username : email;
     }
 
     public void setUsername(String username) {
-        this.email = username;
+        this.username = username;
+        // If email is not set, use username as email
+        if (this.email == null) {
+            this.email = username;
+        }
     }
 }
