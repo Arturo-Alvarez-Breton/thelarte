@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import AuthLayout from './layouts/AuthLayout';
 import LoginPage from './pages/auth/LoginPage';
+import { ProductoListPage } from "./pages/producto/ProductoListPage";
+import { ProductoFormPage } from "./pages/producto/ProductoFormPage";
+import ProductoDetailPage from './pages/producto/ProductoDetailPage';
+import {ProductoEditPage} from './pages/producto/ProductoEditPage';
 import './index.css';
 
 function App() {
@@ -26,6 +30,14 @@ function App() {
             <Route path="login" element={<LoginPage />} />
             <Route index element={<Navigate to="login" replace />} />
           </Route>
+
+            {/* Rutas de productos */}
+            <Route path="/productos">
+                <Route path="/producto" element={<ProductoListPage />} />
+                <Route path="/producto/nuevo" element={<ProductoFormPage />} />
+                <Route path=":id" element={<ProductoDetailPage />} />
+                <Route path=":id/editar" element={<ProductoEditPage />} />
+            </Route>
           
           {/* Ruta del dashboard - será protegida más tarde */}
           <Route 
@@ -51,3 +63,5 @@ function App() {
 }
 
 export default App;
+
+
