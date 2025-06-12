@@ -2,7 +2,8 @@ package com.thelarte.shared.controller;
 
 import com.thelarte.shared.dto.SuplidorDTO;
 import com.thelarte.shared.exception.EntityNotFoundException;
-import com.thelarte.shared.service.SuplidorService;
+import com.thelarte.shared.service.ISuplidorService; // Import the interface
+import com.thelarte.shared.service.SuplidorService; // Keep for existing constructor if needed, or remove if fully switched
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +25,10 @@ import java.util.Optional;
 public class SuplidorController {
 
     private static final Logger logger = LoggerFactory.getLogger(SuplidorController.class);
-    private final SuplidorService suplidorService;
+    private final ISuplidorService suplidorService; // Change to interface type
     
-    public SuplidorController(SuplidorService suplidorService) {
+    @Autowired // Ensure Autowired is present if not already
+    public SuplidorController(ISuplidorService suplidorService) { // Change parameter to interface type
         this.suplidorService = suplidorService;
     }
     

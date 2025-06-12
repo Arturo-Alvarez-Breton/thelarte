@@ -14,10 +14,11 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class SuplidorService {
+public class SuplidorService implements ISuplidorService {
     
     private final SuplidorRepository suplidorRepository;
-      @Autowired
+
+    @Autowired
     public SuplidorService(SuplidorRepository suplidorRepository) {
         this.suplidorRepository = suplidorRepository;
     }
@@ -26,6 +27,7 @@ public class SuplidorService {
      * Lista todos los suplidores
      * @return Lista de DTOs de suplidores
      */
+    @Override
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarTodos() {
         return suplidorRepository.findAll().stream()
@@ -39,6 +41,7 @@ public class SuplidorService {
      * @param id ID del suplidor
      * @return Optional con el DTO si existe
      */
+    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorId(Long id) {
         return suplidorRepository.findById(id)
@@ -51,6 +54,7 @@ public class SuplidorService {
      * @param nombre Nombre del suplidor
      * @return Optional con el DTO si existe
      */
+    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorNombre(String nombre) {
         return suplidorRepository.findByNombre(nombre)
@@ -63,6 +67,7 @@ public class SuplidorService {
      * @param rnc RNC del suplidor
      * @return Optional con el DTO si existe
      */
+    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorRNC(String rnc) {
         return suplidorRepository.findByRNC(rnc)
@@ -75,6 +80,7 @@ public class SuplidorService {
      * @param suplidorDTO DTO con los datos del suplidor
      * @return DTO con los datos guardados
      */
+    @Override
     public SuplidorDTO guardar(SuplidorDTO suplidorDTO) {
         Suplidor suplidor;
         
@@ -113,6 +119,7 @@ public class SuplidorService {
      * Elimina un suplidor por su ID
      * @param id ID del suplidor a eliminar
      */
+    @Override
     public void eliminar(Long id) {
         if (suplidorRepository.existsById(id)) {
             suplidorRepository.deleteById(id);
@@ -126,6 +133,7 @@ public class SuplidorService {
      * @param ciudad Ciudad para filtrar
      * @return Lista de suplidores de la ciudad especificada
      */
+    @Override
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarPorCiudad(String ciudad) {
         return suplidorRepository.findByCiudad(ciudad).stream()
