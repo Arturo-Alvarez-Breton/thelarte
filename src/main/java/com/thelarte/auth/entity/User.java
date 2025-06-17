@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "users", schema = "auth")
+@Table(name = "users")
 public class User implements UserDetails {
     
     @Id
@@ -25,7 +25,6 @@ public class User implements UserDetails {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "user_roles",
-        schema = "auth",
         joinColumns = @JoinColumn(name = "user_id")
     )
     @Column(name = "role")
