@@ -4,19 +4,17 @@ TheLarte is a furniture store management system implemented as a single Spring B
 
 ## Running the application
 
-The easiest way to run the project is using Docker Compose:
-
-```bash
-# build the image and start a PostgreSQL instance
-docker compose up --build
-```
-
-The application will be available on [http://localhost:8080](http://localhost:8080).
-
-During development you can also run the application directly with Gradle:
+The application can be run directly with Gradle. From the project root execute:
 
 ```bash
 ./gradlew bootRun
 ```
 
-The default profile uses an in-memory H2 database. For a persistent database supply the `SPRING_PROFILES_ACTIVE=prod` environment variable and set `POSTGRES_PASSWORD` when starting Docker Compose.
+Open the project in Visual Studio Code and run the `Application` class from the
+IDE to start the server. The application will be available on
+[http://localhost:8080](http://localhost:8080).
+
+The default profile uses an in-memory H2 database. For a persistent database
+you can supply the `SPRING_PROFILES_ACTIVE=prod` environment variable and set
+`POSTGRES_PASSWORD` to connect to PostgreSQL.
+
