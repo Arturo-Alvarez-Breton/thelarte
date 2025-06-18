@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TheLarte - Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.6/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script type="module" src="../js/pages/login.js" defer></script>
+</head>
+<body class="bg-primary-100 font-inter">
+  <div class="flex items-center justify-center min-h-screen">
+    <form id="loginForm" class="bg-white p-8 rounded-xl shadow-md w-full max-w-sm space-y-4">
+      <h1 class="text-primary-400 text-2xl font-bold text-center">Iniciar Sesión</h1>
+      <div>
+        <label for="username" class="block text-sm font-medium text-primary-400 mb-1">Usuario</label>
+        <input id="username" name="username" type="text" required minlength="3" maxlength="20" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
+      </div>
+      <div>
+        <label for="password" class="block text-sm font-medium text-primary-400 mb-1">Contraseña</label>
+        <input id="password" name="password" type="password" required minlength="8" maxlength="30" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
+      </div>
+      <button type="submit" class="w-full bg-primary-300 text-white py-2 rounded hover:bg-primary-200">Entrar</button>
+      <p id="errorMsg" class="text-red-500 text-sm hidden" role="alert" aria-live="polite"></p>
+    </form>
+  </div>
+</body>
+</html>
