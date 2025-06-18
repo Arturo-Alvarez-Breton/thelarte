@@ -18,3 +18,15 @@ The default profile uses an in-memory H2 database. For a persistent database
 you can supply the `SPRING_PROFILES_ACTIVE=prod` environment variable and set
 `POSTGRES_PASSWORD` to connect to PostgreSQL.
 
+## Frontend
+
+The frontend has been simplified and no longer uses React. Static files are
+located under `frontend/src`. To build the Tailwind CSS styles run:
+
+```bash
+cd frontend
+npm run build:css
+```
+
+Open `frontend/src/pages/login.html` in your browser to access the login form.
+
