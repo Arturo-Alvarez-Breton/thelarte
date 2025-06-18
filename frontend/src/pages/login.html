@@ -16,11 +16,11 @@
       <h1 class="text-primary-400 text-2xl font-bold text-center">Iniciar Sesión</h1>
       <div>
         <label for="username" class="block text-sm font-medium text-primary-400 mb-1">Usuario</label>
-        <input id="username" name="username" type="text" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
+        <input id="username" name="username" type="text" required minlength="3" maxlength="20" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
       </div>
       <div>
         <label for="password" class="block text-sm font-medium text-primary-400 mb-1">Contraseña</label>
-        <input id="password" name="password" type="password" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
+        <input id="password" name="password" type="password" required minlength="8" maxlength="30" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-primary-300">
       </div>
       <button type="submit" class="w-full bg-primary-300 text-white py-2 rounded hover:bg-primary-200">Entrar</button>
       <p id="errorMsg" class="text-red-500 text-sm hidden" role="alert" aria-live="polite"></p>
