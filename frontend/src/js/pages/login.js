@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await login({ username, password });
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('userEmail', data.email);
-      window.location.href = '/dashboard.html';
+      window.location.href = '/dashboard';
     } catch (err) {
       errorMsg.textContent = err.message;
       errorMsg.classList.remove('hidden');
