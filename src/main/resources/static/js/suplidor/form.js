@@ -71,7 +71,7 @@ form.addEventListener('submit', async e => {
     const resp = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(id ? { id: parseInt(id), ...data } : data)
+      body: JSON.stringify(id ? { id: parseInt(id, 10), ...data } : data)
     });
     if (!resp.ok) {
       throw new Error(`HTTP error! status: ${resp.status}`);
