@@ -146,32 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Verificación adicional: Comprobar validez del token con el servidor
   verifyToken(token);
 
-  // Mobile sidebar toggle functionality
-  const menuBtn = document.getElementById('menuBtn');
-  const sidebar = document.getElementById('sidebar');
-  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
-  const overlay = document.getElementById('overlay');
-  
-  if (menuBtn) {
-    menuBtn.addEventListener('click', () => {
-      sidebar.classList.add('open');
-      overlay.classList.remove('hidden');
-    });
-  }
-  
-  if (closeSidebarBtn) {
-    closeSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.remove('open');
-      overlay.classList.add('hidden');
-    });
-  }
-  
-  if (overlay) {
-    overlay.addEventListener('click', () => {
-      sidebar.classList.remove('open');
-      overlay.classList.add('hidden');
-    });
-  }
 
   // Display welcome message
   const welcomeMessage = document.getElementById('welcomeMessage');
