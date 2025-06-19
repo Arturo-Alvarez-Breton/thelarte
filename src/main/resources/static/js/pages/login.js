@@ -1,15 +1,60 @@
-// Mock login function for demonstration
+// Real login function to authenticate with backend
 const login = async ({ username, password }) => {
-  // Simple validation to simulate backend authentication
-  if (username === 'admin' && password === 'admin123') {
-    return { token: 'mock-jwt-token', email: username + '@thelarte.com' };
-  } else if (username && password) {
-    // For demo purposes, allow any non-empty username/password
-    return { token: 'mock-jwt-token-for-' + username, email: username + '@thelarte.com' };
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    });
+
+    // Handle different response statuses
+    if (response.status === 401) {
+      throw new Error('Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.');
+    }
+    
+    if (response.status === 403) {
+      throw new Error('Acceso denegado. Tu cuenta puede estar deshabilitada.');
+    }
+    
+    if (response.status === 429) {
+      throw new Error('Demasiados intentos de inicio de sesión. Por favor, espera unos minutos.');
+    }
+    
+    if (response.status >= 500) {
+      throw new Error('Error en el servidor. Por favor, intenta más tarde.');
+    }
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Error de comunicación con el servidor.');
+      }
+      throw new Error(errorData.message || errorData.error || 'Error al iniciar sesión');
+    }
+
+    const data = await response.json();
+    
+    // Validate response data
+    if (!data.token) {
+      throw new Error('Respuesta del servidor inválida. Por favor, intenta más tarde.');
+    }
+
+    return { 
+      token: data.token, 
+      email: data.email || data.username + '@thelarte.com' 
+    };
+
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
+    }
+    throw error;
   }
-  
-  // Simulate authentication error
-  throw new Error('401: Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.');
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,15 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const hideError = () => {
     errorMsg.classList.remove('show');
-  };
-  // Loading state for button
+  };  // Loading state for button
   const setLoadingState = (isLoading) => {
     if (isLoading) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+      submitBtn.innerHTML = '<span class="spinner"></span>Iniciando sesión...';
     } else {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Log in';
+      submitBtn.innerHTML = 'Iniciar sesión';
     }
   };
 
