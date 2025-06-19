@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Suplidor</title>
+  <link rel="stylesheet" href="../../css/styles.css">
+  <script type="module" src="../../js/suplidor/edit.js" defer></script>
+</head>
+<body class="font-inter bg-gray-50 p-6">
+  <div class="container mx-auto max-w-xl bg-white rounded-xl p-4 shadow">
+    <h1 class="text-xl font-semibold text-primary-300 mb-4">Editar Suplidor</h1>
+    <form id="supplierForm" class="space-y-3">
+      <input type="text" id="nombre" placeholder="Nombre" class="w-full border rounded-xl p-2" required />
+      <input type="text" id="ciudad" placeholder="Ciudad" class="w-full border rounded-xl p-2" required />
+      <input type="text" id="direccion" placeholder="Dirección" class="w-full border rounded-xl p-2" />
+      <input type="email" id="email" placeholder="Email" class="w-full border rounded-xl p-2" />
+      <input type="text" id="rnc" placeholder="RNC" class="w-full border rounded-xl p-2" />
+      <input type="text" id="ncf" placeholder="NCF" class="w-full border rounded-xl p-2" />
+      <input type="text" id="telefonos" placeholder="Teléfonos (separados por coma)" class="w-full border rounded-xl p-2" />
+      <button type="submit" class="bg-primary-300 text-white px-4 py-2 rounded-xl">Actualizar</button>
+    </form>
+  </div>
+</body>
+</html>
