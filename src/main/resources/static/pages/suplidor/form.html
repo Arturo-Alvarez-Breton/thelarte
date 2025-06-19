@@ -23,79 +23,9 @@
     }
   </script>
 </head>
-<body class="font-inter bg-[#f6fcfa] min-h-screen flex">  <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-[#f6fcfa] border-r border-gray-200 sidebar-transition transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:relative md:flex flex-col">
-    <div class="flex items-center px-6 py-8">
-      <span class="font-serif text-2xl font-bold text-[#29312C]">Thelarte</span>
-      <!-- Botón cerrar en móvil -->
-      <button id="closeSidebarBtn" class="ml-auto md:hidden text-[#29312C]">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-    <nav class="mt-2 flex-1 px-2 space-y-1">
-      <a href="/pages/dashboard.html" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Dashboard -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7m-9 2v8m4-8v8m5-5h-4a2 2 0 00-2 2v4" /></svg>
-        Dashboard
-      </a>
-      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Sales -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        Ventas
-      </a>
-      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Employees -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87" /><circle cx="9" cy="7" r="4" /><path stroke-linecap="round" stroke-linejoin="round" d="M9 11a4 4 0 00-4 4v4h8v-4a4 4 0 00-4-4z" /></svg>
-        Empleados
-      </a>
-      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Customers -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87" /><circle cx="9" cy="7" r="4" /><path stroke-linecap="round" stroke-linejoin="round" d="M9 11a4 4 0 00-4 4v4h8v-4a4 4 0 00-4-4z" /></svg>
-        Clientes
-      </a>
-      <a href="/pages/suplidor/index.html" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Suppliers -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87" /><circle cx="9" cy="7" r="4" /><path stroke-linecap="round" stroke-linejoin="round" d="M9 11a4 4 0 00-4 4v4h8v-4a4 4 0 00-4-4z" /></svg>
-        Suplidores
-      </a>
-      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">
-        <!-- Icono Products -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#29312C"><path stroke-linecap="round" stroke-linejoin="round" d="M21 16V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 16V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8" /></svg>
-        Productos
-      </a>
-    </nav>
-    <div class="p-4 border-t border-gray-200">
-      <div class="flex items-center justify-between">
-        <div>
-          <p id="welcomeMessage" class="text-sm font-medium text-gray-700">Bienvenido</p>
-          <p id="roleInfo" class="text-xs text-gray-500">Usuario</p>
-        </div>
-        <button id="logoutBtn" class="text-red-500 hover:text-red-700">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Overlay for mobile menu -->
-  <div id="overlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-20 hidden md:hidden"></div>
+<body class="font-inter bg-[#f6fcfa] min-h-screen flex">
 
   <main class="flex-1 flex flex-col ml-0 md:ml-64">
-    <!-- Top navbar for mobile view -->
-    <div class="bg-white shadow md:hidden">
-      <div class="flex justify-between items-center p-4">
-        <button id="menuBtn" class="text-[#29312C]">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <div class="text-[#29312C] text-lg font-serif font-bold">Thelarte</div>
-        <div></div> <!-- Spacer element for centering -->
-      </div>
-    </div>
 
     <div class="p-6 flex-1">
       <div class="container mx-auto max-w-2xl">
@@ -149,8 +79,9 @@
             </div>
           </form>
         </div>
-      </div>
-    </div>
+  </div>
+  </div>
   </main>
+  <script src="/js/structure/sidebarloader.js"></script>
 </body>
 </html>

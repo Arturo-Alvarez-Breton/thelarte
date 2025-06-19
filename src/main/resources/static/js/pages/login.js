@@ -91,9 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('userEmail', data.email);      // Success feedback
       submitBtn.innerHTML = '¡Acceso concedido!';
       submitBtn.style.background = '#10B981';      // Redirect after a brief moment
-      setTimeout(() => {
-        window.location.href = '/pages/dashboard.html';
-      }, 800);
+        setTimeout(() => {
+          window.location.href = '/pages/structure/home.html';
+        }, 800);
 
     } catch (err) {
       console.error('Login error:', err);
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('authToken');
   if (token) {
     console.log('User already has a token');
-    // Redirigir al dashboard automáticamente si hay un token
-    window.location.href = '/pages/dashboard.html';
+    // Redirigir al inicio automáticamente si hay un token
+    window.location.href = '/pages/structure/home.html';
   }
 });
