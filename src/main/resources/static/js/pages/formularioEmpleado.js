@@ -216,7 +216,6 @@ document.getElementById('registroForm').addEventListener('submit', async functio
         return;
     }
 
-    // Si todo es válido, procesar datos (p.ej. enviar a backend)
     const datos = {
         cedula, nombre, apellido, telefono, correo,
         provinciaCode: provincia,

@@ -11,6 +11,7 @@ function renderClientes(data) {
     tbody.innerHTML = '';
     if (!data || data.length === 0) {
         emptyMsg.classList.remove('hidden');
+        tbody.innerHTML = '';
         return;
     }
     emptyMsg.classList.add('hidden');

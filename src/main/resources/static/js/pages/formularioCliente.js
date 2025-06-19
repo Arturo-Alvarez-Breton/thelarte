@@ -114,13 +114,12 @@ async function cargarMunicipios(regionCode) {
     municipioSelect.innerHTML = '<option value="">Cargando municipios...</option>';
     municipioSelect.disabled = true;
     try {
-        let url = `https://api.digital.gob.do/v1/territories/municipalities`;
+        let url = `https://api.digital.gob.do/v1/territories/municipalities?regionCode=${regionCode}`;
         let resp = await fetch(url);
 
         if (!resp.ok) throw resp;
         const json = await resp.json();
         municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
-        // Suponiendo json.data es array de { name, municipalityCode }
         json.data.forEach(mun => {
             const opt = document.createElement('option');
             opt.value = mun.municipalityCode || mun.code || mun.id || mun.name;
@@ -150,88 +149,46 @@ document.getElementById('provincia').addEventListener('change', function() {
 // --- Validación y envío del formulario ---
 document.getElementById('registroForm').addEventListener('submit', async function(event) {
     event.preventDefault();
-    // Limpiar errores previos
-    ['cedula','nombre','apellido','telefono','correo','provincia','municipio','direccionDetallada']
-        .forEach(f => clearError(f));
     const formMessage = document.getElementById('formMessage');
     formMessage.textContent = '';
     formMessage.className = '';
 
-    // Obtener valores
-    const cedula = document.getElementById('cedula').value.trim();
-    const nombre = document.getElementById('nombre').value.trim();
-    const apellido = document.getElementById('apellido').value.trim();
-    const telefono = document.getElementById('telefono').value.trim();
-    const correo = document.getElementById('correo').value.trim();
-    const provincia = document.getElementById('provincia').value;
-    const municipio = document.getElementById('municipio').value;
-    const direccionDetallada = document.getElementById('direccionDetallada').value.trim();
-
     let valid = true;
-    // Validaciones básicas
-    const cedulaPattern = /^\d{3}-\d{7}-\d{1}$/;
-    if (!cedula || !cedulaPattern.test(cedula)) {
-        showError('cedula', 'La cédula debe tener el formato XXX-XXXXXXX-X');
-        valid = false;
-    }
-    const nombrePattern = /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$/;
-    if (!nombre || !nombrePattern.test(nombre)) {
-        showError('nombre', 'El nombre solo puede contener letras y espacios');
-        valid = false;
-    }
-    if (!apellido || !nombrePattern.test(apellido)) {
-        showError('apellido', 'El apellido solo puede contener letras y espacios');
-        valid = false;
-    }
-    const telefonoPattern = /^\d{3}-\d{3}-\d{4}$/;
-    if (!telefono || !telefonoPattern.test(telefono)) {
-        showError('telefono', 'El teléfono debe tener el formato XXX-XXX-XXXX');
-        valid = false;
-    }
-    const correoPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!correo || !correoPattern.test(correo)) {
-        showError('correo', 'Debe ingresar un correo electrónico válido');
-        valid = false;
-    }
-    if (!provincia) {
-        showError('provincia', 'Debe seleccionar una provincia');
-        valid = false;
-    }
-    if (!municipio) {
-        showError('municipio', 'Debe seleccionar un municipio');
-        valid = false;
-    }
-    if (!direccionDetallada) {
-        showError('direccionDetallada', 'La dirección detallada es obligatoria');
-        valid = false;
-    }
-    if (!valid) {
-        return;
-    }
+    ['cedula', 'nombre', 'apellido', 'telefono', 'correo', 'provincia', 'municipio', 'direccionDetallada'].forEach(field => {
+        const value = document.getElementById(field).value.trim();
+        if (!value) {
+            showError(field, `El campo ${field} es obligatorio`);
+            valid = false;
+        }
+    });
 
-    // Validación de cédula contra API
+    if (!valid) return;
+
+    const cedula = document.getElementById('cedula').value.trim();
     const cedulaResult = await validateCedulaAPI(cedula);
     if (!cedulaResult.valid) {
         showError('cedula', cedulaResult.message);
         return;
     }
 
-    // Si todo es válido, procesar datos (p.ej. enviar a backend)
     const datos = {
-        cedula, nombre, apellido, telefono, correo,
-        provinciaCode: provincia,
-        municipioCode: municipio,
-        direccionDetallada
+        cedula,
+        nombre: document.getElementById('nombre').value.trim(),
+        apellido: document.getElementById('apellido').value.trim(),
+        telefono: document.getElementById('telefono').value.trim(),
+        correo: document.getElementById('correo').value.trim(),
+        provinciaCode: document.getElementById('provincia').value,
+        municipioCode: document.getElementById('municipio').value,
+        direccionDetallada: document.getElementById('direccionDetallada').value.trim()
     };
+
     console.log("Datos a enviar:", datos);
     formMessage.textContent = 'Registro exitoso.';
     formMessage.className = 'text-green-600';
 
     this.reset();
-    // Resetear selects de provincia/municipio
     document.getElementById('municipio').innerHTML = '<option value="">Seleccione primero provincia</option>';
     document.getElementById('municipio').disabled = true;
 });
-
 // Iniciar carga de provincias al cargar DOM
 document.addEventListener('DOMContentLoaded', cargarProvincias);
