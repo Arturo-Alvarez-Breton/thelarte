@@ -4,9 +4,9 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import java.util.Collection;
 import java.util.List;
+
 
 @Entity
 @Table(name = "users")
@@ -29,8 +29,9 @@ public class User implements UserDetails {
         name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id")
     )
+    @Enumerated(EnumType.STRING)
     @Column(name = "role")
-    private List<String> roles;
+    private List<UserRole> roles;
     
     @Column(nullable = false)
     private boolean active;
@@ -38,7 +39,8 @@ public class User implements UserDetails {
     // Constructors
     public User() {
     }
-      public User(String username, String email, String password, List<String> roles, boolean active) {
+
+    public User(String username, String email, String password, List<UserRole> roles, boolean active) {
         this.username = username;
         this.email = email;
         this.password = password;
@@ -78,11 +80,11 @@ public class User implements UserDetails {
         this.password = password;
     }
     
-    public List<String> getRoles() {
+    public List<UserRole> getRoles() {
         return roles;
     }
-    
-    public void setRoles(List<String> roles) {
+
+    public void setRoles(List<UserRole> roles) {
         this.roles = roles;
     }
     
@@ -98,8 +100,9 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
-                .map(SimpleGrantedAuthority::new)
-                .toList();    }
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+                .toList();
+    }
 
     @Override
     public boolean isAccountNonExpired() {

@@ -41,6 +41,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))            .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/login.html", "/register", "/h2-console/**", "/", "/static/**", "/frontend/**", "/css/**", "/js/**", "/pages/**").permitAll()
                 .requestMatchers("*.html", "*.css", "*.js").permitAll()
+                .requestMatchers("/api/suplidores/**").hasRole("VENDEDOR")
                 .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
