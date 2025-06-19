@@ -3,7 +3,15 @@ const emptyState = document.getElementById('emptyState');
 
 async function loadSuppliers() {
   try {
-    const resp = await fetch('/api/suplidores');
+    const token = localStorage.getItem('authToken');
+    const resp = await fetch('/api/suplidores', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
     if (!resp.ok) {
       throw new Error(`HTTP error! status: ${resp.status}`);
     }
@@ -49,7 +57,15 @@ async function deleteSupplier(id) {
   if (!confirm('¿Estás seguro de que deseas eliminar este suplidor?')) return;
   
   try {
-    const resp = await fetch(`/api/suplidores/${id}`, { method: 'DELETE' });
+    const token = localStorage.getItem('authToken');
+    const resp = await fetch(`/api/suplidores/${id}`, { 
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
     if (!resp.ok) {
       throw new Error(`HTTP error! status: ${resp.status}`);
     }
@@ -61,10 +77,112 @@ async function deleteSupplier(id) {
   }
 }
 
+/**
+ * Verifica si el token es válido haciendo una petición al endpoint de validación
+ * @param {string} token Token JWT a verificar
+ */
+async function verifyToken(token) {
+  try {
+    const resp = await fetch('/api/dashboard/validate', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!resp.ok) {
+      console.log('Token validation failed');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userEmail');
+      window.location.href = '/pages/login.html';
+      return false;
+    }
+    
+    const data = await resp.json();
+    console.log('Token validation successful:', data);
+    return data.authorized;
+  } catch (error) {
+    console.error('Error validating token:', error);
+    return false;
+  }
+}
+
 table.addEventListener('click', e => {
   if (e.target.classList.contains('delete')) {
     deleteSupplier(e.target.dataset.id);
   }
 });
 
-loadSuppliers();
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Suplidor index loading...');
+  
+  // Check if user is authenticated using local storage
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    console.log('No valid token found, redirecting to login');
+    window.location.href = '/pages/login.html';
+    return;
+  }
+  console.log('Token found, loading page...');
+  
+  // Verificación adicional: Comprobar validez del token con el servidor
+  verifyToken(token);
+
+  // Mobile sidebar toggle functionality
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+  const overlay = document.getElementById('overlay');
+  
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.add('open');
+      overlay.classList.remove('hidden');
+    });
+  }
+  
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.add('hidden');
+    });
+  }
+  
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.add('hidden');
+    });
+  }
+
+  // Display welcome message
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  const userEmail = localStorage.getItem('userEmail') || 'Usuario';
+  
+  if (welcomeMessage) {
+    welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
+  }
+  
+  // Add role information if element exists
+  const roleInfo = document.getElementById('roleInfo');
+  if (roleInfo) {
+    roleInfo.textContent = 'Usuario';
+  }
+
+  // Logout functionality
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        // Clear authentication data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userEmail');
+        
+        // Redirect to login
+        window.location.href = '/pages/login.html';
+      }
+    });
+  }
+
+  // Iniciar la carga de los suplidores
+  loadSuppliers();
+});

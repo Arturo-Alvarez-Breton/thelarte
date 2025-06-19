@@ -22,7 +22,15 @@ function setMode() {
 
 async function loadSupplier() {
   try {
-    const resp = await fetch(`/api/suplidores/${id}`);
+    const token = localStorage.getItem('authToken');
+    const resp = await fetch(`/api/suplidores/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
     if (!resp.ok) {
       throw new Error(`HTTP error! status: ${resp.status}`);
     }
@@ -66,16 +74,25 @@ form.addEventListener('submit', async e => {
 
   const url = id ? `/api/suplidores/${id}` : '/api/suplidores';
   const method = id ? 'PUT' : 'POST';
+  const token = localStorage.getItem('authToken');
 
   try {
     const resp = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify(id ? { id: parseInt(id, 10), ...data } : data)
     });
+    
     if (!resp.ok) {
       throw new Error(`HTTP error! status: ${resp.status}`);
     }
+    
+    const savedData = await resp.json();
+    console.log('Suplidor guardado:', savedData);
+    
     alert(id ? 'Suplidor actualizado exitosamente!' : 'Suplidor creado exitosamente!');
     location.href = 'index.html';
   } catch (error) {
@@ -87,4 +104,104 @@ form.addEventListener('submit', async e => {
   }
 });
 
-setMode();
+/**
+ * Verifica si el token es válido haciendo una petición al endpoint de validación
+ * @param {string} token Token JWT a verificar
+ */
+async function verifyToken(token) {
+  try {
+    const resp = await fetch('/api/dashboard/validate', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!resp.ok) {
+      console.log('Token validation failed');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userEmail');
+      window.location.href = '/pages/login.html';
+      return false;
+    }
+    
+    const data = await resp.json();
+    console.log('Token validation successful:', data);
+    return data.authorized;
+  } catch (error) {
+    console.error('Error validating token:', error);
+    return false;
+  }
+}
+
+// Código para manejar navegación móvil y autenticación
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if user is authenticated using local storage
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    console.log('No valid token found, redirecting to login');
+    window.location.href = '/pages/login.html';
+    return;
+  }
+  
+  // Verificación adicional: Comprobar validez del token con el servidor
+  verifyToken(token);
+
+  // Mobile sidebar toggle functionality
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+  const overlay = document.getElementById('overlay');
+  
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.add('open');
+      overlay.classList.remove('hidden');
+    });
+  }
+  
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.add('hidden');
+    });
+  }
+  
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.add('hidden');
+    });
+  }
+
+  // Display welcome message
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  const userEmail = localStorage.getItem('userEmail') || 'Usuario';
+  
+  if (welcomeMessage) {
+    welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
+  }
+  
+  // Add role information if element exists
+  const roleInfo = document.getElementById('roleInfo');
+  if (roleInfo) {
+    roleInfo.textContent = 'Usuario';
+  }
+
+  // Logout functionality
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        // Clear authentication data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userEmail');
+        
+        // Redirect to login
+        window.location.href = '/pages/login.html';
+      }
+    });
+  }
+
+  // Inicializar configuración del formulario
+  setMode();
+});
