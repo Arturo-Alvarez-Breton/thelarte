@@ -11,12 +11,14 @@ public class SuplidorDTO {
     private String RNC;
     private String NCF;
     private List<String> telefonos;
+    private Double longitud;
+    private Double latitud;
 
     // Constructor vacío
     public SuplidorDTO() {}
 
     // Constructor con todos los campos
-    public SuplidorDTO(long id, String nombre, String ciudad, String direccion, String email, String RNC, String NCF, List<String> telefonos) {
+    public SuplidorDTO(long id, String nombre, String ciudad, String direccion, String email, String RNC, String NCF, List<String> telefonos, Double longitud, Double latitud) {
         this.id = id;
         this.nombre = nombre;
         this.ciudad = ciudad;
@@ -25,6 +27,8 @@ public class SuplidorDTO {
         this.RNC = RNC;
         this.NCF = NCF;
         this.telefonos = telefonos;
+        this.longitud = longitud;
+        this.latitud = latitud;
     }
 
     // Getters
@@ -60,6 +64,14 @@ public class SuplidorDTO {
         return telefonos;
     }
 
+    public Double getLongitud() {
+        return longitud;
+    }
+
+    public Double getLatitud() {
+        return latitud;
+    }
+
     // Setters
     public void setId(long id) {
         this.id = id;
@@ -91,5 +103,13 @@ public class SuplidorDTO {
 
     public void setTelefonos(List<String> telefonos) {
         this.telefonos = telefonos;
+    }
+
+    public void setLongitud(Double longitud) {
+        this.longitud = longitud;
+    }
+
+    public void setLatitud(Double latitud) {
+        this.latitud = latitud;
     }
 }

@@ -1,4 +1,16 @@
-import { login } from '../services/authService.js';
+// Mock login function for demonstration
+const login = async ({ username, password }) => {
+  // Simple validation to simulate backend authentication
+  if (username === 'admin' && password === 'admin123') {
+    return { token: 'mock-jwt-token', email: username + '@thelarte.com' };
+  } else if (username && password) {
+    // For demo purposes, allow any non-empty username/password
+    return { token: 'mock-jwt-token-for-' + username, email: username + '@thelarte.com' };
+  }
+  
+  // Simulate authentication error
+  throw new Error('401: Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.');
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
@@ -76,15 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Store auth data
       localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userEmail', data.email);
-        // Success feedback
-      submitBtn.innerHTML = '¡Access granted!';
-      submitBtn.style.background = '#10B981';
-      
-      // Redirect after a brief moment
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+      localStorage.setItem('userEmail', data.email);      // Success feedback
+      submitBtn.innerHTML = '¡Acceso concedido!';
+      submitBtn.style.background = '#10B981';      // Redirect after a brief moment
+        setTimeout(() => {
+          window.location.href = '/pages/structure/home.html';
+        }, 800);
 
     } catch (err) {
       console.error('Login error:', err);
@@ -124,12 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-focus username input
   usernameInput.focus();
-
   // Check if user is already logged in
   const token = localStorage.getItem('authToken');
   if (token) {
     console.log('User already has a token');
-    // Optionally redirect to dashboard
-    // window.location.href = '/dashboard';
+    // Redirigir al inicio automáticamente si hay un token
+    window.location.href = '/pages/structure/home.html';
   }
 });

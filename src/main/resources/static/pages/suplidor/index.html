@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suplidores - Thelarte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="/js/suplidor/index.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              300: '#009963', 
+              400: '#007a4f' 
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-inter bg-[#f6fcfa] min-h-screen flex">
+
+  <main class="flex-1 flex flex-col ml-0 md:ml-64">
+
+    <div class="p-6 flex-1">
+      <div class="container mx-auto">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h1 class="text-3xl font-bold text-primary-300">Gestión de Suplidores</h1>
+            <p class="text-gray-600 mt-1">Administra la información de tus proveedores</p>
+          </div>
+          <div class="flex gap-3">
+            <a href="/pages/structure/home.html" class="bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition-colors">← Volver al Inicio</a>
+            <a href="form.html" class="bg-primary-300 text-white px-4 py-2 rounded-xl hover:bg-primary-400 transition-colors">+ Nuevo Suplidor</a>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <table class="min-w-full">
+            <thead class="bg-primary-200 text-white">
+              <tr>
+                <th class="px-6 py-4 text-left">ID</th>
+                <th class="px-6 py-4 text-left">Nombre</th>
+                <th class="px-6 py-4 text-left">Ciudad</th>
+                <th class="px-6 py-4 text-left">Email</th>
+                <th class="px-6 py-4 text-left">RNC</th>
+                <th class="px-6 py-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="supplierTable" class="divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+
+        <div id="emptyState" class="hidden text-center py-12">
+          <div class="text-gray-400 text-6xl mb-4">🏪</div>
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">No hay suplidores registrados</h3>
+          <p class="text-gray-500 mb-6">Comienza agregando tu primer proveedor</p>
+          <a href="form.html" class="bg-primary-300 text-white px-6 py-3 rounded-xl hover:bg-primary-400 transition-colors inline-block">Agregar Primer Suplidor</a>
+  </div>
+  </div>
+  </div>
+  <script src="/js/structure/sidebarloader.js"></script>
+</body>
+</html>

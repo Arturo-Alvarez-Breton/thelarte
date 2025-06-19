@@ -41,6 +41,10 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))            .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/login.html", "/register", "/h2-console/**", "/", "/static/**", "/frontend/**", "/css/**", "/js/**", "/pages/**").permitAll()
                 .requestMatchers("*.html", "*.css", "*.js").permitAll()
+                .requestMatchers("/dashboard", "/dashboard.html").permitAll()  // Allow access, JS will handle auth
+                .requestMatchers("/suplidor/**").permitAll()  // Make suplidor pages public
+                .requestMatchers("/api/dashboard/validate").hasAnyRole("VENDEDOR", "GERENTE", "TI", "CONTABILIDAD")  // All roles can access dashboard
+                .requestMatchers("/api/suplidores/**").permitAll()  // Make suplidor API public
                 .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
