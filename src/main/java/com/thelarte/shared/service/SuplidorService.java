@@ -39,39 +39,36 @@ public class SuplidorService implements ISuplidorService {
      * Busca un suplidor por su ID
      * @param id ID del suplidor
      * @return Optional con el DTO si existe
-     */
-    @Override
+     */    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorId(Long id) {
         return suplidorRepository.findById(id)
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
-                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos()));
+                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()));
     }
     
     /**
      * Busca un suplidor por su nombre
      * @param nombre Nombre del suplidor
      * @return Optional con el DTO si existe
-     */
-    @Override
+     */    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorNombre(String nombre) {
         return suplidorRepository.findByNombre(nombre)
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
-                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos()));
+                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()));
     }
     
     /**
      * Busca un suplidor por su RNC
      * @param rnc RNC del suplidor
      * @return Optional con el DTO si existe
-     */
-    @Override
+     */    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorRNC(String rnc) {
         return suplidorRepository.findByRNC(rnc)
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
-                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos()));
+                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()));
     }
     
     /**
@@ -91,14 +88,15 @@ public class SuplidorService implements ISuplidorService {
             suplidor = suplidorRepository.findById(suplidorDTO.getId())
                     .orElseThrow(() -> new EntityNotFoundException("No se encontró el suplidor con ID: " + suplidorDTO.getId()));
         }
-        
-        suplidor.setNombre(suplidorDTO.getNombre());
+          suplidor.setNombre(suplidorDTO.getNombre());
         suplidor.setCiudad(suplidorDTO.getCiudad());
         suplidor.setDireccion(suplidorDTO.getDireccion());
         suplidor.setEmail(suplidorDTO.getEmail());
         suplidor.setRNC(suplidorDTO.getRNC());
         suplidor.setNCF(suplidorDTO.getNCF());
         suplidor.setTelefonos(suplidorDTO.getTelefonos());
+        suplidor.setLongitud(suplidorDTO.getLongitud());
+        suplidor.setLatitud(suplidorDTO.getLatitud());
         
         suplidor = suplidorRepository.save(suplidor);
         
@@ -110,7 +108,9 @@ public class SuplidorService implements ISuplidorService {
             suplidor.getEmail(),
             suplidor.getRNC(),
             suplidor.getNCF(),
-            suplidor.getTelefonos()
+            suplidor.getTelefonos(),
+            suplidor.getLongitud(),
+            suplidor.getLatitud()
         );
     }
     
@@ -131,17 +131,16 @@ public class SuplidorService implements ISuplidorService {
      * Busca suplidores por ciudad
      * @param ciudad Ciudad para filtrar
      * @return Lista de suplidores de la ciudad especificada
-     */
-    @Override
+     */    @Override
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarPorCiudad(String ciudad) {
         return suplidorRepository.findByCiudad(ciudad).stream()
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
-                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos()))
+                        s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()))
                 .collect(Collectors.toList());
     }
 
     private SuplidorDTO toDto(Suplidor s) {
-        return new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos());
+        return new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud());
     }
 }
