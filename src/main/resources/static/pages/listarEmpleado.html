@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Listado de Empleados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+<div class="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <h1 class="text-2xl font-bold mb-4 md:mb-0">Listado de Empleados</h1>
+        <button id="btnNuevoEmpleado"
+                class="self-start md:self-auto bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+            Nuevo Empleado
+        </button>
+    </div>
+
+    <div id="tableContainer" class="overflow-x-auto">
+        <table class="min-w-full table-auto border-collapse">
+            <thead>
+            <tr class="bg-gray-200">
+                <th class="px-4 py-2 text-left">ID</th>
+                <th class="px-4 py-2 text-left">Nombre</th>
+                <th class="px-4 py-2 text-left">Apellido</th>
+                <th class="px-4 py-2 text-left">Cédula</th>
+                <th class="px-4 py-2 text-left">Teléfono</th>
+                <th class="px-4 py-2 text-left">Rol</th>
+                <th class="px-4 py-2 text-left">Salario</th>
+                <th class="px-4 py-2 text-left">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="empleadosBody">
+            <!-- Se llenará dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <p id="emptyMessage" class="mt-4 text-center text-gray-500 hidden">
+        No hay empleados para mostrar.
+    </p>
+</div>
+<script src="/js/pages/lsitarEmpleados.js" type="module"></script>
+</body>
+</html>
