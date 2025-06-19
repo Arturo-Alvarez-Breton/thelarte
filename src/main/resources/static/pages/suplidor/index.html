@@ -6,50 +6,60 @@
   <title>Suplidores - Thelarte</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  <link rel="stylesheet" href="/css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
   <script type="module" src="/js/suplidor/index.js" defer></script>
 </head>
-<body class="font-inter bg-gray-50 p-6">
-  <div class="container mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-primary-300">Gestión de Suplidores</h1>
-        <p class="text-gray-600 mt-1">Administra la información de tus proveedores</p>
+<body class="font-inter bg-[#f6fcfa] min-h-screen flex">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-[#f6fcfa] border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:relative md:flex flex-col">
+    <div class="flex items-center px-6 py-8">
+      <span class="font-serif text-2xl font-bold text-[#29312C]">Thelarte</span>
+    </div>
+    <nav class="mt-2 flex-1 px-2 space-y-1">
+      <a href="/dashboard" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Dashboard</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Ventas</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Empleador</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Clientes</a>
+      <a href="/suplidor" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg bg-[#e8f7f2] text-[#29312C]">Suplidores</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Productos</a>
+    </nav>
+  </aside>
+  <main class="flex-1 ml-0 md:ml-64 p-6">
+    <div class="container mx-auto">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-3xl font-bold text-primary-300">Gestión de Suplidores</h1>
+          <p class="text-gray-600 mt-1">Administra la información de tus proveedores</p>
+        </div>
+        <div class="flex gap-3">
+          <a href="/dashboard" class="bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition-colors">← Volver al Dashboard</a>
+          <a href="form.html" class="bg-primary-300 text-white px-4 py-2 rounded-xl hover:bg-primary-400 transition-colors">+ Nuevo Suplidor</a>
+        </div>
       </div>
-      <div class="flex gap-3">
-        <a href="/dashboard" class="bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition-colors">
-          ← Volver al Dashboard
-        </a>
-        <a href="create.html" class="bg-primary-300 text-white px-4 py-2 rounded-xl hover:bg-primary-400 transition-colors">
-          + Nuevo Suplidor
-        </a>
+
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="min-w-full">
+          <thead class="bg-primary-200 text-white">
+            <tr>
+              <th class="px-6 py-4 text-left">ID</th>
+              <th class="px-6 py-4 text-left">Nombre</th>
+              <th class="px-6 py-4 text-left">Ciudad</th>
+              <th class="px-6 py-4 text-left">Email</th>
+              <th class="px-6 py-4 text-left">RNC</th>
+              <th class="px-6 py-4 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="supplierTable" class="divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+
+      <div id="emptyState" class="hidden text-center py-12">
+        <div class="text-gray-400 text-6xl mb-4">🏪</div>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">No hay suplidores registrados</h3>
+        <p class="text-gray-500 mb-6">Comienza agregando tu primer proveedor</p>
+        <a href="form.html" class="bg-primary-300 text-white px-6 py-3 rounded-xl hover:bg-primary-400 transition-colors inline-block">Agregar Primer Suplidor</a>
       </div>
     </div>
-    
-    <div class="bg-white rounded-xl shadow overflow-hidden">
-      <table class="min-w-full">
-        <thead class="bg-primary-200 text-white">
-          <tr>
-            <th class="px-6 py-4 text-left">ID</th>
-            <th class="px-6 py-4 text-left">Nombre</th>
-            <th class="px-6 py-4 text-left">Ciudad</th>
-            <th class="px-6 py-4 text-left">Email</th>
-            <th class="px-6 py-4 text-left">RNC</th>
-            <th class="px-6 py-4 text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="supplierTable" class="divide-y divide-gray-200"></tbody>
-      </table>
-    </div>
-    
-    <div id="emptyState" class="hidden text-center py-12">
-      <div class="text-gray-400 text-6xl mb-4">🏪</div>
-      <h3 class="text-xl font-semibold text-gray-700 mb-2">No hay suplidores registrados</h3>
-      <p class="text-gray-500 mb-6">Comienza agregando tu primer proveedor</p>
-      <a href="create.html" class="bg-primary-300 text-white px-6 py-3 rounded-xl hover:bg-primary-400 transition-colors inline-block">
-        Agregar Primer Suplidor
-      </a>
-    </div>
-  </div>
+  </main>
 </body>
 </html>

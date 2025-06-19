@@ -27,7 +27,7 @@ async function loadSuppliers() {
         <td class="px-6 py-4 text-sm text-gray-500">${s.rNC || 'N/A'}</td>
         <td class="px-6 py-4 text-sm text-center">
           <div class="flex justify-center space-x-2">
-            <a href="edit.html?id=${s.id}" 
+            <a href="form.html?id=${s.id}"
                class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">
               ✏️ Editar
             </a>
