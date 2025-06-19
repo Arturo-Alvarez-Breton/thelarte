@@ -8,9 +8,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
 @Configuration
-public class JwtConfig {
-
-    @Value("${jwt.secret:thisisasecretkeyforjwtauthenticationthelarteapp}")
+public class JwtConfig {    @Value("${jwt.secret:thisisasecretkeyforjwtauthenticationthelarteappthisneedstobe64chars}")
     private String jwtSecret;
 
     @Value("${jwt.expiration:86400000}")

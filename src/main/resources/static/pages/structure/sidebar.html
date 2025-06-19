@@ -1,0 +1,28 @@
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-[#f6fcfa] border-r border-gray-200 transform -translate-x-full transition-transform duration-200 flex flex-col h-full">
+    <div class="flex items-center px-6 py-8">
+        <span class="font-serif text-2xl font-bold text-[#29312C]">Thelarte</span>
+        <!-- Botón cerrar -->
+        <button id="closeSidebarBtn" class="ml-auto text-[#29312C]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    <nav class="mt-2 flex-1 px-2 space-y-1">
+        <a href="/pages/structure/home.html" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Dashboard</a>
+        <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Ventas</a>
+        <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Empleados</a>
+        <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Clientes</a>
+        <a href="/pages/suplidor/index.html" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Suplidores</a>
+        <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Productos</a>
+    </nav>
+</aside>
+<!-- Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden"></div>
+<!-- Botón hamburguesa SIEMPRE visible por defecto -->
+<button id="openSidebarBtn" class="fixed top-4 left-4 z-50 p-2 rounded bg-[#f6fcfa] border border-gray-200 shadow">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#29312C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+</button>

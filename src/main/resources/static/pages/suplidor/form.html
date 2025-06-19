@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title id="pageTitle">Suplidor - Thelarte</title>
+
+  <!-- Tailwind & configuración de marca -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandBrown: '#59391B',
+            brandGold: '#7B5222'
+          },
+          fontFamily: {
+            serifTitle: ['"Playfair Display"', 'serif'],
+            cursiveLogo: ['"Itim"', 'cursive']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600;700&family=Itim&display=swap" rel="stylesheet"/>
+  <script type="module" src="/js/suplidor/form.js" defer></script>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen flex">
+
+  <!-- Contenedor principal -->
+  <main class="flex-1 flex flex-col ml-0 md:ml-64 p-6">
+    <div class="container mx-auto max-w-2xl">
+      <div class="bg-white rounded-xl p-6 shadow-lg">
+
+        <!-- Encabezado -->
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h1 id="formTitle" class="text-2xl font-bold text-brandGold">Suplidor</h1>
+            <p id="formDesc" class="text-gray-600 mt-1"></p>
+          </div>
+          <a href="index.html"
+             class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition">
+            ← Volver a Lista
+          </a>
+        </div>
+
+        <!-- Formulario -->
+        <form id="supplierForm" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del Suplidor *
+              </label>
+              <input type="text" id="nombre" name="nombre" required
+                     placeholder="Nombre de la empresa"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+            </div>
+            <div>
+              <label for="ciudad" class="block text-sm font-medium text-gray-700 mb-1">
+                Ciudad *
+              </label>
+              <input type="text" id="ciudad" name="ciudad" required
+                     placeholder="Ciudad donde se ubica"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+            </div>
+          </div>
+
+          <div>
+            <label for="direccion" class="block text-sm font-medium text-gray-700 mb-1">
+              Dirección
+            </label>
+            <input type="text" id="direccion" name="direccion"
+                   placeholder="Dirección completa"
+                   class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input type="email" id="email" name="email"
+                     placeholder="correo@empresa.com"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+            </div>
+            <div>
+              <label for="telefonos" class="block text-sm font-medium text-gray-700 mb-1">
+                Teléfonos
+              </label>
+              <input type="text" id="telefonos" name="telefonos"
+                     placeholder="809-555-1234, 809-555-5678"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+              <p class="text-xs text-gray-500 mt-1">
+                Separa con comas
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="rnc" class="block text-sm font-medium text-gray-700 mb-1">
+                RNC
+              </label>
+              <input type="text" id="rnc" name="rnc"
+                     placeholder="123456789"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+            </div>
+            <div>
+              <label for="ncf" class="block text-sm font-medium text-gray-700 mb-1">
+                NCF
+              </label>
+              <input type="text" id="ncf" name="ncf"
+                     placeholder="A010000000001"
+                     class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brandGold focus:border-transparent transition"/>
+            </div>
+          </div>
+
+          <!-- Acciones -->
+          <div class="flex justify-end space-x-3 pt-6 border-t">
+            <a href="index.html"
+               class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition">
+              Cancelar
+            </a>
+            <button id="submitBtn" type="submit"
+                    class="bg-brandGold text-white px-6 py-2 rounded-lg hover:bg-brandBrown transition">
+              Guardar
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/structure/sidebarloader.js"></script>
+</body>
+</html>

@@ -1,4 +1,61 @@
-import { login } from '../services/authService.js';
+// Real login function to authenticate with backend
+const login = async ({ username, password }) => {
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    });
+
+    // Handle different response statuses
+    if (response.status === 401) {
+      throw new Error('Credenciales incorrectas. Por favor, verifica tu usuario y contraseña.');
+    }
+    
+    if (response.status === 403) {
+      throw new Error('Acceso denegado. Tu cuenta puede estar deshabilitada.');
+    }
+    
+    if (response.status === 429) {
+      throw new Error('Demasiados intentos de inicio de sesión. Por favor, espera unos minutos.');
+    }
+    
+    if (response.status >= 500) {
+      throw new Error('Error en el servidor. Por favor, intenta más tarde.');
+    }
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Error de comunicación con el servidor.');
+      }
+      throw new Error(errorData.message || errorData.error || 'Error al iniciar sesión');
+    }
+
+    const data = await response.json();
+    
+    // Validate response data
+    if (!data.token) {
+      throw new Error('Respuesta del servidor inválida. Por favor, intenta más tarde.');
+    }
+
+    return { 
+      token: data.token, 
+      email: data.email || data.username + '@thelarte.com' 
+    };
+
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
+    }
+    throw error;
+  }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('loginForm');
@@ -15,15 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const hideError = () => {
     errorMsg.classList.remove('show');
-  };
-  // Loading state for button
+  };  // Loading state for button
   const setLoadingState = (isLoading) => {
     if (isLoading) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+      submitBtn.innerHTML = '<span class="spinner"></span>Iniciando sesión...';
     } else {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Log in';
+      submitBtn.innerHTML = 'Iniciar sesión';
     }
   };
 
@@ -76,15 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Store auth data
       localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userEmail', data.email);
-        // Success feedback
-      submitBtn.innerHTML = '¡Access granted!';
-      submitBtn.style.background = '#10B981';
-      
-      // Redirect after a brief moment
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+      localStorage.setItem('userEmail', data.email);      // Success feedback
+      submitBtn.innerHTML = '¡Acceso concedido!';
+      submitBtn.style.background = '#10B981';      // Redirect after a brief moment
+        setTimeout(() => {
+          window.location.href = '/pages/structure/home.html';
+        }, 800);
 
     } catch (err) {
       console.error('Login error:', err);
@@ -124,12 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-focus username input
   usernameInput.focus();
-
   // Check if user is already logged in
   const token = localStorage.getItem('authToken');
   if (token) {
     console.log('User already has a token');
-    // Optionally redirect to dashboard
-    // window.location.href = '/dashboard';
+    // Redirigir al inicio automáticamente si hay un token
+    window.location.href = '/pages/structure/home.html';
   }
 });

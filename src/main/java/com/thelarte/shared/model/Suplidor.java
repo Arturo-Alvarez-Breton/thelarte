@@ -16,6 +16,10 @@ public class Suplidor {
     private String email;
     private String RNC;
     private String NCF;
+    
+    // Campos de geolocalización
+    private Double longitud;
+    private Double latitud;
 
     @ElementCollection
     private List<String> telefonos;
@@ -24,7 +28,7 @@ public class Suplidor {
     public Suplidor() {}
 
 
-    public Suplidor(String nombre, String ciudad, String direccion, String email, List<String> telefonos, String RNC, String NCF) {
+    public Suplidor(String nombre, String ciudad, String direccion, String email, List<String> telefonos, String RNC, String NCF, Double longitud, Double latitud) {
         this.nombre = nombre;
         this.ciudad = ciudad;
         this.direccion = direccion;
@@ -32,6 +36,8 @@ public class Suplidor {
         this.telefonos = telefonos;
         this.RNC = RNC;
         this.NCF = NCF;
+        this.longitud = longitud;
+        this.latitud = latitud;
     }
 
 
@@ -67,6 +73,14 @@ public class Suplidor {
         return NCF;
     }
 
+    public Double getLongitud() {
+        return longitud;
+    }
+
+    public Double getLatitud() {
+        return latitud;
+    }
+
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
@@ -94,5 +108,13 @@ public class Suplidor {
 
     public void setNCF(String NCF) {
         this.NCF = NCF;
+    }
+
+    public void setLongitud(Double longitud) {
+        this.longitud = longitud;
+    }
+
+    public void setLatitud(Double latitud) {
+        this.latitud = latitud;
     }
 }
