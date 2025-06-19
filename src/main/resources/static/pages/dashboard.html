@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Thelarte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/login.css">
+  <style>
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 1rem;
+    }
+    .dashboard-title {
+      color: #009963;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logout-btn {
+      background: #ef4444;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .module-card {
+      background: linear-gradient(135deg, #009963, #00b377);
+      color: white;
+      padding: 2rem;
+      border-radius: 16px;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .module-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      text-decoration: none;
+      color: white;
+    }
+    .module-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .module-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .module-description {
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+  </style>
+  <script type="module" src="/js/pages/dashboard.js" defer></script>
+</head>
+<body>
+  <div class="dashboard-container">    <div class="dashboard-header">
+      <h1 class="dashboard-title">Dashboard - Thelarte</h1>
+      <div class="user-info">
+        <div style="text-align: right;">
+          <span id="welcomeMessage">Bienvenido</span>
+          <div id="roleInfo" style="font-size: 0.9rem; opacity: 0.7;"></div>
+        </div>
+        <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <div class="module-grid">
+      <a href="/frontend/pages/suplidor/index.html" class="module-card">
+        <span class="module-icon">🏪</span>
+        <div class="module-title">Suplidores</div>
+        <div class="module-description">
+          Gestiona proveedores, registra nuevos suplidores y mantén actualizada la información de contacto.
+        </div>
+      </a>
+
+      <a href="#" class="module-card" onclick="alert('Módulo en desarrollo')">
+        <span class="module-icon">📦</span>
+        <div class="module-title">Inventario</div>
+        <div class="module-description">
+          Controla el stock de productos, realiza ajustes de inventario y genera reportes.
+        </div>
+      </a>
+
+      <a href="#" class="module-card" onclick="alert('Módulo en desarrollo')">
+        <span class="module-icon">💰</span>
+        <div class="module-title">Ventas</div>
+        <div class="module-description">
+          Procesa ventas, genera facturas y lleva el control de las transacciones.
+        </div>
+      </a>
+
+      <a href="#" class="module-card" onclick="alert('Módulo en desarrollo')">
+        <span class="module-icon">👥</span>
+        <div class="module-title">Clientes</div>
+        <div class="module-description">
+          Administra la base de datos de clientes y su historial de compras.
+        </div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

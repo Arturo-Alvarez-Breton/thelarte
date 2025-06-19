@@ -4,6 +4,7 @@ import com.thelarte.auth.dto.AuthResponse;
 import com.thelarte.auth.dto.LoginRequest;
 import com.thelarte.auth.dto.RegisterRequest;
 import com.thelarte.auth.entity.User;
+import com.thelarte.auth.security.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,16 +15,21 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UserService userService;
-    private final JwtService jwtService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
 
-    public AuthService(UserService userService, JwtService jwtService, AuthenticationManager authenticationManager) {
+    public AuthService(UserService userService, JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
         this.userService = userService;
-        this.jwtService = jwtService;
+        this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationManager = authenticationManager;
     }    public AuthResponse register(RegisterRequest request) {
         User user = userService.createUser(request.getUsername(), request.getPassword());
-        String token = jwtService.generateToken(user);
+        
+        // Create authentication object to generate token
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getUsername(), null, user.getAuthorities());
+        
+        String token = jwtTokenProvider.createToken(authentication);
         return new AuthResponse(token, user.getUsername());
     }
 
@@ -35,7 +41,8 @@ public class AuthService {
         if (authentication.isAuthenticated()) {
             User user = userService.findByUsername(request.getUsername())
                     .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-            String token = jwtService.generateToken(user);
+            
+            String token = jwtTokenProvider.createToken(authentication);
             return new AuthResponse(token, user.getUsername());
         } else {
             throw new UsernameNotFoundException("Credenciales inválidas");

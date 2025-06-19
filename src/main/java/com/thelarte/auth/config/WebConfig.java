@@ -14,10 +14,13 @@ public class WebConfig implements WebMvcConfigurer {
         // Serve frontend static files from classpath
         registry.addResourceHandler("/static/**")
                 .addResourceLocations("classpath:/static/");
-                
-        // Serve the external frontend files
+                  // Serve the external frontend files
         registry.addResourceHandler("/frontend/**")
                 .addResourceLocations("file:frontend/src/");
+        
+        // Serve the external frontend pages specifically  
+        registry.addResourceHandler("/frontend/pages/**")
+                .addResourceLocations("file:frontend/src/pages/");
                 
         registry.addResourceHandler("/css/**")
                 .addResourceLocations("classpath:/static/css/");
@@ -30,6 +33,10 @@ public class WebConfig implements WebMvcConfigurer {
                 
         // Handle login.html specifically
         registry.addResourceHandler("/login.html")
+                .addResourceLocations("classpath:/static/pages/");
+        
+        // Handle dashboard.html specifically
+        registry.addResourceHandler("/dashboard.html")
                 .addResourceLocations("classpath:/static/pages/");
     }
 

@@ -1,5 +1,43 @@
 const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
 
+// Utility function for making authenticated API calls
+export async function makeAuthenticatedRequest(url, options = {}) {
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
+    }
+  };
+
+  const finalOptions = { ...defaultOptions, ...options };
+  
+  try {
+    const response = await fetch(url, finalOptions);
+    
+    if (response.status === 401) {
+      // Token is invalid, clear storage and redirect to login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userEmail');
+      window.location.href = '/login.html';
+      throw new Error('Session expired. Please log in again.');
+    }
+    
+    return response;
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
+    }
+    throw error;
+  }
+}
+
 export async function login(credentials) {
   try {
     const response = await fetch(`${API_BASE_URL}/login`, {
