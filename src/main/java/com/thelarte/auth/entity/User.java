@@ -15,8 +15,10 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+      @Column(unique = true, nullable = false)
+    private String username;
     
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = true)
     private String email;
     
     @Column(nullable = false)
@@ -36,8 +38,8 @@ public class User implements UserDetails {
     // Constructors
     public User() {
     }
-    
-    public User(String email, String password, List<String> roles, boolean active) {
+      public User(String username, String email, String password, List<String> roles, boolean active) {
+        this.username = username;
         this.email = email;
         this.password = password;
         this.roles = roles;
@@ -47,10 +49,16 @@ public class User implements UserDetails {
     // Getters and Setters
     public Long getId() {
         return id;
+    }    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
@@ -91,13 +99,7 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(SimpleGrantedAuthority::new)
-                .toList();
-    }
-
-    @Override
-    public String getUsername() {
-        return email;
-    }
+                .toList();    }
 
     @Override
     public boolean isAccountNonExpired() {

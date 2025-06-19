@@ -20,31 +20,30 @@ public class UserService implements UserDetailsService {
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-    }
-
-    @Override
+    }    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + username));
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con username: " + username));
     }
 
-    public User createUser(String email, String password) {
-        if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+    public User createUser(String username, String password) {
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeException("El nombre de usuario ya está registrado");
         }
         
         User newUser = new User();
-        newUser.setEmail(email);
+        newUser.setUsername(username);
         newUser.setPassword(passwordEncoder.encode(password));
         newUser.setRoles(Collections.singletonList("ROLE_USER"));
         newUser.setActive(true);
         
         return userRepository.save(newUser);
-    }    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
     }
-    
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }    
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
     }
 }

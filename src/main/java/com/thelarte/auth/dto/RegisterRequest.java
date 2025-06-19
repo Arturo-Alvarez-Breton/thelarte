@@ -1,15 +1,24 @@
 package com.thelarte.auth.dto;
 
 public class RegisterRequest {
+    private String username;
     private String email;
     private String password;
 
     public RegisterRequest() {
     }
 
-    public RegisterRequest(String email, String password) {
-        this.email = email;
+    public RegisterRequest(String username, String password) {
+        this.username = username;
         this.password = password;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getEmail() {
@@ -26,14 +35,5 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    // Alias username for backward-compatible tests
-    public String getUsername() {
-        return email;
-    }
-
-    public void setUsername(String username) {
-        this.email = username;
     }
 }

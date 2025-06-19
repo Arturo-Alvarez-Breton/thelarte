@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thelarte - Sistema de Gestión de Mueblería</title>  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/login.css">
+  <script type="module" src="/js/pages/login.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Brand Section -->
+    <div class="brand-section">
+      <div class="brand-content">
+        <div class="brand-logo">Thelarte</div>
+        <div class="brand-subtitle">
+          Sistema de Gestión de Mueblería<br>
+          Gestiona tu inventario, ventas y clientes de manera eficiente
+        </div>
+        <div class="furniture-showcase">
+          <div class="furniture-placeholder">🛋️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login Section -->
+    <div class="login-section">
+      <div class="welcome-header">
+        <h2>Welcome back</h2>
+        <p>Ingresa tus credenciales para acceder al sistema</p>
+      </div>
+
+      <div id="errorMsg" class="error-msg">
+        <span></span>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input"
+            placeholder="Username"
+            required 
+            minlength="3" 
+            maxlength="50"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input"
+            placeholder="Password"
+            required 
+            minlength="3" 
+            maxlength="100"
+          >
+        </div>
+
+        <div class="form-options">
+          <div class="remember-me">
+            <input type="checkbox" id="remember" name="remember">
+            <label for="remember">Recordarme</label>
+          </div>
+          <button type="button" class="contact-admin" onclick="alert('Contacte al administrador del sistema para restablecer su contraseña')">Contactar administrador</button>
+        </div>
+
+        <button type="submit" class="login-btn" id="submitBtn">
+          Log in
+        </button>
+      </form>
+
+      <div class="footer">
+        <p>&copy; 2025 Thelarte. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
