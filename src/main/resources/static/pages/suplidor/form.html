@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">Suplidor - Thelarte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script type="module" src="/js/suplidor/form.js" defer></script>
+</head>
+<body class="font-inter bg-[#f6fcfa] min-h-screen flex">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-[#f6fcfa] border-r border-gray-200 transform -translate-x-full md:translate-x-0 md:static md:inset-auto md:relative md:flex flex-col">
+    <div class="flex items-center px-6 py-8">
+      <span class="font-serif text-2xl font-bold text-[#29312C]">Thelarte</span>
+    </div>
+    <nav class="mt-2 flex-1 px-2 space-y-1">
+      <a href="/dashboard" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Dashboard</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Ventas</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Empleador</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Clientes</a>
+      <a href="/suplidor" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg bg-[#e8f7f2] text-[#29312C]">Suplidores</a>
+      <a href="#" class="group flex items-center px-4 py-3 text-lg font-medium rounded-lg hover:bg-[#e8f7f2] text-[#29312C]">Productos</a>
+    </nav>
+  </aside>
+  <main class="flex-1 ml-0 md:ml-64 p-6">
+    <div class="container mx-auto max-w-2xl">
+      <div class="bg-white rounded-xl p-6 shadow">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h1 id="formTitle" class="text-2xl font-bold text-primary-300">Suplidor</h1>
+            <p id="formDesc" class="text-gray-600 mt-1"></p>
+          </div>
+          <a href="index.html" class="bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition-colors">← Volver a Lista</a>
+        </div>
+        <form id="supplierForm" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Suplidor *</label>
+              <input type="text" id="nombre" name="nombre" placeholder="Nombre de la empresa" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" required />
+            </div>
+            <div>
+              <label for="ciudad" class="block text-sm font-medium text-gray-700 mb-1">Ciudad *</label>
+              <input type="text" id="ciudad" name="ciudad" placeholder="Ciudad donde se ubica" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" required />
+            </div>
+          </div>
+          <div>
+            <label for="direccion" class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+            <input type="text" id="direccion" name="direccion" placeholder="Dirección completa" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" />
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="email" name="email" placeholder="correo@empresa.com" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" />
+            </div>
+            <div>
+              <label for="telefonos" class="block text-sm font-medium text-gray-700 mb-1">Teléfonos</label>
+              <input type="text" id="telefonos" name="telefonos" placeholder="809-555-1234, 809-555-5678" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" />
+              <p class="text-xs text-gray-500 mt-1">Separar múltiples teléfonos con comas</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="rnc" class="block text-sm font-medium text-gray-700 mb-1">RNC</label>
+              <input type="text" id="rnc" name="rnc" placeholder="123456789" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" />
+            </div>
+            <div>
+              <label for="ncf" class="block text-sm font-medium text-gray-700 mb-1">NCF</label>
+              <input type="text" id="ncf" name="ncf" placeholder="A010000000001" class="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary-300 focus:border-transparent" />
+            </div>
+          </div>
+          <div class="flex justify-end space-x-3 pt-6 border-t">
+            <a href="index.html" class="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-400 transition-colors">Cancelar</a>
+            <button id="submitBtn" type="submit" class="bg-primary-300 text-white px-6 py-3 rounded-xl hover:bg-primary-400 transition-colors">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
