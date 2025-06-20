@@ -23,6 +23,7 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<Cliente> crearCliente(@Valid @RequestBody Cliente cliente) {
+        // Se ignora cualquier valor de fechaRegistro en JSON; JPA lo asigna automáticamente
         Cliente creado = clienteService.crearCliente(cliente);
         URI ubicacion = URI.create("/api/clientes/" + creado.getCedula());
         return ResponseEntity.created(ubicacion).body(creado);
@@ -40,4 +41,16 @@ public class ClienteController {
         return ResponseEntity.ok(c);
     }
 
+    @PutMapping("/{cedula}")
+    public ResponseEntity<Cliente> actualizarCliente(@PathVariable String cedula,
+                                                     @Valid @RequestBody Cliente clienteActualizado) {
+        Cliente actualizado = clienteService.actualizarCliente(cedula, clienteActualizado);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @DeleteMapping("/{cedula}")
+    public ResponseEntity<Void> eliminarCliente(@PathVariable String cedula) {
+        clienteService.eliminarCliente(cedula);
+        return ResponseEntity.noContent().build();
+    }
 }

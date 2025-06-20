@@ -9,10 +9,6 @@ import com.thelarte.user.repository.ClienteRepository;
 
 import java.util.List;
 
-/**
- * Implementación de ClienteService. Maneja toda la lógica
- * de negocio CRUD para Cliente.
- */
 @Service
 public class ClienteServiceImpl implements ClienteService {
 
@@ -25,7 +21,8 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente crearCliente(Cliente cliente) {
-        // Podrías agregar validaciones adicionales (p.ej. que el email no esté duplicado)
+        // fechaRegistro se asigna automáticamente en @PrePersist
+        // Si quisieras, podrías validar duplicados antes de save (email, cedula ya PK)
         return clienteRepository.save(cliente);
     }
 
@@ -47,13 +44,13 @@ public class ClienteServiceImpl implements ClienteService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Cliente no encontrado con cédula: " + cedula));
 
-        // Actualizamos solo los campos permisibles (no cambiamos la cédula)
+        // Actualizar solo campos permisibles; NO modificar fechaRegistro
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
         existente.setEmail(datosActualizados.getEmail());
         existente.setDireccion(datosActualizados.getDireccion());
-        existente.setFechaRegistro(datosActualizados.getFechaRegistro());
+        // NO: existente.setFechaRegistro(datosActualizados.getFechaRegistro());
 
         return clienteRepository.save(existente);
     }

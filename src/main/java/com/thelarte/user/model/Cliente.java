@@ -17,7 +17,6 @@ public class Cliente extends Persona {
     private String direccion;
 
     @Column(nullable = false)
-    @NotNull(message = "La fecha de registro es obligatoria")
     private LocalDate fechaRegistro;
 
     // Constructores
@@ -30,7 +29,6 @@ public class Cliente extends Persona {
 
         super(cedula, nombre, apellido, telefono, email);
         this.direccion = direccion;
-        this.fechaRegistro = fechaRegistro;
     }
 
     // Getters y Setters
@@ -48,5 +46,12 @@ public class Cliente extends Persona {
 
     public void setFechaRegistro(LocalDate fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.fechaRegistro == null) {
+            this.fechaRegistro = LocalDate.now();
+        }
     }
 }
