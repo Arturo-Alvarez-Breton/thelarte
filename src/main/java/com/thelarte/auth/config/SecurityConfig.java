@@ -45,6 +45,9 @@ public class SecurityConfig {
                 .requestMatchers("/suplidor/**").permitAll()  // Make suplidor pages public
                 .requestMatchers("/api/dashboard/validate").hasAnyRole("VENDEDOR", "GERENTE", "TI", "CONTABILIDAD")  // All roles can access dashboard
                 .requestMatchers("/api/suplidores/**").permitAll()  // Make suplidor API public
+                .requestMatchers("/api/productos/**").permitAll()
+                .requestMatchers("/producto/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
                 .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

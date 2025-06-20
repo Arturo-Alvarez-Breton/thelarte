@@ -1,57 +1,115 @@
 package com.thelarte.inventory.controller;
 
-import com.thelarte.shared.model.Producto;
-import com.thelarte.inventory.service.ProductoService;
+import com.thelarte.inventory.dto.ProductoDTO;
+import com.thelarte.inventory.service.IProductoService;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/producto")
+@RequestMapping("/api/productos")
 public class ProductoController {
 
-    private final ProductoService productoService;
+    private static final Logger logger = LoggerFactory.getLogger(ProductoController.class);
+    private final IProductoService productoService;
 
-    public ProductoController(ProductoService productoService) {
+    @Autowired
+    public ProductoController(IProductoService productoService) {
         this.productoService = productoService;
     }
 
     @GetMapping
-    public List<Producto> listarProductos() {
-        return productoService.listarTodos();
+    public ResponseEntity<List<ProductoDTO>> listarProductos() {
+        List<ProductoDTO> productoDTOs = productoService.listarTodos();
+        return ResponseEntity.ok(productoDTOs);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Producto> obtenerProducto(@PathVariable String id) {
+    public ResponseEntity<ProductoDTO> obtenerProducto(@PathVariable long id) {
         return productoService.buscarPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
-    public Producto crearProducto(@RequestBody Producto producto) {
-        return productoService.guardar(producto);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Producto> actualizarProducto(@PathVariable String id, @RequestBody Producto nuevo) {
-        return productoService.buscarPorId(id)
-                .map(productoExistente -> {
-                    productoExistente.setNombre(nuevo.getNombre());
-                    productoExistente.setTipo(nuevo.getTipo());
-                    productoExistente.setDescripcion(nuevo.getDescripcion());
-                    productoExistente.setMarca(nuevo.getMarca());
-                    productoExistente.setItbis(nuevo.getItbis());
-                    productoExistente.setPrecio(nuevo.getPrecio());
-                    productoExistente.setActivo(nuevo.isActivo());
-                    return ResponseEntity.ok(productoService.guardar(productoExistente));
-                })
+    @GetMapping("/nombre/{nombre}")
+    public ResponseEntity<ProductoDTO> buscarPorNombre(@PathVariable String nombre) {
+        return productoService.buscarPorNombre(nombre)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/tipo/{tipo}")
+    public ResponseEntity<List<ProductoDTO>> listarPorTipo(@PathVariable String tipo) {
+        List<ProductoDTO> productos = productoService.listarPorTipo(tipo);
+        return ResponseEntity.ok(productos);
+    }
+
+    @PostMapping
+    public ResponseEntity<ProductoDTO> crearProducto(@RequestBody ProductoDTO productoDTO) {
+        // Procesar imagen si viene en base64
+        if (productoDTO.getFotoBase64() != null && !productoDTO.getFotoBase64().isBlank()) {
+            String url = guardarImagenBase64(productoDTO.getFotoBase64());
+            productoDTO.setFotoUrl(url);
+        }
+        productoDTO.setFotoBase64(null); // Limpia para no guardar base64 en la BD ni devolverlo
+        ProductoDTO saved = productoService.guardar(productoDTO);
+        return ResponseEntity.ok(saved);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductoDTO> actualizarProducto(@PathVariable Long id, @RequestBody ProductoDTO productoDTO) {
+        // Si hay fotoBase64, procesa y actualiza la imagen
+        if (productoDTO.getFotoBase64() != null && !productoDTO.getFotoBase64().isBlank()) {
+            String url = guardarImagenBase64(productoDTO.getFotoBase64());
+            productoDTO.setFotoUrl(url);
+        } else {
+            // Si NO hay fotoBase64, NO cambies el campo fotoUrl:
+            // Recupéralo del producto original
+            ProductoDTO original = productoService.buscarPorId(id).orElse(null);
+            if (original != null) {
+                productoDTO.setFotoUrl(original.getFotoUrl());
+            }
+        }
+        productoDTO.setId(id);
+        productoDTO.setFotoBase64(null);
+        ProductoDTO updated = productoService.guardar(productoDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    private String guardarImagenBase64(String base64Data) {
+        try {
+            // Validación robusta para evitar errores de índice
+            if (base64Data == null || base64Data.isEmpty() || !base64Data.contains(",")) {
+                // Si no hay coma, el formato es inválido o no hay imagen nueva
+                return null;
+            }
+            String[] parts = base64Data.split(",");
+            if (parts.length < 2) {
+                throw new RuntimeException("Formato de imagen Base64 inválido");
+            }
+            String metadata = parts[0]; // data:image/png;base64
+            String extension = "png";
+            if (metadata.contains("jpeg")) extension = "jpg";
+            else if (metadata.contains("gif")) extension = "gif";
+            byte[] data = java.util.Base64.getDecoder().decode(parts[1]);
+            String fileName = System.currentTimeMillis() + "." + extension;
+            java.nio.file.Path dir = java.nio.file.Paths.get("uploads/imagenes");
+            java.nio.file.Files.createDirectories(dir);
+            java.nio.file.Path path = dir.resolve(fileName);
+            java.nio.file.Files.write(path, data);
+            return "/uploads/imagenes/" + fileName;
+        } catch (Exception e) {
+            throw new RuntimeException("Error guardando imagen", e);
+        }
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarProducto(@PathVariable String id) {
+    public ResponseEntity<Void> eliminarProducto(@PathVariable long id) {
         if (productoService.buscarPorId(id).isPresent()) {
             productoService.eliminar(id);
             return ResponseEntity.ok().build();

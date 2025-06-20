@@ -1,6 +1,6 @@
 package com.thelarte.sales.repository;
 
-import com.thelarte.shared.model.Venta;
+import com.thelarte.sales.model.Venta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,4 +1,4 @@
-package com.thelarte.shared.model;
+package com.thelarte.sales.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

@@ -1,6 +1,8 @@
-package com.thelarte.shared.model;
+package com.thelarte.inventory.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -9,29 +11,32 @@ import java.util.UUID;
 public class Producto {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String nombre;
     private String tipo;
     private String descripcion;
     private String marca;
     private float itbis;
     private BigDecimal precio;
-    private boolean activo;
+    private String fotoURL;
 
     public Producto() {
     }
 
-    public Producto(String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precio) {
-        this.id = UUID.randomUUID().toString();
+    public Producto(String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precio, String fotoURL) {
+        this.id = id;
         this.nombre = nombre;
         this.tipo = tipo;
         this.descripcion = descripcion;
         this.marca = marca;
         this.itbis = itbis;
         this.precio = precio;
+        this.fotoURL = fotoURL;
     }
 
-    public String getId() {
+    public long getId() {
         return id;
     }
 
@@ -82,12 +87,12 @@ public class Producto {
     public void setPrecio(BigDecimal precio) {
         this.precio = precio;
     }
-    
-    public boolean isActivo() {
-        return activo;
+    public String getFotoURL() {
+        return fotoURL;
+    }
+    public void setFotoURL(String fotoURL) {
+        this.fotoURL = fotoURL;
     }
     
-    public void setActivo(boolean activo) {
-        this.activo = activo;
-    }
+
 }
