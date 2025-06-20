@@ -1,7 +1,7 @@
 package com.thelarte.user.service.impl;
 
 import com.thelarte.user.service.EmpleadoService;
-import com.thelarte.user.util.ResourceNotFoundException;
+import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.thelarte.user.model.Empleado;
@@ -33,7 +33,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     public Empleado obtenerEmpleadoPorCedula(String cedula) {
         return empleadoRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Empleado no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Empleado no encontrado con cédula: " + cedula));
     }
 
     @Override
@@ -45,12 +45,13 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     public Empleado actualizarEmpleado(String cedula, Empleado datosActualizados) {
         Empleado existente = empleadoRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Empleado no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Empleado no encontrado con cédula: " + cedula));
 
         // Actualizamos solo los campos permitidos (no cambiamos la cedula)
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
+        existente.setEmail(datosActualizados.getEmail());
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
         existente.setFechaContratacion(datosActualizados.getFechaContratacion());
@@ -62,7 +63,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     public void eliminarEmpleado(String cedula) {
         Empleado existente = empleadoRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Empleado no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Empleado no encontrado con cédula: " + cedula));
         empleadoRepository.delete(existente);
     }
 }

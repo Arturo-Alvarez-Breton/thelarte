@@ -38,4 +38,8 @@ public abstract class Persona {
     @Column(nullable = false)
     @NotBlank(message = "El teléfono es obligatorio")
     private String telefono;
+
+    @Column(nullable = false, unique = true)
+    @NotBlank(message = "El email es obligatorio")
+    private String email;
 }
