@@ -1,5 +1,7 @@
 package com.thelarte.shared.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public class SuplidorDTO {
@@ -8,7 +10,10 @@ public class SuplidorDTO {
     private String ciudad;
     private String direccion;
     private String email;
+    @JsonProperty("rNC")
     private String RNC;
+
+    @JsonProperty("nCF")
     private String NCF;
     private List<String> telefonos;
     private Double longitud;
