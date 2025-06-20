@@ -1,85 +1,138 @@
-// Datos estáticos de ejemplo; reemplazar cuando haya fetch real
-const empleadosData = [
-    // { id: 1, nombre: "Ana", apellido: "López", cedula: "001-0000001-0", telefono: "809-123-4567", rol: "EMPLEADO", salario: 35000 },
-    // { id: 2, nombre: "Pedro", apellido: "Martínez", cedula: "002-0000002-0", telefono: "829-987-6543", rol: "GERENTE", salario: 55000 },
-];
+// /js/empleado/index.js
+const tableBody = document.getElementById('empleadosTable');
+const emptyState = document.getElementById('emptyState');
 
-function renderEmpleados(data) {
-    const tbody = document.getElementById('empleadosBody');
-    const emptyMsg = document.getElementById('emptyMessage');
-    tbody.innerHTML = '';
-    if (!data || data.length === 0) {
-        emptyMsg.classList.remove('hidden');
-        return;
-    }
-    emptyMsg.classList.add('hidden');
-    data.forEach(emp => {
-        const tr = document.createElement('tr');
-        tr.classList.add('border-b');
-        tr.innerHTML = `
-          <td class="px-4 py-2">${emp.id}</td>
-          <td class="px-4 py-2">${emp.nombre}</td>
-          <td class="px-4 py-2">${emp.apellido}</td>
-          <td class="px-4 py-2">${emp.cedula}</td>
-          <td class="px-4 py-2">${emp.telefono || '-'}</td>
-          <td class="px-4 py-2">${emp.rol}</td>
-          <td class="px-4 py-2">${emp.salario != null ? emp.salario : '-'}</td>
-          <td class="px-4 py-2 space-x-2">
-            <button data-id="${emp.id}" class="editar-btn text-blue-500 hover:underline">Editar</button>
-            <button data-id="${emp.id}" class="eliminar-btn text-red-500 hover:underline">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    document.querySelectorAll('.editar-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            editEmpleado(id);
+async function verifyToken(token) {
+    try {
+        const resp = await fetch('/api/dashboard/validate', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-    });
-    document.querySelectorAll('.eliminar-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            deleteEmpleado(id);
-        });
-    });
-}
-
-function editEmpleado(id) {
-    console.log("Editar empleado ID:", id);
-    // Aquí redirigir o abrir modal de edición
-    // ej: window.location.href = `/empleados/edit.html?id=${id}`;
-}
-
-function deleteEmpleado(id) {
-    if (confirm("¿Seguro que deseas eliminar el empleado ID " + id + "?")) {
-        console.log("Eliminar empleado ID:", id);
-        // Ejemplo:
-        // fetch(`/api/empleados/${id}`, { method: 'DELETE' }).then(...)
+        if (!resp.ok) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            window.location.href = '/pages/login.html';
+            return false;
+        }
+        const data = await resp.json();
+        return data.authorized;
+    } catch (err) {
+        console.error('Error validating token:', err);
+        return false;
     }
 }
 
 async function loadEmpleados() {
-    // Si hay endpoint real, descomentar y ajustar:
-    // try {
-    //   const resp = await fetch('/api/empleados');
-    //   if (resp.ok) {
-    //     const data = await resp.json();
-    //     renderEmpleados(data);
-    //   } else {
-    //     console.error('Error al obtener empleados');
-    //     renderEmpleados([]);
-    //   }
-    // } catch (err) {
-    //   console.error('Error de red al cargar empleados', err);
-    //   renderEmpleados([]);
-    // }
-    renderEmpleados(empleadosData);
+    try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = '/pages/login.html';
+            return;
+        }
+        await verifyToken(token);
+
+        const resp = await fetch('/api/empleados', {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            tableBody.parentElement.style.display = 'none';
+            emptyState.classList.remove('hidden');
+            return;
+        }
+        tableBody.parentElement.style.display = 'table';
+        emptyState.classList.add('hidden');
+        tableBody.innerHTML = data.map(emp => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">${emp.cedula}</td>
+        <td class="px-6 py-4 text-sm text-gray-900">${emp.nombre}</td>
+        <td class="px-6 py-4 text-sm text-gray-500">${emp.apellido}</td>
+        <td class="px-6 py-4 text-sm text-gray-500">${emp.telefono || 'N/A'}</td>
+        <td class="px-6 py-4 text-sm text-gray-500">${emp.rol || 'N/A'}</td>
+        <td class="px-6 py-4 text-sm text-gray-500">${emp.salario != null ? emp.salario : 'N/A'}</td>
+        <td class="px-6 py-4 text-sm text-gray-500">${emp.fechaContratacion || 'N/A'}</td>
+        <td class="px-6 py-4 text-sm text-center">
+          <div class="flex justify-center space-x-2">
+            <a href="form.html?cedula=${encodeURIComponent(emp.cedula)}"
+               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">
+              ✏️ Editar
+            </a>
+            <button data-cedula="${emp.cedula}"
+                    class="delete-btn text-red-600 hover:text-red-800 px-3 py-1 rounded-md hover:bg-red-50 transition-colors">
+              🗑️ Eliminar
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    } catch (error) {
+        console.error('Error loading empleados:', error);
+        alert('Error al cargar los empleados. Por favor, intenta de nuevo.');
+    }
 }
 
-document.getElementById('btnNuevoEmpleado').addEventListener('click', () => {
-    console.log("Nuevo empleado");
-    // Ejemplo de redirección: window.location.href = '/empleados/nuevo.html';
-});
+async function deleteEmpleado(cedula) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar el empleado con cédula ${cedula}?`)) return;
+    try {
+        const token = localStorage.getItem('authToken');
+        const resp = await fetch(`/api/empleados/${encodeURIComponent(cedula)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (resp.status === 404) {
+            alert('Empleado no encontrado.');
+            loadEmpleados();
+            return;
+        }
+        if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+        alert('Empleado eliminado exitosamente.');
+        loadEmpleados();
+    } catch (error) {
+        console.error('Error deleting empleado:', error);
+        alert('Error al eliminar el empleado. Por favor, intenta de nuevo.');
+    }
+}
 
-document.addEventListener('DOMContentLoaded', loadEmpleados);
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        window.location.href = '/pages/login.html';
+        return;
+    }
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const userEmail = localStorage.getItem('userEmail') || 'Usuario';
+    if (welcomeMessage) welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
+    const roleInfo = document.getElementById('roleInfo');
+    if (roleInfo) roleInfo.textContent = 'Usuario';
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userEmail');
+                window.location.href = '/pages/login.html';
+            }
+        });
+    }
+
+    tableBody.addEventListener('click', e => {
+        if (e.target.classList.contains('delete-btn')) {
+            const ced = e.target.dataset.cedula;
+            deleteEmpleado(ced);
+        }
+    });
+
+    loadEmpleados();
+
+    const btnNuevo = document.getElementById('btnNuevoEmpleado');
+    if (btnNuevo) {
+        btnNuevo.addEventListener('click', () => {
+            window.location.href = 'form.html';
+        });
+    }
+});

@@ -18,28 +18,23 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public abstract class Persona {
 
-    /**
-     * Usamos la cédula como clave primaria.
-     * Se asume que cada persona (empleado o cliente) tiene cédula única.
-     */
     @Id
     @Column(name = "cedula", nullable = false, unique = true, length = 20)
     @NotBlank(message = "La cédula es obligatoria")
     private String cedula;
 
-    @Column(nullable = false)
+    @Column(name = "nombre", nullable = false)
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
 
-    @Column(nullable = false)
+    @Column(name = "apellido", nullable = false)
     @NotBlank(message = "El apellido es obligatorio")
     private String apellido;
 
-    @Column(nullable = false)
+    @Column(name = "telefono", nullable = false)
     @NotBlank(message = "El teléfono es obligatorio")
     private String telefono;
 
-    @Column(nullable = false, unique = true)
-    @NotBlank(message = "El email es obligatorio")
+    @Column(name = "email", nullable = true, unique = true)
     private String email;
 }

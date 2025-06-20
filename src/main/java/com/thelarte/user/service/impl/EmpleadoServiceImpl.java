@@ -9,10 +9,6 @@ import com.thelarte.user.repository.EmpleadoRepository;
 
 import java.util.List;
 
-/**
- * Implementación de EmpleadoService. Maneja toda la lógica
- * de negocio CRUD para Empleado.
- */
 @Service
 public class EmpleadoServiceImpl implements EmpleadoService {
 
@@ -25,7 +21,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
 
     @Override
     public Empleado crearEmpleado(Empleado empleado) {
-        // Aquí podrías verificar duplicados (p.ej. mismo email) antes de save()
+        // Validaciones adicionales si se desean (e.g. duplicados)
         return empleadoRepository.save(empleado);
     }
 
@@ -47,15 +43,13 @@ public class EmpleadoServiceImpl implements EmpleadoService {
                 .orElseThrow(() ->
                         new EntityNotFoundException("Empleado no encontrado con cédula: " + cedula));
 
-        // Actualizamos solo los campos permitidos (no cambiamos la cedula)
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
-        existente.setEmail(datosActualizados.getEmail());
+        // No seteamos email
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
-        existente.setFechaContratacion(datosActualizados.getFechaContratacion());
-
+        // No modificamos fechaContratacion: se mantiene la original establecida en creación
         return empleadoRepository.save(existente);
     }
 

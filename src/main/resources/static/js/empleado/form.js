@@ -1,6 +1,8 @@
-// --- Formateo de cédula y teléfono ---
+// /js/empleado/form.js
+
+// Formateo de cédula y teléfono
 function formatCedula(e) {
-    let input = e.target;
+    const input = e.target;
     let digits = input.value.replace(/\D/g, '').slice(0, 11);
     let part1 = digits.slice(0, 3);
     let part2 = digits.slice(3, 10);
@@ -11,7 +13,7 @@ function formatCedula(e) {
     input.value = formatted;
 }
 function formatTelefono(e) {
-    let input = e.target;
+    const input = e.target;
     let digits = input.value.replace(/\D/g, '').slice(0, 10);
     let part1 = digits.slice(0, 3);
     let part2 = digits.slice(3, 6);
@@ -21,216 +23,249 @@ function formatTelefono(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
-document.getElementById('cedula').addEventListener('input', formatCedula);
-document.getElementById('telefono').addEventListener('input', formatTelefono);
 
-// --- Mostrar/limpiar errores ---
+// Mostrar/limpiar errores
 function showError(fieldId, message) {
-    const errorEl = document.getElementById(fieldId + 'Error');
-    errorEl.textContent = message;
-    errorEl.classList.remove('hidden');
+    const el = document.getElementById(fieldId + 'Error');
+    if (el) {
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
 }
 function clearError(fieldId) {
-    const errorEl = document.getElementById(fieldId + 'Error');
-    errorEl.textContent = '';
-    errorEl.classList.add('hidden');
+    const el = document.getElementById(fieldId + 'Error');
+    if (el) {
+        el.textContent = '';
+        el.classList.add('hidden');
+    }
 }
 
-// --- Validar cédula contra API ---
-async function validateCedulaAPI(cedulaFormatted) {
-    const digits = cedulaFormatted.replace(/\D/g, '');
-    if (digits.length !== 11) {
-        return { valid: false, message: 'La cédula debe tener 11 dígitos' };
+// Validación local
+function validateForm(data) {
+    let valid = true;
+    ['cedula','nombre','apellido','telefono','rol','salario'].forEach(f => clearError(f));
+
+    if (!data.cedula) {
+        showError('cedula','La cédula es obligatoria'); valid = false;
+    } else {
+        const digits = data.cedula.replace(/\D/g,'');
+        if (digits.length !== 11) {
+            showError('cedula','Formato de cédula inválido'); valid = false;
+        }
     }
-    const url = `https://api.digital.gob.do/v3/cedulas/${digits}/validate`;
+    if (!data.nombre) {
+        showError('nombre','El nombre es obligatorio'); valid = false;
+    }
+    if (!data.apellido) {
+        showError('apellido','El apellido es obligatorio'); valid = false;
+    }
+    if (!data.telefono) {
+        showError('telefono','El teléfono es obligatorio'); valid = false;
+    } else {
+        const telDigits = data.telefono.replace(/\D/g,'');
+        if (telDigits.length !== 10) {
+            showError('telefono','Formato de teléfono inválido'); valid = false;
+        }
+    }
+    if (!data.rol) {
+        showError('rol','El rol es obligatorio'); valid = false;
+    }
+    if (data.salario == null) {
+        showError('salario','El salario es obligatorio'); valid = false;
+    } else if (isNaN(data.salario) || data.salario < 0) {
+        showError('salario','El salario debe ser ≥ 0'); valid = false;
+    }
+    return valid;
+}
+
+async function verifyToken(token) {
     try {
-        const resp = await fetch(url, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
+        const resp = await fetch('/api/dashboard/validate', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!resp.ok) {
-            // Puede devolver 4xx/5xx si inválida o error; considerar inválida
-            return { valid: false, message: 'Error validando cédula' };
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            window.location.href = '/pages/login.html';
+            return false;
         }
         const data = await resp.json();
-        // Se asume esquema { valid: true/false, message?: string }
-        if (data.valid === true) {
-            return { valid: true };
-        } else {
-            const msg = data.message || 'Cédula no válida según la JCE';
-            return { valid: false, message: msg };
-        }
+        return data.authorized;
     } catch (err) {
-        console.error('Error al llamar API de validación de cédula:', err);
-        return { valid: false, message: 'No se pudo validar cédula (error de red)' };
+        console.error('Error validating token:', err);
+        return false;
     }
 }
 
-// Evento blur en cédula para feedback inmediato
-document.getElementById('cedula').addEventListener('blur', async function() {
-    const cedulaInput = this.value.trim();
-    clearError('cedula');
-    if (cedulaInput) {
-        const errorEl = document.getElementById('cedulaError');
-        errorEl.textContent = 'Validando cédula...';
-        errorEl.classList.remove('hidden');
-        const result = await validateCedulaAPI(cedulaInput);
-        if (result.valid) {
-            // Limpia mensaje si es válido
-            errorEl.textContent = '';
-            errorEl.classList.add('hidden');
-        } else {
-            showError('cedula', result.message);
-        }
-    }
-});
+const form = document.getElementById('empleadoForm');
+const titleEl = document.getElementById('formTitle');
+const descEl = document.getElementById('formDesc');
+const submitBtn = document.getElementById('submitBtn');
+const params = new URLSearchParams(window.location.search);
+const cedulaParam = params.get('cedula');
 
-// --- Carga dinámica de provincias y municipios ---
-async function cargarProvincias() {
-    const provinciaSelect = document.getElementById('provincia');
-    provinciaSelect.innerHTML = '<option value="">Cargando provincias...</option>';
-    provinciaSelect.disabled = true;
-    try {
-        const resp = await fetch("https://api.digital.gob.do/v1/territories/provinces");
-        if (!resp.ok) throw resp;
-        const json = await resp.json();
-        provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
-        // Suponiendo json.data es array de { name, regionCode }
-        json.data.forEach(prov => {
-            const opt = document.createElement('option');
-            opt.value = prov.regionCode;
-            opt.textContent = prov.name;
-            provinciaSelect.appendChild(opt);
-        });
-        provinciaSelect.disabled = false;
-    } catch (err) {
-        provinciaSelect.innerHTML = '<option value="">Error al cargar provincias</option>';
-        console.error("Error cargando provincias:", err);
-    }
-}
-
-async function cargarMunicipios(regionCode) {
-    const municipioSelect = document.getElementById('municipio');
-    municipioSelect.innerHTML = '<option value="">Cargando municipios...</option>';
-    municipioSelect.disabled = true;
-    try {
-        let url = `https://api.digital.gob.do/v1/territories/municipalities`;
-        let resp = await fetch(url);
-
-        if (!resp.ok) throw resp;
-        const json = await resp.json();
-        municipioSelect.innerHTML = '<option value="">Seleccione un municipio</option>';
-        // Suponiendo json.data es array de { name, municipalityCode }
-        json.data.forEach(mun => {
-            const opt = document.createElement('option');
-            opt.value = mun.municipalityCode || mun.code || mun.id || mun.name;
-            opt.textContent = mun.name;
-            municipioSelect.appendChild(opt);
-        });
-        municipioSelect.disabled = false;
-    } catch (err) {
-        municipioSelect.innerHTML = '<option value="">Error al cargar municipios</option>';
-        console.error("Error cargando municipios:", err);
-    }
-}
-
-document.getElementById('provincia').addEventListener('change', function() {
-    clearError('provincia');
-    clearError('municipio');
-    const regionCode = this.value;
-    const municipioSelect = document.getElementById('municipio');
-    if (regionCode) {
-        cargarMunicipios(regionCode);
+function setMode() {
+    if (cedulaParam) {
+        document.title = 'Editar Empleado - Thelarte';
+        titleEl.textContent = 'Editar Empleado';
+        descEl.textContent = 'Actualiza la información del empleado';
+        submitBtn.textContent = 'Actualizar Empleado';
+        document.getElementById('cedula').setAttribute('disabled','disabled');
+        loadEmpleado();
     } else {
-        municipioSelect.innerHTML = '<option value="">Seleccione primero provincia</option>';
-        municipioSelect.disabled = true;
+        document.title = 'Nuevo Empleado - Thelarte';
+        titleEl.textContent = 'Nuevo Empleado';
+        descEl.textContent = 'Registra un nuevo empleado en el sistema';
+        submitBtn.textContent = 'Guardar Empleado';
     }
-});
+}
 
-// --- Validación y envío del formulario ---
-document.getElementById('registroForm').addEventListener('submit', async function(event) {
-    event.preventDefault();
-    // Limpiar errores previos
-    ['cedula','nombre','apellido','telefono','correo','provincia','municipio','direccionDetallada']
-        .forEach(f => clearError(f));
-    const formMessage = document.getElementById('formMessage');
-    formMessage.textContent = '';
-    formMessage.className = '';
+async function loadEmpleado() {
+    try {
+        const token = localStorage.getItem('authToken');
+        const resp = await fetch(`/api/empleados/${encodeURIComponent(cedulaParam)}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (resp.status === 404) {
+            alert('Empleado no encontrado');
+            window.location.href = 'index.html';
+            return;
+        }
+        if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+        const e = await resp.json();
+        document.getElementById('cedula').value = e.cedula || '';
+        document.getElementById('nombre').value = e.nombre || '';
+        document.getElementById('apellido').value = e.apellido || '';
+        document.getElementById('telefono').value = e.telefono || '';
+        if (e.rol) document.getElementById('rol').value = e.rol;
+        if (e.salario != null) document.getElementById('salario').value = e.salario;
+    } catch (err) {
+        console.error('Error loading empleado:', err);
+        alert('Error al cargar datos del empleado');
+        window.location.href = 'index.html';
+    }
+}
 
-    // Obtener valores
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = cedulaParam ? 'Actualizando...' : 'Guardando...';
+
     const cedula = document.getElementById('cedula').value.trim();
     const nombre = document.getElementById('nombre').value.trim();
     const apellido = document.getElementById('apellido').value.trim();
     const telefono = document.getElementById('telefono').value.trim();
-    const correo = document.getElementById('correo').value.trim();
-    const provincia = document.getElementById('provincia').value;
-    const municipio = document.getElementById('municipio').value;
-    const direccionDetallada = document.getElementById('direccionDetallada').value.trim();
+    const rol = document.getElementById('rol').value;
+    const salarioVal = document.getElementById('salario').value;
+    const salario = salarioVal !== '' ? parseFloat(salarioVal) : null;
 
-    let valid = true;
-    // Validaciones básicas
-    const cedulaPattern = /^\d{3}-\d{7}-\d{1}$/;
-    if (!cedula || !cedulaPattern.test(cedula)) {
-        showError('cedula', 'La cédula debe tener el formato XXX-XXXXXXX-X');
-        valid = false;
-    }
-    const nombrePattern = /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$/;
-    if (!nombre || !nombrePattern.test(nombre)) {
-        showError('nombre', 'El nombre solo puede contener letras y espacios');
-        valid = false;
-    }
-    if (!apellido || !nombrePattern.test(apellido)) {
-        showError('apellido', 'El apellido solo puede contener letras y espacios');
-        valid = false;
-    }
-    const telefonoPattern = /^\d{3}-\d{3}-\d{4}$/;
-    if (!telefono || !telefonoPattern.test(telefono)) {
-        showError('telefono', 'El teléfono debe tener el formato XXX-XXX-XXXX');
-        valid = false;
-    }
-    const correoPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!correo || !correoPattern.test(correo)) {
-        showError('correo', 'Debe ingresar un correo electrónico válido');
-        valid = false;
-    }
-    if (!provincia) {
-        showError('provincia', 'Debe seleccionar una provincia');
-        valid = false;
-    }
-    if (!municipio) {
-        showError('municipio', 'Debe seleccionar un municipio');
-        valid = false;
-    }
-    if (!direccionDetallada) {
-        showError('direccionDetallada', 'La dirección detallada es obligatoria');
-        valid = false;
-    }
-    if (!valid) {
+    const data = { cedula, nombre, apellido, telefono, rol, salario };
+
+    if (!validateForm(data)) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         return;
     }
 
-    // Validación de cédula contra API
-    const cedulaResult = await validateCedulaAPI(cedula);
-    if (!cedulaResult.valid) {
-        showError('cedula', cedulaResult.message);
-        return;
+    const token = localStorage.getItem('authToken');
+    const url = cedulaParam
+        ? `/api/empleados/${encodeURIComponent(cedulaParam)}`
+        : '/api/empleados';
+    const method = cedulaParam ? 'PUT' : 'POST';
+
+    let bodyPayload;
+    if (cedulaParam) {
+        bodyPayload = {
+            nombre,
+            apellido,
+            telefono,
+            rol,
+            salario
+        };
+    } else {
+        bodyPayload = {
+            cedula,
+            nombre,
+            apellido,
+            telefono,
+            rol,
+            salario
+        };
     }
 
-    const datos = {
-        cedula, nombre, apellido, telefono, correo,
-        provinciaCode: provincia,
-        municipioCode: municipio,
-        direccionDetallada
-    };
-    console.log("Datos a enviar:", datos);
-    formMessage.textContent = 'Registro exitoso.';
-    formMessage.className = 'text-green-600';
-
-    this.reset();
-    // Resetear selects de provincia/municipio
-    document.getElementById('municipio').innerHTML = '<option value="">Seleccione primero provincia</option>';
-    document.getElementById('municipio').disabled = true;
+    try {
+        const resp = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(bodyPayload)
+        });
+        if (resp.status === 400) {
+            const errors = await resp.json();
+            Object.entries(errors).forEach(([field, msg]) => {
+                showError(field, msg);
+            });
+            throw new Error('Validation error');
+        }
+        if (resp.status === 403) {
+            alert('No autorizado para esta acción');
+            throw new Error('Forbidden');
+        }
+        if (resp.status === 404) {
+            alert('Empleado no encontrado');
+            window.location.href = 'index.html';
+            return;
+        }
+        if (!resp.ok) {
+            throw new Error(`HTTP error! status: ${resp.status}`);
+        }
+        alert(cedulaParam ? 'Empleado actualizado exitosamente!' : 'Empleado creado exitosamente!');
+        window.location.href = 'index.html';
+    } catch (err) {
+        if (err.message !== 'Validation error') {
+            console.error('Error saving empleado:', err);
+            alert(cedulaParam ? 'Error al actualizar el empleado.' : 'Error al crear el empleado.');
+        }
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
 });
 
-// Iniciar carga de provincias al cargar DOM
-document.addEventListener('DOMContentLoaded', cargarProvincias);
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        window.location.href = '/pages/login.html';
+        return;
+    }
+    verifyToken(token);
+
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const userEmail = localStorage.getItem('userEmail') || 'Usuario';
+    if (welcomeMessage) welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
+    const roleInfo = document.getElementById('roleInfo');
+    if (roleInfo) roleInfo.textContent = 'Usuario';
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('¿Cerrar sesión?')) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userEmail');
+                window.location.href = '/pages/login.html';
+            }
+        });
+    }
+
+    const cedEl = document.getElementById('cedula');
+    const telEl = document.getElementById('telefono');
+    if (cedEl) cedEl.addEventListener('input', formatCedula);
+    if (telEl) telEl.addEventListener('input', formatTelefono);
+
+    setMode();
+});
