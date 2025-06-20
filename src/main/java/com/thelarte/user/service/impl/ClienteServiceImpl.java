@@ -1,7 +1,7 @@
 package com.thelarte.user.service.impl;
 
 import com.thelarte.user.service.ClienteService;
-import com.thelarte.user.util.ResourceNotFoundException;
+import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.thelarte.user.model.Cliente;
@@ -21,8 +21,7 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente crearCliente(Cliente cliente) {
-        // fechaRegistro se asigna automáticamente en @PrePersist
-        // Si quisieras, podrías validar duplicados antes de save (email, cedula ya PK)
+        // Aquí podrías validar duplicados (cedula única, email, etc.)
         return clienteRepository.save(cliente);
     }
 
@@ -30,7 +29,7 @@ public class ClienteServiceImpl implements ClienteService {
     public Cliente obtenerClientePorCedula(String cedula) {
         return clienteRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Cliente no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
     }
 
     @Override
@@ -42,16 +41,15 @@ public class ClienteServiceImpl implements ClienteService {
     public Cliente actualizarCliente(String cedula, Cliente datosActualizados) {
         Cliente existente = clienteRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Cliente no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
 
-        // Actualizar solo campos permisibles; NO modificar fechaRegistro
+        // Actualizar solo campos permisibles:
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
         existente.setEmail(datosActualizados.getEmail());
         existente.setDireccion(datosActualizados.getDireccion());
-        // NO: existente.setFechaRegistro(datosActualizados.getFechaRegistro());
-
+        // NO modificar fechaRegistro
         return clienteRepository.save(existente);
     }
 
@@ -59,7 +57,7 @@ public class ClienteServiceImpl implements ClienteService {
     public void eliminarCliente(String cedula) {
         Cliente existente = clienteRepository.findById(cedula)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Cliente no encontrado con cédula: " + cedula));
+                        new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
         clienteRepository.delete(existente);
     }
 }

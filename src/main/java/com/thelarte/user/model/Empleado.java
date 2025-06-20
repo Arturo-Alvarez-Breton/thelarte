@@ -14,30 +14,16 @@ import com.thelarte.user.util.Rol;
 @Entity
 @DiscriminatorValue("EMPLEADO")
 public class Empleado extends Persona {
-
-    /*
-     * El rol del empleado (ADMIN, VENDEDOR, GERENTE, etc.).
-     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @NotNull(message = "El rol es obligatorio")
     private Rol rol;
 
-    /**
-     * Salario mensual (solo positivo).
-     */
     @Column(nullable = false)
     @Min(value = 0, message = "El salario no puede ser negativo")
     private float salario;
 
-    /**
-     * Fecha de contratación.
-     * (Opcional: si quisieras agregarla, bastaría con:
-     *    @Column(nullable = false)
-     *    private LocalDate fechaContratacion;
-     *  junto con validaciones adecuadas).
-     */
-    @Column(nullable = false)
+    @Column(name = "FECHA_CONTRATACION", nullable = true)
     private LocalDate fechaContratacion;
 
     // Constructores
