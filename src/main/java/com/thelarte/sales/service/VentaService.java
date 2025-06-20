@@ -1,6 +1,6 @@
 package com.thelarte.sales.service;
 
-import com.thelarte.shared.model.Venta;
+import com.thelarte.sales.model.Venta;
 import com.thelarte.sales.repository.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

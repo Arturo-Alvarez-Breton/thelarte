@@ -1,6 +1,6 @@
 package com.thelarte.sales.controller;
 
-import com.thelarte.shared.model.Venta;
+import com.thelarte.sales.model.Venta;
 import com.thelarte.sales.service.VentaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

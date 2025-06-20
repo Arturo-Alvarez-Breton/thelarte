@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Registrar Producto | Thelarte</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex flex-col">
+<!-- Header Thelarte -->
+<header class="flex flex-col items-center mt-10 mb-4">
+  <div class="flex items-end">
+    <h1 class="font-serif text-5xl font-bold bg-[#59391B] text-white tracking-wider mr-2 px-4 py-2 rounded">Thel</h1>
+    <h1 class="font-bold text-6xl italic text-[#7b5222] font-cursive" style="font-family: cursive;">Arte</h1>
+  </div>
+  <div class="font-serif text-gray-500 tracking-widest text-lg font-medium mt-2">GALERÍA Y DECORACIÓN</div>
+</header>
+
+<!-- Form Container -->
+<main class="flex-1 flex items-center justify-center">
+  <form id="productoForm" class="bg-[#f6fcfa] border border-gray-200 shadow-xl rounded-2xl px-10 py-8 w-full max-w-2xl">
+    <h2 id="formTitle" class="text-2xl font-bold mb-2 text-center text-[#59391B]">Registrar Producto</h2>
+    <p id="formDesc" class="mb-6 text-center text-gray-500"></p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+
+      <!-- Nombre -->
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Nombre</label>
+        <input type="text" name="nombre" id="nombre"
+               class="border border-[#59391B]/30 rounded-lg p-3 w-full focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+      </div>
+
+      <!-- Tipo -->
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Tipo</label>
+        <select name="tipo" id="tipo"
+                class="border border-[#59391B]/30 rounded-lg p-3 w-full bg-white focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+          <option value="silla">Silla</option>
+          <option value="mueble" >Mueble</option>
+          <option value="mesa" >Mesa</option>
+          <option value="otoman" >Otoman</option>
+          <option value="otro" >Otro</option>
+        </select>
+      </div>
+
+      <!-- Descripción -->
+      <div class="md:col-span-2">
+        <label class="block mb-1 font-serif text-[#7b5222]">Descripción</label>
+        <textarea name="descripcion" rows="2" id="descripcion"
+                  class="border border-[#59391B]/30 rounded-lg p-3 w-full focus:ring-2 focus:ring-[#7b5222] outline-none transition resize-none"></textarea>
+      </div>
+
+      <!-- Marca -->
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Marca</label>
+        <input type="text" name="marca" id="marca"
+               class="border border-[#59391B]/30 rounded-lg p-3 w-full focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+      </div>
+
+      <!-- Precio -->
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Precio</label>
+        <input type="number" name="precio"  min="0" step="0.01" id="precio"
+               class="border border-[#59391B]/30 rounded-lg p-3 w-full focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+      </div>
+
+      <!-- Foto con Previsualización -->
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Foto</label>
+        <input type="file" name="foto" accept="image/*" id="fotoInput"
+               class="border border-[#59391B]/30 rounded-lg p-2.5 w-full bg-white focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+        <div class="mt-2 flex justify-center">
+          <img id="fotoPreview" src="#" alt="Previsualización de la imagen" class="max-h-32 rounded shadow border border-gray-200 hidden"/>
+        </div>
+      </div>
+      <div>
+        <label class="block mb-1 font-serif text-[#7b5222]">Itibis</label>
+        <input type="number" name="itbis"  min="0" step="0.01" id="itbis"
+               class="border border-[#59391B]/30 rounded-lg p-3 w-full focus:ring-2 focus:ring-[#7b5222] outline-none transition">
+      </div>
+    </div>
+    <button type="submit" id="submitBtn"
+            class="mt-8 w-full bg-[#59391B] hover:bg-[#7b5222] text-white font-bold py-3 rounded-lg shadow transition">
+      Registrar
+    </button>
+  </form>
+</main>
+
+<footer class="w-full text-center py-4 text-gray-400 text-sm">
+  &copy; 2025 Thelarte.
+</footer>
+
+<!-- JS para preview de imagen -->
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+    const input = document.getElementById('fotoInput');
+    const preview = document.getElementById('fotoPreview');
+    input.addEventListener('change', function(e) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+      } else {
+        preview.src = "#";
+        preview.classList.add('hidden');
+      }
+    });
+  });
+</script>
+
+<script src="/js/structure/sidebarloader.js"></script>
+<script type="module" src="/js/producto/form.js" defer></script>
+</body>
+</html>
