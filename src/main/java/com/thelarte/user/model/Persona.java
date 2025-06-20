@@ -15,10 +15,7 @@ import lombok.Setter;
 @Table(name = "personas")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "tipo_persona", discriminatorType = DiscriminatorType.STRING)
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public abstract class Persona {
 
     /**

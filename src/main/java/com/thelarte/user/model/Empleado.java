@@ -13,7 +13,6 @@ import com.thelarte.user.util.Rol;
  */
 @Entity
 @DiscriminatorValue("EMPLEADO")
-@Table(name = "empleados")
 public class Empleado extends Persona {
 
     /*

@@ -11,7 +11,6 @@ import java.time.LocalDate;
  */
 @Entity
 @DiscriminatorValue("CLIENTE")
-@Table(name = "clientes")
 public class Cliente extends Persona {
 
     @Email(message = "El email debe ser válido")
