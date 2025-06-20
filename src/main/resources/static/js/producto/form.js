@@ -59,7 +59,6 @@ async function loadProducto() {
         form.descripcion.value = p.descripcion || '';
         form.marca.value = p.marca || '';
         form.precio.value = p.precio || '';
-        form.itbis.value = p.itbis || '';
         // Mostrar previsualización si existe foto
         if (p.fotoUrl && document.getElementById('fotoPreview')) {
             document.getElementById('fotoPreview').src = p.fotoUrl;
@@ -125,7 +124,6 @@ form.addEventListener('submit', async e => {
         descripcion: form.descripcion.value.trim(),
         marca: form.marca.value.trim(),
         precio: parseFloat(form.precio.value) || 0,
-        itbis: parseFloat(form.itbis.value) || 0,
         fotoBase64: fotoBase64
     };
 

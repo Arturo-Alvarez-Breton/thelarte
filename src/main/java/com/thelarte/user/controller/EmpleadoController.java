@@ -36,6 +36,7 @@ public class EmpleadoController {
         // rol:
         ent.setRol(Rol.valueOf(dto.getRol()));
         ent.setSalario(dto.getSalario());
+        ent.setEmail(dto.getEmail());
         // fechaContratacion será null aquí, PrePersist lo asigna a LocalDate.now()
 
         Empleado creado = empleadoService.crearEmpleado(ent);
@@ -66,6 +67,7 @@ public class EmpleadoController {
         // no setEmail
         datos.setRol(Rol.valueOf(dto.getRol()));
         datos.setSalario(dto.getSalario());
+        datos.setEmail(dto.getEmail());
         // No modificamos fechaContratacion aquí: se conserva la de creación
 
         Empleado actualizado = empleadoService.actualizarEmpleado(cedula, datos);

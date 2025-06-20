@@ -21,6 +21,12 @@ public class EmpleadoCreateDTO {
     @PositiveOrZero(message = "El salario no puede ser negativo")
     private Float salario;
 
+    @NotBlank(message = "El correo electrónico es obligatorio")
+    private String email;
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
     // Getters y setters
     public String getCedula() { return cedula; }
     public void setCedula(String cedula) { this.cedula = cedula; }

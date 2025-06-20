@@ -43,7 +43,7 @@ function clearError(fieldId) {
 // Validación local
 function validateForm(data) {
     let valid = true;
-    ['cedula','nombre','apellido','telefono','rol','salario'].forEach(f => clearError(f));
+    ['cedula','nombre','apellido','telefono','rol','salario','email'].forEach(f => clearError(f));
 
     if (!data.cedula) {
         showError('cedula','La cédula es obligatoria'); valid = false;
@@ -74,6 +74,15 @@ function validateForm(data) {
         showError('salario','El salario es obligatorio'); valid = false;
     } else if (isNaN(data.salario) || data.salario < 0) {
         showError('salario','El salario debe ser ≥ 0'); valid = false;
+    }
+    if (!data.email) {
+        showError('email', 'El correo electrónico es obligatorio'); valid = false;
+    } else {
+        // Validación básica de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email)) {
+            showError('email', 'El correo electrónico no es válido'); valid = false;
+        }
     }
     return valid;
 }
@@ -142,6 +151,7 @@ async function loadEmpleado() {
         document.getElementById('telefono').value = e.telefono || '';
         if (e.rol) document.getElementById('rol').value = e.rol;
         if (e.salario != null) document.getElementById('salario').value = e.salario;
+        if (e.email) document.getElementById('email').value = e.email;
     } catch (err) {
         console.error('Error loading empleado:', err);
         alert('Error al cargar datos del empleado');
@@ -162,8 +172,9 @@ form.addEventListener('submit', async e => {
     const rol = document.getElementById('rol').value;
     const salarioVal = document.getElementById('salario').value;
     const salario = salarioVal !== '' ? parseFloat(salarioVal) : null;
+    const email = document.getElementById('email').value.trim();
 
-    const data = { cedula, nombre, apellido, telefono, rol, salario };
+    const data = { cedula, nombre, apellido, telefono, rol, salario, email };
 
     if (!validateForm(data)) {
         submitBtn.disabled = false;
@@ -184,7 +195,8 @@ form.addEventListener('submit', async e => {
             apellido,
             telefono,
             rol,
-            salario
+            salario,
+            email
         };
     } else {
         bodyPayload = {
@@ -193,7 +205,8 @@ form.addEventListener('submit', async e => {
             apellido,
             telefono,
             rol,
-            salario
+            salario,
+            email
         };
     }
 
