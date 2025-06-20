@@ -31,6 +31,25 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Asegura que al recargar la página, el sidebar esté cerrado y el botón visible
         closeSidebar();
+
+        const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
+        if (sidebarLogoutBtn) {
+            sidebarLogoutBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to log out?')) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('userEmail');
+                    window.location.href = '/pages/login.html';
+                }
+            });
+        }
+        const sidebarUserEmail = document.getElementById('sidebarUserEmail');
+        const sidebarUserRole = document.getElementById('sidebarUserRole');
+        if (sidebarUserEmail) {
+            sidebarUserEmail.textContent = localStorage.getItem('userEmail') || 'Usuario';
+        }
+        if (sidebarUserRole) {
+            sidebarUserRole.textContent = 'Usuario'; // O el rol real si lo tienes
+        }
     } catch (error) {
         console.error('🛑 Error cargando el sidebar:', error);
     }
