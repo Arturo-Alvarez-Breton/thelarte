@@ -46,9 +46,9 @@ public class Empleado extends Persona {
     }
 
     public Empleado(String cedula, String nombre, String apellido, String telefono,
-                    Rol rol, float salario, LocalDate fechaContratacion) {
+                    String email, Rol rol, float salario, LocalDate fechaContratacion) {
 
-        super(cedula, nombre, apellido, telefono);
+        super(cedula, nombre, apellido, telefono, email);
         this.rol = rol;
         this.salario = salario;
         this.fechaContratacion = fechaContratacion;

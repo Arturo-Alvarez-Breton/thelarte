@@ -1,7 +1,6 @@
 package com.thelarte.user.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -12,11 +11,6 @@ import java.time.LocalDate;
 @Entity
 @DiscriminatorValue("CLIENTE")
 public class Cliente extends Persona {
-
-    @Email(message = "El email debe ser válido")
-    @NotBlank(message = "El email es obligatorio")
-    @Column(nullable = false, unique = true)
-    private String email;
 
     @NotBlank(message = "La dirección es obligatoria")
     @Column(nullable = false)
@@ -34,21 +28,12 @@ public class Cliente extends Persona {
     public Cliente(String cedula, String nombre, String apellido, String telefono,
                    String email, String direccion, LocalDate fechaRegistro) {
 
-        super(cedula, nombre, apellido, telefono);
-        this.email = email;
+        super(cedula, nombre, apellido, telefono, email);
         this.direccion = direccion;
         this.fechaRegistro = fechaRegistro;
     }
 
     // Getters y Setters
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public String getDireccion() {
         return direccion;
     }
