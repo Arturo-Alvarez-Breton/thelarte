@@ -61,6 +61,15 @@ public class LineaTransaccion {
     }
 
     public void calcularTotales() {
+        // Check for null values to prevent NullPointerException
+        if (this.precioUnitario == null) {
+            this.precioUnitario = BigDecimal.ZERO;
+        }
+        
+        if (this.cantidad == null) {
+            this.cantidad = 0;
+        }
+        
         this.subtotal = this.precioUnitario.multiply(BigDecimal.valueOf(this.cantidad));
         
         if (this.descuentoMonto != null) {

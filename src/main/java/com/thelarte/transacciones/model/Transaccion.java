@@ -76,6 +76,9 @@ public class Transaccion {
     @Column(name = "observaciones", length = 1000)
     private String observaciones;
 
+    @Column(name = "metadatos_pago", columnDefinition = "TEXT")
+    private String metadatosPago;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 
@@ -267,6 +270,14 @@ public class Transaccion {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public String getMetadatosPago() {
+        return metadatosPago;
+    }
+
+    public void setMetadatosPago(String metadatosPago) {
+        this.metadatosPago = metadatosPago;
     }
 
     public LocalDateTime getFechaCreacion() {

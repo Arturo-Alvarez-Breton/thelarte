@@ -3,6 +3,7 @@ package com.thelarte.transacciones.service;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
+import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,11 @@ public class TransaccionService {
     @Autowired
     private TransaccionRepository transaccionRepository;
 
+    @Autowired
+    private PaymentMetadataValidator paymentMetadataValidator;
+
     public Transaccion crearTransaccion(Transaccion transaccion) {
+        validatePaymentMetadata(transaccion);
         calcularTotalesTransaccion(transaccion);
         return transaccionRepository.save(transaccion);
     }
@@ -166,6 +171,7 @@ public class TransaccionService {
         transaccion.setNumeroFactura(transaccionActualizada.getNumeroFactura());
         transaccion.setNumeroOrdenCompra(transaccionActualizada.getNumeroOrdenCompra());
         transaccion.setMetodoPago(transaccionActualizada.getMetodoPago());
+        transaccion.setMetadatosPago(transaccionActualizada.getMetadatosPago());
         transaccion.setDireccionEntrega(transaccionActualizada.getDireccionEntrega());
         
         if (transaccionActualizada.getLineas() != null) {
@@ -226,5 +232,20 @@ public class TransaccionService {
         transaccion.setSubtotal(subtotal);
         transaccion.setImpuestos(impuestos);
         transaccion.setTotal(total);
+    }
+
+    private void validatePaymentMetadata(Transaccion transaccion) {
+        if (transaccion.getMetodoPago() != null) {
+            PaymentMetadataValidator.ValidationResult validationResult = 
+                paymentMetadataValidator.validatePaymentMetadata(
+                    transaccion.getMetodoPago(), 
+                    transaccion.getMetadatosPago()
+                );
+            
+            if (!validationResult.isValid()) {
+                throw new IllegalArgumentException("Error en metadatos de pago: " + 
+                    String.join(", ", validationResult.getErrors()));
+            }
+        }
     }
 }

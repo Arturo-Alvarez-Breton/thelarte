@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,18 +14,32 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/transacciones")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
 public class TransaccionController {
 
     @Autowired
     private TransaccionService transaccionService;
 
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> handleOptions() {
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<String> testEndpoint() {
+        System.out.println("Test endpoint called successfully");
+        return new ResponseEntity<>("API de transacciones funcionando correctamente", HttpStatus.OK);
+    }
+
     @PostMapping
     public ResponseEntity<Transaccion> crearTransaccion(@RequestBody Transaccion transaccion) {
         try {
+            System.out.println("Recibida petición para crear transacción: " + transaccion.getTipo());
             Transaccion nuevaTransaccion = transaccionService.crearTransaccion(transaccion);
             return new ResponseEntity<>(nuevaTransaccion, HttpStatus.CREATED);
         } catch (Exception e) {
+            System.err.println("Error al crear transacción: " + e.getMessage());
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }

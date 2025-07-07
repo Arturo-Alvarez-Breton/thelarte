@@ -26,6 +26,7 @@ public class TransaccionDTO {
     private Long vendedorId;
     private String direccionEntrega;
     private String observaciones;
+    private String metadatosPago;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 
@@ -210,6 +211,14 @@ public class TransaccionDTO {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public String getMetadatosPago() {
+        return metadatosPago;
+    }
+
+    public void setMetadatosPago(String metadatosPago) {
+        this.metadatosPago = metadatosPago;
     }
 
     public LocalDateTime getFechaCreacion() {

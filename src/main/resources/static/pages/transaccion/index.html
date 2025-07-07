@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contabilidad - Thelarte</title>
+
+  <!-- Tailwind & configuración de marca -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandBrown: '#59391B',
+            brandGold: '#7B5222'
+          },
+          fontFamily: {
+            serifTitle: ['"Playfair Display"', 'serif'],
+            cursiveLogo: ['"Itim"', 'cursive']
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600;700&family=Itim&display=swap" rel="stylesheet"/>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen flex">
+
+  <main class="flex-1 flex flex-col ml-0 md:ml-64 p-6">
+    <div class="container mx-auto max-w-6xl">
+
+      <!-- Cabecera -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-brandGold mb-2">
+          Contabilidad
+        </h1>
+        <p class="text-gray-600">
+          Selecciona el tipo de transacción que deseas registrar
+        </p>
+      </div>
+
+      <!-- Tipos de Transacción -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        <!-- Compra -->
+        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/compra.html'">
+          <div class="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4 group-hover:bg-green-200 transition-colors">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">Compra</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Registra las compras de productos a tus suplidores
+          </p>
+          <div class="flex items-center text-green-600 font-medium">
+            <span>Registrar Compra</span>
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Venta -->
+        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/venta.html'">
+          <div class="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 group-hover:bg-blue-200 transition-colors">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">Venta</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Registra las ventas de productos a tus clientes
+          </p>
+          <div class="flex items-center text-blue-600 font-medium">
+            <span>Registrar Venta</span>
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Devolución -->
+        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/devolucion.html'">
+          <div class="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4 group-hover:bg-red-200 transition-colors">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-2">Devolución</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Registra las devoluciones de productos de clientes
+          </p>
+          <div class="flex items-center text-red-600 font-medium">
+            <span>Registrar Devolución</span>
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Estadísticas Rápidas -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        
+        <div class="bg-white rounded-xl shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Compras Este Mes</p>
+              <p class="text-2xl font-bold text-green-600">$0.00</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Ventas Este Mes</p>
+              <p class="text-2xl font-bold text-blue-600">$0.00</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Devoluciones</p>
+              <p class="text-2xl font-bold text-red-600">$0.00</p>
+            </div>
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Balance Neto</p>
+              <p class="text-2xl font-bold text-brandGold">$0.00</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Transacciones Recientes -->
+      <div class="bg-white rounded-xl shadow p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold text-gray-800">Transacciones Recientes</h2>
+          <button class="text-brandGold hover:text-brandBrown font-medium">
+            Ver todas
+          </button>
+        </div>
+        
+        <div class="text-center py-12">
+          <div class="text-gray-400 text-4xl mb-4">📊</div>
+          <h3 class="text-lg font-medium text-gray-700 mb-2">
+            No hay transacciones registradas
+          </h3>
+          <p class="text-gray-500 mb-4">
+            Comienza registrando tu primera transacción
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/js/structure/sidebarloader.js"></script>
+</body>
+</html>
