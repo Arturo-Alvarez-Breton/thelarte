@@ -36,6 +36,9 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     @Query("SELECT t FROM Transaccion t WHERE t.vendedorId = :vendedorId AND t.tipo = 'VENTA'")
     List<Transaccion> findVentasPorVendedor(@Param("vendedorId") Long vendedorId);
 
+    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :contraparteId AND t.tipo = 'DEVOLUCION'")
+    List<Transaccion> findDevolucionesPorContraparte(@Param("contraparteId") Long contraparteId);
+
     List<Transaccion> findByNumeroFactura(String numeroFactura);
 
     List<Transaccion> findByNumeroOrdenCompra(String numeroOrdenCompra);

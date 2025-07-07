@@ -287,7 +287,8 @@ public class Transaccion {
 
     public enum TipoTransaccion {
         COMPRA,
-        VENTA
+        VENTA,
+        DEVOLUCION
     }
 
     public enum EstadoTransaccion {

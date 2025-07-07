@@ -54,6 +54,23 @@ public class TransaccionService {
         return crearTransaccion(venta);
     }
 
+    public Transaccion crearDevolucion(Long contraparteId, Transaccion.TipoContraparte tipoContraparte, 
+                                      String contraparteNombre, List<LineaTransaccion> lineas, 
+                                      Long transaccionOriginalId) {
+        Transaccion devolucion = new Transaccion(
+            Transaccion.TipoTransaccion.DEVOLUCION,
+            contraparteId,
+            tipoContraparte,
+            contraparteNombre
+        );
+        
+        devolucion.setObservaciones("Devolución de transacción original ID: " + transaccionOriginalId);
+        lineas.forEach(linea -> linea.setTransaccion(devolucion));
+        devolucion.setLineas(lineas);
+        
+        return crearTransaccion(devolucion);
+    }
+
     @Transactional(readOnly = true)
     public Optional<Transaccion> obtenerPorId(Long id) {
         return transaccionRepository.findById(id);
@@ -77,6 +94,11 @@ public class TransaccionService {
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentas() {
         return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.VENTA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerDevoluciones() {
+        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION);
     }
 
     @Transactional(readOnly = true)
@@ -169,6 +191,11 @@ public class TransaccionService {
     @Transactional(readOnly = true)
     public Double obtenerTotalVentasEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
         return transaccionRepository.sumTotalPorTipoEnPeriodo(Transaccion.TipoTransaccion.VENTA, fechaInicio, fechaFin);
+    }
+
+    @Transactional(readOnly = true)
+    public Double obtenerTotalDevolucionesEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        return transaccionRepository.sumTotalPorTipoEnPeriodo(Transaccion.TipoTransaccion.DEVOLUCION, fechaInicio, fechaFin);
     }
 
     @Transactional(readOnly = true)

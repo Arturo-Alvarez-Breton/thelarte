@@ -54,6 +54,12 @@ public class TransaccionController {
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 
+    @GetMapping("/devoluciones")
+    public ResponseEntity<List<Transaccion>> obtenerDevoluciones() {
+        List<Transaccion> devoluciones = transaccionService.obtenerDevoluciones();
+        return new ResponseEntity<>(devoluciones, HttpStatus.OK);
+    }
+
     @GetMapping("/tipo/{tipo}")
     public ResponseEntity<List<Transaccion>> obtenerPorTipo(@PathVariable String tipo) {
         try {
@@ -203,6 +209,18 @@ public class TransaccionController {
             LocalDateTime inicio = LocalDateTime.parse(fechaInicio);
             LocalDateTime fin = LocalDateTime.parse(fechaFin);
             Double total = transaccionService.obtenerTotalVentasEnPeriodo(inicio, fin);
+            return new ResponseEntity<>(total != null ? total : 0.0, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/estadisticas/devoluciones/total")
+    public ResponseEntity<Double> obtenerTotalDevoluciones(@RequestParam String fechaInicio, @RequestParam String fechaFin) {
+        try {
+            LocalDateTime inicio = LocalDateTime.parse(fechaInicio);
+            LocalDateTime fin = LocalDateTime.parse(fechaFin);
+            Double total = transaccionService.obtenerTotalDevolucionesEnPeriodo(inicio, fin);
             return new ResponseEntity<>(total != null ? total : 0.0, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
