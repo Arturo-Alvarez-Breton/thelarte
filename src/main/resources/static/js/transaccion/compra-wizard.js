@@ -1,4 +1,5 @@
 import { makeAuthenticatedRequest } from '../services/authService.js';
+import { createTransaccion } from '../services/transaccionService.js';
 
 class CompraWizard {
     constructor() {
@@ -620,22 +621,12 @@ class CompraWizard {
         const formData = this.getFormData();
         
         try {
-            const response = await makeAuthenticatedRequest('/api/transacciones', {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            });
-
-            if (response.ok) {
-                alert('Compra registrada exitosamente');
-                window.location.href = '/pages/transaccion/index.html';
-            } else {
-                const errorData = await response.text();
-                console.error('Error response:', errorData);
-                alert('Error al registrar la compra: ' + errorData);
-            }
+            await createTransaccion(formData);
+            alert('Compra registrada exitosamente');
+            window.location.href = '/pages/transaccion/index.html';
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al procesar la solicitud: ' + error.message);
+            alert('Error al registrar la compra: ' + error.message);
         }
     }
 
