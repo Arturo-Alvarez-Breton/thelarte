@@ -29,14 +29,37 @@ function renderTable(items) {
   tbody.innerHTML = '';
   items.forEach(t => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800">${t.id}</td>
-      <td class="px-4 py-2 whitespace-nowrap text-sm">${t.tipo}</td>
-      <td class="px-4 py-2 whitespace-nowrap text-sm">${t.contraparteNombre || ''}</td>
-      <td class="px-4 py-2 whitespace-nowrap text-sm">${new Date(t.fecha).toLocaleDateString()}</td>
-      <td class="px-4 py-2 whitespace-nowrap text-sm">${t.estado}</td>
-      <td class="px-4 py-2 whitespace-nowrap text-sm text-right">$${t.total.toFixed(2)}</td>
-    `;
+    
+    const idCell = document.createElement('td');
+    idCell.className = "px-4 py-2 whitespace-nowrap text-sm text-gray-800";
+    idCell.textContent = t.id;
+    row.appendChild(idCell);
+    
+    const tipoCell = document.createElement('td');
+    tipoCell.className = "px-4 py-2 whitespace-nowrap text-sm";
+    tipoCell.textContent = t.tipo;
+    row.appendChild(tipoCell);
+    
+    const contraparteCell = document.createElement('td');
+    contraparteCell.className = "px-4 py-2 whitespace-nowrap text-sm";
+    contraparteCell.textContent = t.contraparteNombre || '';
+    row.appendChild(contraparteCell);
+    
+    const fechaCell = document.createElement('td');
+    fechaCell.className = "px-4 py-2 whitespace-nowrap text-sm";
+    fechaCell.textContent = new Date(t.fecha).toLocaleDateString();
+    row.appendChild(fechaCell);
+    
+    const estadoCell = document.createElement('td');
+    estadoCell.className = "px-4 py-2 whitespace-nowrap text-sm";
+    estadoCell.textContent = t.estado;
+    row.appendChild(estadoCell);
+    
+    const totalCell = document.createElement('td');
+    totalCell.className = "px-4 py-2 whitespace-nowrap text-sm text-right";
+    totalCell.textContent = `$${t.total.toFixed(2)}`;
+    row.appendChild(totalCell);
+    
     tbody.appendChild(row);
   });
 }
