@@ -59,17 +59,34 @@ public class TransaccionService {
         return crearTransaccion(venta);
     }
 
-    public Transaccion crearDevolucion(Long contraparteId, Transaccion.TipoContraparte tipoContraparte, 
-                                      String contraparteNombre, List<LineaTransaccion> lineas, 
-                                      Long transaccionOriginalId) {
+    public Transaccion crearDevolucionCompra(Long suplidorId, String suplidorNombre, 
+                                           List<LineaTransaccion> lineas, Long transaccionOriginalId) {
         Transaccion devolucion = new Transaccion(
-            Transaccion.TipoTransaccion.DEVOLUCION,
-            contraparteId,
-            tipoContraparte,
-            contraparteNombre
+            Transaccion.TipoTransaccion.DEVOLUCION_COMPRA,
+            suplidorId,
+            Transaccion.TipoContraparte.SUPLIDOR,
+            suplidorNombre
         );
         
-        devolucion.setObservaciones("Devolución de transacción original ID: " + transaccionOriginalId);
+        devolucion.setTransaccionOrigenId(transaccionOriginalId);
+        devolucion.setObservaciones("Devolución de compra original ID: " + transaccionOriginalId);
+        lineas.forEach(linea -> linea.setTransaccion(devolucion));
+        devolucion.setLineas(lineas);
+        
+        return crearTransaccion(devolucion);
+    }
+
+    public Transaccion crearDevolucionVenta(Long clienteId, String clienteNombre, 
+                                          List<LineaTransaccion> lineas, Long transaccionOriginalId) {
+        Transaccion devolucion = new Transaccion(
+            Transaccion.TipoTransaccion.DEVOLUCION_VENTA,
+            clienteId,
+            Transaccion.TipoContraparte.CLIENTE,
+            clienteNombre
+        );
+        
+        devolucion.setTransaccionOrigenId(transaccionOriginalId);
+        devolucion.setObservaciones("Devolución de venta original ID: " + transaccionOriginalId);
         lineas.forEach(linea -> linea.setTransaccion(devolucion));
         devolucion.setLineas(lineas);
         
@@ -102,8 +119,13 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
-    public List<Transaccion> obtenerDevoluciones() {
-        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION);
+    public List<Transaccion> obtenerDevolucionesCompra() {
+        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION_COMPRA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerDevolucionesVenta() {
+        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION_VENTA);
     }
 
     @Transactional(readOnly = true)
@@ -200,8 +222,18 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
-    public Double obtenerTotalDevolucionesEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        return transaccionRepository.sumTotalPorTipoEnPeriodo(Transaccion.TipoTransaccion.DEVOLUCION, fechaInicio, fechaFin);
+    public Double obtenerTotalDevolucionesCompraEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        return transaccionRepository.sumTotalPorTipoEnPeriodo(Transaccion.TipoTransaccion.DEVOLUCION_COMPRA, fechaInicio, fechaFin);
+    }
+
+    @Transactional(readOnly = true)
+    public Double obtenerTotalDevolucionesVentaEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+        return transaccionRepository.sumTotalPorTipoEnPeriodo(Transaccion.TipoTransaccion.DEVOLUCION_VENTA, fechaInicio, fechaFin);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerTransaccionesPorOrigen(Long transaccionOrigenId) {
+        return transaccionRepository.findByTransaccionOrigenId(transaccionOrigenId);
     }
 
     @Transactional(readOnly = true)

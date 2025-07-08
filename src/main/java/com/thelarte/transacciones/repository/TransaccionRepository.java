@@ -51,4 +51,6 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     Double sumTotalPorTipoEnPeriodo(@Param("tipo") Transaccion.TipoTransaccion tipo, 
                                    @Param("fechaInicio") LocalDateTime fechaInicio, 
                                    @Param("fechaFin") LocalDateTime fechaFin);
+
+    List<Transaccion> findByTransaccionOrigenId(Long transaccionOrigenId);
 }

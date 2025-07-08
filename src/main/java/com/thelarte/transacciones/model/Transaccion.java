@@ -79,6 +79,12 @@ public class Transaccion {
     @Column(name = "metadatos_pago", columnDefinition = "TEXT")
     private String metadatosPago;
 
+    @Column(name = "transaccion_origen_id")
+    private Long transaccionOrigenId;
+
+    @Column(name = "numero_referencia")
+    private String numeroReferencia;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 
@@ -296,17 +302,35 @@ public class Transaccion {
         this.fechaActualizacion = fechaActualizacion;
     }
 
+    public Long getTransaccionOrigenId() {
+        return transaccionOrigenId;
+    }
+
+    public void setTransaccionOrigenId(Long transaccionOrigenId) {
+        this.transaccionOrigenId = transaccionOrigenId;
+    }
+
+    public String getNumeroReferencia() {
+        return numeroReferencia;
+    }
+
+    public void setNumeroReferencia(String numeroReferencia) {
+        this.numeroReferencia = numeroReferencia;
+    }
+
     public enum TipoTransaccion {
         COMPRA,
         VENTA,
-        DEVOLUCION
+        DEVOLUCION_COMPRA,
+        DEVOLUCION_VENTA
     }
 
     public enum EstadoTransaccion {
         PENDIENTE,
         CONFIRMADA,
         COMPLETADA,
-        CANCELADA
+        CANCELADA,
+        FACTURADA
     }
 
     public enum TipoContraparte {

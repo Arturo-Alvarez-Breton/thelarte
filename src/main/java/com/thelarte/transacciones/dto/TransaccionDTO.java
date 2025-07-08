@@ -27,6 +27,8 @@ public class TransaccionDTO {
     private String direccionEntrega;
     private String observaciones;
     private String metadatosPago;
+    private Long transaccionOrigenId;
+    private String numeroReferencia;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 
@@ -235,5 +237,21 @@ public class TransaccionDTO {
 
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
+    }
+
+    public Long getTransaccionOrigenId() {
+        return transaccionOrigenId;
+    }
+
+    public void setTransaccionOrigenId(Long transaccionOrigenId) {
+        this.transaccionOrigenId = transaccionOrigenId;
+    }
+
+    public String getNumeroReferencia() {
+        return numeroReferencia;
+    }
+
+    public void setNumeroReferencia(String numeroReferencia) {
+        this.numeroReferencia = numeroReferencia;
     }
 }
