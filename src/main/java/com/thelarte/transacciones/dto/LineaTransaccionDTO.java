@@ -1,9 +1,13 @@
 package com.thelarte.transacciones.dto;
 
 import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.thelarte.transacciones.config.ProductoIdDeserializer;
 
 public class LineaTransaccionDTO {
     private Long id;
+    
+    @JsonDeserialize(using = ProductoIdDeserializer.class)
     private Long productoId;
     private String productoNombre;
     private Integer cantidad;
