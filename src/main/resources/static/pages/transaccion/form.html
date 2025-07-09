@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transacción | Thelarte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .form-wizard {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .wizard-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            background: #e8f7f2;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .wizard-step {
+            flex: 1;
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 10px;
+            transition: all 0.3s;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #7b5222;
+        }
+        .wizard-step.active {
+            background: #59391B;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(89, 57, 27, 0.3);
+        }
+        .wizard-step.completed {
+            background: #28a745;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        .step-content {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .step-content.active {
+            display: block;
+        }
+        .step-content h4 {
+            color: #59391B;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+        .product-line {
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .counterpart-selector {
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        .counterpart-selector:hover {
+            border-color: #59391B;
+            background: #f6fcfa;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .counterpart-selector.selected {
+            border-color: #59391B;
+            background: #f0f8f4;
+            box-shadow: 0 4px 12px rgba(89, 57, 27, 0.2);
+        }
+        .transaction-summary {
+            background: #f0f8f4;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 2px solid #e8f7f2;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: #59391B;
+        }
+        .summary-total {
+            font-size: 1.4rem;
+            font-weight: bold;
+            border-top: 2px solid #59391B;
+            padding-top: 1rem;
+            color: #7b5222;
+        }
+        .form-label {
+            color: #59391B;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .form-control, .form-select {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #59391B;
+            box-shadow: 0 0 0 0.2rem rgba(89, 57, 27, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col">
+<!-- Header Thelarte -->
+<header class="flex flex-col items-center mt-10 mb-4">
+  <div class="flex items-end">
+    <h1 class="font-serif text-5xl font-bold bg-[#59391B] text-white tracking-wider mr-2 px-4 py-2 rounded">Thel</h1>
+    <h1 class="font-bold text-6xl italic text-[#7b5222] font-cursive" style="font-family: cursive;">Arte</h1>
+  </div>
+  <div class="font-serif text-gray-500 tracking-widest text-lg font-medium mt-2">GALERÍA Y DECORACIÓN</div>
+</header>
+
+<main class="flex-1 flex items-center justify-center w-full">
+  <div class="flex flex-col md:flex-row w-full max-w-6xl bg-[#f6fcfa] rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+    <!-- Contenido principal -->
+    <section class="flex-1 p-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <h2 class="text-3xl font-bold font-serif text-[#59391B]" id="tituloForm">Nueva Transacción</h2>
+        <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded-lg font-serif transition" onclick="window.location.href='index.html'">
+          Volver
+        </button>
+      </div>
+
+                    <div class="wizard-steps">
+                        <div class="wizard-step active" data-step="1">
+                            <i class="fas fa-info-circle mb-3 text-2xl"></i>
+                            <div class="font-semibold">Información General</div>
+                        </div>
+                        <div class="wizard-step" data-step="2">
+                            <i class="fas fa-user-tie mb-3 text-2xl"></i>
+                            <div class="font-semibold">Contraparte</div>
+                        </div>
+                        <div class="wizard-step" data-step="3">
+                            <i class="fas fa-boxes mb-3 text-2xl"></i>
+                            <div class="font-semibold">Productos</div>
+                        </div>
+                        <div class="wizard-step" data-step="4">
+                            <i class="fas fa-credit-card mb-3 text-2xl"></i>
+                            <div class="font-semibold">Finalizar</div>
+                        </div>
+                    </div>
+
+                    <form id="transaccionForm">
+                        <!-- Paso 1: Información General -->
+                        <div class="step-content active" id="step1">
+                            <h4 class="mb-3">Información General</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label for="tipo" class="form-label block">Tipo de Transacción</label>
+                                    <select class="form-select w-full" id="tipo" required>
+                                        <option value="">Seleccionar tipo</option>
+                                        <option value="COMPRA">Compra</option>
+                                        <option value="VENTA">Venta</option>
+                                        <option value="DEVOLUCION_COMPRA">Devolución Compra</option>
+                                        <option value="DEVOLUCION_VENTA">Devolución Venta</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="fecha" class="form-label block">Fecha</label>
+                                    <input type="datetime-local" class="form-control w-full" id="fecha" required>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <div class="space-y-2">
+                                    <label for="numeroFactura" class="form-label block">Número de Factura</label>
+                                    <input type="text" class="form-control w-full" id="numeroFactura">
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="numeroOrdenCompra" class="form-label block">Número de Orden de Compra</label>
+                                    <input type="text" class="form-control w-full" id="numeroOrdenCompra">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paso 2: Contraparte -->
+                        <div class="step-content" id="step2">
+                            <h4 class="mb-3">Seleccionar Contraparte</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:border-[#59391B] transition">
+                                    <input class="w-4 h-4 text-[#59391B] border-gray-300 focus:ring-[#59391B]" type="radio" name="tipoContraparte" id="cliente" value="CLIENTE">
+                                    <label class="flex items-center cursor-pointer text-base font-medium text-gray-700" for="cliente">
+                                        <i class="fas fa-user mr-2 text-lg text-[#59391B]"></i>Cliente
+                                    </label>
+                                </div>
+                                <div class="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg hover:border-[#59391B] transition">
+                                    <input class="w-4 h-4 text-[#59391B] border-gray-300 focus:ring-[#59391B]" type="radio" name="tipoContraparte" id="suplidor" value="SUPLIDOR">
+                                    <label class="flex items-center cursor-pointer text-base font-medium text-gray-700" for="suplidor">
+                                        <i class="fas fa-truck mr-2 text-lg text-[#59391B]"></i>Suplidor
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="contraparteContainer">
+                                <div class="text-center py-12">
+                                    <i class="fas fa-arrow-up text-4xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-600 text-base">Selecciona el tipo de contraparte para continuar</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paso 3: Productos -->
+                        <div class="step-content" id="step3">
+                            <h4 class="mb-3">Productos</h4>
+                            <div class="flex justify-between items-center mb-6">
+                                <div></div>
+                                <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-6 py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-base font-medium" onclick="agregarProducto()">
+                                    <i class="fas fa-plus mr-2"></i>Agregar Producto
+                                </button>
+                            </div>
+                            <div id="productosContainer">
+                                <div class="text-center py-12">
+                                    <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-600 text-base">No hay productos agregados</p>
+                                </div>
+                            </div>
+                            <div class="transaction-summary" id="resumenTransaccion" style="display: none;">
+                                <h5 class="mb-3">Resumen</h5>
+                                <div class="summary-row">
+                                    <span>Subtotal:</span>
+                                    <span id="subtotalResumen">€0.00</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Impuestos:</span>
+                                    <span id="impuestosResumen">€0.00</span>
+                                </div>
+                                <div class="summary-row summary-total">
+                                    <span>Total:</span>
+                                    <span id="totalResumen">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paso 4: Finalizar -->
+                        <div class="step-content" id="step4">
+                            <h4 class="mb-3">Finalizar Transacción</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label for="metodoPago" class="form-label block">Método de Pago</label>
+                                    <select class="form-select w-full" id="metodoPago">
+                                        <option value="">Seleccionar método</option>
+                                        <option value="EFECTIVO">Efectivo</option>
+                                        <option value="TARJETA">Tarjeta</option>
+                                        <option value="TRANSFERENCIA">Transferencia</option>
+                                        <option value="CHEQUE">Cheque</option>
+                                        <option value="CREDITO">Crédito</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="condicionesPago" class="form-label block">Condiciones de Pago</label>
+                                    <input type="text" class="form-control w-full" id="condicionesPago" placeholder="Ej: 30 días">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <div class="space-y-2">
+                                    <label for="fechaEntregaEsperada" class="form-label block">Fecha de Entrega Esperada</label>
+                                    <input type="datetime-local" class="form-control w-full" id="fechaEntregaEsperada">
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="direccionEntrega" class="form-label block">Dirección de Entrega</label>
+                                    <input type="text" class="form-control w-full" id="direccionEntrega">
+                                </div>
+                            </div>
+                            <div class="space-y-2 mt-6">
+                                <label for="observaciones" class="form-label block">Observaciones</label>
+                                <textarea class="form-control w-full" id="observaciones" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </form>
+
+      <div class="flex justify-between mt-8 pt-6 border-t border-gray-200">
+        <button type="button" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-base font-medium" id="btnAnterior" onclick="anteriorPaso()" style="display: none;">
+          <i class="fas fa-arrow-left mr-2"></i>Anterior
+        </button>
+        <div></div>
+        <div class="flex gap-3">
+          <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-6 py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-base font-medium" id="btnSiguiente" onclick="siguientePaso()">
+            Siguiente<i class="fas fa-arrow-right ml-2"></i>
+          </button>
+          <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-base font-medium" id="btnGuardar" onclick="guardarTransaccion()" style="display: none;">
+            <i class="fas fa-save mr-2"></i>Guardar Transacción
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="w-full text-center py-4 text-gray-400 text-sm">
+  &copy; 2025 Thelarte.
+</footer>
+
+<script src="../../js/structure/sidebarloader.js"></script>
+<script src="../../js/services/transaccionService.js"></script>
+<script src="../../js/transaccion/form.js"></script>
+</body>
+</html>

@@ -1,79 +1,167 @@
-import { makeAuthenticatedRequest } from './authService.js';
+class TransaccionService {
+    constructor() {
+        this.baseUrl = '/api/transacciones';
+    }
 
-const BASE_URL = '/api/transacciones';
+    async obtenerTransacciones() {
+        try {
+            const response = await fetch(this.baseUrl);
+            if (!response.ok) {
+                throw new Error('Error al obtener transacciones');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
 
-function handleErrors(response) {
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-  }
-  return response.json();
+    async obtenerTransaccionPorId(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`);
+            if (!response.ok) {
+                throw new Error('Error al obtener transacción');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async crearTransaccion(transaccion) {
+        try {
+            const response = await fetch(this.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(transaccion)
+            });
+            if (!response.ok) {
+                throw new Error('Error al crear transacción');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async actualizarTransaccion(id, transaccion) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(transaccion)
+            });
+            if (!response.ok) {
+                throw new Error('Error al actualizar transacción');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async eliminarTransaccion(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                throw new Error('Error al eliminar transacción');
+            }
+            return true;
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async obtenerProductos() {
+        try {
+            const response = await fetch('/api/productos');
+            if (!response.ok) {
+                throw new Error('Error al obtener productos');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async obtenerSuplidores() {
+        try {
+            const response = await fetch('/api/suplidores');
+            if (!response.ok) {
+                throw new Error('Error al obtener suplidores');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async obtenerClientes() {
+        try {
+            const response = await fetch('/api/clientes');
+            if (!response.ok) {
+                throw new Error('Error al obtener clientes');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    formatearFecha(fecha) {
+        return new Date(fecha).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    formatearMoneda(monto) {
+        return new Intl.NumberFormat('es-DO', {
+            style: 'currency',
+            currency: 'DOP'
+        }).format(monto);
+    }
+
+    obtenerEstadoColor(estado) {
+        const colores = {
+            'PENDIENTE': 'warning',
+            'CONFIRMADA': 'info',
+            'COMPLETADA': 'success',
+            'CANCELADA': 'danger',
+            'FACTURADA': 'primary',
+            'RECIBIDA': 'success',
+            'PAGADA': 'success',
+            'ENTREGADA': 'success',
+            'COBRADA': 'success'
+        };
+        return colores[estado] || 'secondary';
+    }
+
+    obtenerTipoIcon(tipo) {
+        const iconos = {
+            'COMPRA': 'fas fa-shopping-cart',
+            'VENTA': 'fas fa-cash-register',
+            'DEVOLUCION_COMPRA': 'fas fa-undo',
+            'DEVOLUCION_VENTA': 'fas fa-undo-alt'
+        };
+        return iconos[tipo] || 'fas fa-file';
+    }
 }
 
-export async function createTransaccion(data) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}`, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
-  return handleErrors(response);
-}
-
-export async function getTransacciones(params = {}) {
-  const query = new URLSearchParams(params).toString();
-  const response = await makeAuthenticatedRequest(`${BASE_URL}${query ? `?${query}` : ''}`);
-  return handleErrors(response);
-}
-
-export async function getTransaccionById(id) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}`);
-  return handleErrors(response);
-}
-
-export async function updateTransaccion(id, data) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data)
-  });
-  return handleErrors(response);
-}
-
-export async function cambiarEstado(id, estado) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}/estado?estado=${estado}`, {
-    method: 'PUT'
-  });
-  return handleErrors(response);
-}
-
-export async function confirmarTransaccion(id) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}/confirmar`, { method: 'PUT' });
-  return handleErrors(response);
-}
-
-export async function completarTransaccion(id) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}/completar`, { method: 'PUT' });
-  return handleErrors(response);
-}
-
-export async function cancelarTransaccion(id) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}/cancelar`, { method: 'PUT' });
-  return handleErrors(response);
-}
-
-export async function deleteTransaccion(id) {
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/${id}`, { method: 'DELETE' });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-  }
-  return true;
-}
-
-export async function getEstadisticasComprasTotal(fechaInicio, fechaFin) {
-  const query = new URLSearchParams({ fechaInicio, fechaFin }).toString();
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/estadisticas/compras/total?${query}`);
-  return handleErrors(response);
-}
-
-export async function countByTipoEstado(tipo, estado) {
-  const query = new URLSearchParams({ tipo, estado }).toString();
-  const response = await makeAuthenticatedRequest(`${BASE_URL}/estadisticas/contar?${query}`);
-  return handleErrors(response);
-}
+window.TransaccionService = TransaccionService;

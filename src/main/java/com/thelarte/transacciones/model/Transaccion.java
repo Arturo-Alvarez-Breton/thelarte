@@ -330,7 +330,11 @@ public class Transaccion {
         CONFIRMADA,
         COMPLETADA,
         CANCELADA,
-        FACTURADA
+        FACTURADA,
+        RECIBIDA,    // Para compras: mercancía recibida
+        PAGADA,      // Para compras: pago completado al suplidor
+        ENTREGADA,   // Para ventas: producto entregado al cliente
+        COBRADA      // Para ventas: pago recibido del cliente
     }
 
     public enum TipoContraparte {

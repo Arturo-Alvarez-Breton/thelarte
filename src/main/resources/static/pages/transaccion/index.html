@@ -1,210 +1,126 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Contabilidad - Thelarte</title>
-
-  <!-- Tailwind & configuración de marca -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brandBrown: '#59391B',
-            brandGold: '#7B5222'
-          },
-          fontFamily: {
-            serifTitle: ['"Playfair Display"', 'serif'],
-            cursiveLogo: ['"Itim"', 'cursive']
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transacciones | Thelarte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .transaction-card {
+            transition: transform 0.2s;
+            border-left: 4px solid #007bff;
         }
-      }
-    }
-  </script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600;700&family=Itim&display=swap" rel="stylesheet"/>
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .transaction-card.compra {
+            border-left-color: #28a745;
+        }
+        .transaction-card.devolucion {
+            border-left-color: #dc3545;
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .counterpart-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .counterpart-info i {
+            width: 16px;
+            text-align: center;
+        }
+        .transaction-amount {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
 </head>
-<body class="font-inter bg-gray-50 min-h-screen flex">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+<!-- Header Thelarte -->
+<header class="flex flex-col items-center mt-6 mb-4">
+  <div class="flex items-end">
+    <h1 class="font-serif text-2xl md:text-5xl font-bold bg-[#59391B] text-white tracking-wider mr-2 px-3 md:px-4 py-2 rounded">Thel</h1>
+    <h1 class="font-bold text-3xl md:text-6xl italic text-[#7b5222] font-cursive" style="font-family: cursive;">Arte</h1>
+  </div>
+  <div class="font-serif text-gray-500 tracking-widest text-sm md:text-lg font-medium mt-2">GALERÍA Y DECORACIÓN</div>
+</header>
 
-  <main class="flex-1 flex flex-col ml-0 md:ml-64 p-6">
-    <div class="container mx-auto max-w-6xl">
-
-      <!-- Cabecera -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-brandGold mb-2">
-          Contabilidad
-        </h1>
-        <p class="text-gray-600">
-          Selecciona el tipo de transacción que deseas registrar
-        </p>
-      </div>
-
-      <!-- Tipos de Transacción -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        
-        <!-- Compra -->
-        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/compra.html'">
-          <div class="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4 group-hover:bg-green-200 transition-colors">
-            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">Compra</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Registra las compras de productos a tus suplidores
-          </p>
-          <div class="flex items-center text-green-600 font-medium">
-            <span>Registrar Compra</span>
-            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
-        <!-- Venta -->
-        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/venta.html'">
-          <div class="flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4 group-hover:bg-blue-200 transition-colors">
-            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">Venta</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Registra las ventas de productos a tus clientes
-          </p>
-          <div class="flex items-center text-blue-600 font-medium">
-            <span>Registrar Venta</span>
-            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
-        <!-- Devolución -->
-        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/devolucion.html'">
-          <div class="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4 group-hover:bg-red-200 transition-colors">
-            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">Devolución</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Registra las devoluciones de productos de clientes
-          </p>
-          <div class="flex items-center text-red-600 font-medium">
-            <span>Registrar Devolución</span>
-            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
-        <!-- Listado -->
-        <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group" onclick="location.href='/pages/transaccion/list.html'">
-          <div class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4 group-hover:bg-gray-200 transition-colors">
-            <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-            </svg>
-          </div>
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">Listado</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Consulta todas las transacciones registradas
-          </p>
-          <div class="flex items-center text-gray-600 font-medium">
-            <span>Ver Transacciones</span>
-            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Estadísticas Rápidas -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        
-        <div class="bg-white rounded-xl shadow p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Compras Este Mes</p>
-              <p class="text-2xl font-bold text-green-600">$0.00</p>
-            </div>
-            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Ventas Este Mes</p>
-              <p class="text-2xl font-bold text-blue-600">$0.00</p>
-            </div>
-            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Devoluciones</p>
-              <p class="text-2xl font-bold text-red-600">$0.00</p>
-            </div>
-            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Balance Neto</p>
-              <p class="text-2xl font-bold text-brandGold">$0.00</p>
-            </div>
-            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Transacciones Recientes -->
-      <div class="bg-white rounded-xl shadow p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-semibold text-gray-800">Transacciones Recientes</h2>
-          <button class="text-brandGold hover:text-brandBrown font-medium">
-            Ver todas
+<main class="flex-1 px-4 md:px-8 lg:px-12 xl:px-16 w-full max-w-7xl mx-auto">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <!-- Contenido principal -->
+    <section class="flex-1 p-6 md:p-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <h2 class="text-2xl font-bold font-serif text-[#59391B]">Contabilidad</h2>
+        <div class="flex flex-wrap gap-3">
+          <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('COMPRA')">
+            <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
+          </button>
+          <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('DEVOLUCION')">
+            <i class="fas fa-undo mr-2"></i>Devolución
           </button>
         </div>
-        
-        <div class="text-center py-12">
-          <div class="text-gray-400 text-4xl mb-4">📊</div>
-          <h3 class="text-lg font-medium text-gray-700 mb-2">
-            No hay transacciones registradas
-          </h3>
-          <p class="text-gray-500 mb-4">
-            Comienza registrando tu primera transacción
-          </p>
+      </div>
+
+      <div class="filter-section bg-[#f8f9fa] rounded-lg p-4 md:p-5 mb-6">
+        <h3 class="text-base md:text-lg font-semibold text-[#59391B] mb-4">Filtros</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Tipo de Transacción</label>
+            <select class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="filtroTipo" onchange="filtrarTransacciones()">
+              <option value="">Todos los tipos</option>
+              <option value="COMPRA">Compras</option>
+              <option value="DEVOLUCION_COMPRA">Devolución Compra</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Estado</label>
+            <select class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="filtroEstado" onchange="filtrarTransacciones()">
+              <option value="">Todos los estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="COMPLETADA">Completada</option>
+              <option value="CANCELADA">Cancelada</option>
+              <option value="FACTURADA">Facturada</option>
+              <option value="RECIBIDA">Recibida</option>
+              <option value="PAGADA">Pagada</option>
+              <option value="ENTREGADA">Entregada</option>
+              <option value="COBRADA">Cobrada</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Buscar</label>
+            <input type="text" class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="buscarTexto" placeholder="Buscar por nombre, factura o ID..." onkeyup="filtrarTransacciones()">
+          </div>
         </div>
       </div>
 
-    </div>
-  </main>
+      <div id="transaccionesContainer">
+        <div class="text-center py-8 md:py-12">
+          <div class="animate-spin inline-block w-6 h-6 md:w-8 md:h-8 border-4 border-current border-t-transparent text-[#7b5222] rounded-full">
+            <span class="sr-only">Cargando...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
 
-  <script src="/js/structure/sidebarloader.js"></script>
+<footer class="w-full text-center py-4 text-gray-400 text-sm">
+  &copy; 2025 Thelarte.
+</footer>
+
+<script src="../../js/structure/sidebarloader.js"></script>
+<script src="../../js/services/transaccionService.js"></script>
+<script src="../../js/transaccion/index.js"></script>
 </body>
 </html>

@@ -26,7 +26,6 @@ public class Producto {
     }
 
     public Producto(String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precio, String fotoURL) {
-        this.id = id;
         this.nombre = nombre;
         this.tipo = tipo;
         this.descripcion = descripcion;

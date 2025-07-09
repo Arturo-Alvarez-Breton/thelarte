@@ -202,6 +202,66 @@ public class TransaccionController {
         }
     }
 
+    @PutMapping("/{id}/recibir")
+    public ResponseEntity<Transaccion> marcarComoRecibida(@PathVariable Long id) {
+        try {
+            Transaccion transaccionRecibida = transaccionService.marcarComoRecibida(id);
+            return new ResponseEntity<>(transaccionRecibida, HttpStatus.OK);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/pagar")
+    public ResponseEntity<Transaccion> marcarComoPagada(@PathVariable Long id) {
+        try {
+            Transaccion transaccionPagada = transaccionService.marcarComoPagada(id);
+            return new ResponseEntity<>(transaccionPagada, HttpStatus.OK);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/entregar")
+    public ResponseEntity<Transaccion> marcarComoEntregada(@PathVariable Long id) {
+        try {
+            Transaccion transaccionEntregada = transaccionService.marcarComoEntregada(id);
+            return new ResponseEntity<>(transaccionEntregada, HttpStatus.OK);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/cobrar")
+    public ResponseEntity<Transaccion> marcarComoCobrada(@PathVariable Long id) {
+        try {
+            Transaccion transaccionCobrada = transaccionService.marcarComoCobrada(id);
+            return new ResponseEntity<>(transaccionCobrada, HttpStatus.OK);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/facturar")
+    public ResponseEntity<Transaccion> facturarVenta(@PathVariable Long id, @RequestParam String numeroFactura) {
+        try {
+            Transaccion transaccionFacturada = transaccionService.facturarVenta(id, numeroFactura);
+            return new ResponseEntity<>(transaccionFacturada, HttpStatus.OK);
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarTransaccion(@PathVariable Long id) {
         try {
@@ -276,5 +336,29 @@ public class TransaccionController {
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @GetMapping("/compras/pendientes-recepcion")
+    public ResponseEntity<List<Transaccion>> obtenerComprasPendientesRecepcion() {
+        List<Transaccion> compras = transaccionService.obtenerComprasPendientesRecepcion();
+        return new ResponseEntity<>(compras, HttpStatus.OK);
+    }
+
+    @GetMapping("/compras/pendientes-pago")
+    public ResponseEntity<List<Transaccion>> obtenerComprasPendientesPago() {
+        List<Transaccion> compras = transaccionService.obtenerComprasPendientesPago();
+        return new ResponseEntity<>(compras, HttpStatus.OK);
+    }
+
+    @GetMapping("/ventas/pendientes-entrega")
+    public ResponseEntity<List<Transaccion>> obtenerVentasPendientesEntrega() {
+        List<Transaccion> ventas = transaccionService.obtenerVentasPendientesEntrega();
+        return new ResponseEntity<>(ventas, HttpStatus.OK);
+    }
+
+    @GetMapping("/ventas/pendientes-cobro")
+    public ResponseEntity<List<Transaccion>> obtenerVentasPendientesCobro() {
+        List<Transaccion> ventas = transaccionService.obtenerVentasPendientesCobro();
+        return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 }

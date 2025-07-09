@@ -4,6 +4,8 @@ import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
+import com.thelarte.inventory.model.Producto;
+import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,14 @@ public class TransaccionService {
     private TransaccionRepository transaccionRepository;
 
     @Autowired
+    private ProductoRepository productoRepository;
+
+    @Autowired
     private PaymentMetadataValidator paymentMetadataValidator;
 
     public Transaccion crearTransaccion(Transaccion transaccion) {
         validatePaymentMetadata(transaccion);
+        procesarLineasTransaccion(transaccion);
         calcularTotalesTransaccion(transaccion);
         return transaccionRepository.save(transaccion);
     }
@@ -183,6 +189,106 @@ public class TransaccionService {
         return actualizarEstado(id, Transaccion.EstadoTransaccion.CANCELADA);
     }
 
+    public Transaccion marcarComoRecibida(Long id) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.COMPRA) {
+            throw new IllegalStateException("Solo las compras pueden marcarse como recibidas");
+        }
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.RECIBIDA);
+        transaccion.setFechaEntregaReal(LocalDateTime.now());
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    public Transaccion marcarComoPagada(Long id) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.COMPRA) {
+            throw new IllegalStateException("Solo las compras pueden marcarse como pagadas");
+        }
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.PAGADA);
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    public Transaccion marcarComoEntregada(Long id) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
+            throw new IllegalStateException("Solo las ventas pueden marcarse como entregadas");
+        }
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.ENTREGADA);
+        transaccion.setFechaEntregaReal(LocalDateTime.now());
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    public Transaccion marcarComoCobrada(Long id) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
+            throw new IllegalStateException("Solo las ventas pueden marcarse como cobradas");
+        }
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    public Transaccion facturarVenta(Long id, String numeroFactura) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
+            throw new IllegalStateException("Solo las ventas pueden facturarse");
+        }
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.FACTURADA);
+        transaccion.setNumeroFactura(numeroFactura);
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerComprasPendientesRecepcion() {
+        return transaccionRepository.findByTipoAndEstado(
+            Transaccion.TipoTransaccion.COMPRA, 
+            Transaccion.EstadoTransaccion.CONFIRMADA
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerComprasPendientesPago() {
+        return transaccionRepository.findByTipoAndEstado(
+            Transaccion.TipoTransaccion.COMPRA, 
+            Transaccion.EstadoTransaccion.RECIBIDA
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerVentasPendientesEntrega() {
+        return transaccionRepository.findByTipoAndEstado(
+            Transaccion.TipoTransaccion.VENTA, 
+            Transaccion.EstadoTransaccion.CONFIRMADA
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerVentasPendientesCobro() {
+        return transaccionRepository.findByTipoAndEstado(
+            Transaccion.TipoTransaccion.VENTA, 
+            Transaccion.EstadoTransaccion.ENTREGADA
+        );
+    }
+
     public Transaccion actualizarTransaccion(Long id, Transaccion transaccionActualizada) {
         Transaccion transaccion = transaccionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
@@ -264,6 +370,30 @@ public class TransaccionService {
         transaccion.setSubtotal(subtotal);
         transaccion.setImpuestos(impuestos);
         transaccion.setTotal(total);
+    }
+
+    private void procesarLineasTransaccion(Transaccion transaccion) {
+        if (transaccion.getLineas() != null) {
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                // Si el productoId es null, crear un nuevo producto
+                if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
+                    Producto nuevoProducto = new Producto();
+                    nuevoProducto.setNombre(linea.getProductoNombre());
+                    nuevoProducto.setTipo("General"); // Tipo por defecto
+                    nuevoProducto.setDescripcion("Producto creado automáticamente");
+                    nuevoProducto.setMarca("Sin marca");
+                    nuevoProducto.setItbis(18.0f); // 18% de ITBIS por defecto
+                    nuevoProducto.setPrecio(linea.getPrecioUnitario());
+                    nuevoProducto.setFotoURL("");
+                    
+                    // Guardar el producto en la base de datos
+                    nuevoProducto = productoRepository.save(nuevoProducto);
+                    
+                    // Asignar el ID generado a la línea de transacción
+                    linea.setProductoId(nuevoProducto.getId());
+                }
+            }
+        }
     }
 
     private void validatePaymentMetadata(Transaccion transaccion) {
