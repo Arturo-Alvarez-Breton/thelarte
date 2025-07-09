@@ -1,7 +1,17 @@
 const service = new TransaccionService();
 
-function showLoading(){document.getElementById('loadingOverlay').classList.remove('hidden');}
-function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden');}
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+  }
+}
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+}
 
 async function loadDetalle(){
   const params = new URLSearchParams(window.location.search);
