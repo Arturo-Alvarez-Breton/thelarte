@@ -2,9 +2,32 @@ const table = document.getElementById('supplierTable');
 const emptyState = document.getElementById('emptyState');
 const mobileView = document.getElementById('mobileView');
 const desktopView = document.getElementById('desktopView');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const viewToggle = document.getElementById('viewToggle');
+
+function showLoading() {
+  if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+}
+
+function hideLoading() {
+  if (loadingOverlay) loadingOverlay.classList.add('hidden');
+}
+
+function updateView() {
+  const mode = localStorage.getItem('supplierView') || viewToggle.value;
+  if (viewToggle) viewToggle.value = mode;
+  if (mode === 'card') {
+    mobileView.style.display = 'block';
+    desktopView.style.display = 'none';
+  } else {
+    desktopView.style.display = 'block';
+    mobileView.style.display = 'none';
+  }
+}
 
 async function loadSuppliers() {
   try {
+    showLoading();
     const token = localStorage.getItem('authToken');
     const resp = await fetch('/api/suplidores', {
       method: 'GET',
@@ -23,6 +46,7 @@ async function loadSuppliers() {
       desktopView.style.display = 'none';
       mobileView.style.display = 'none';
       emptyState.classList.remove('hidden');
+      hideLoading();
       return;
     }
     
@@ -92,9 +116,12 @@ async function loadSuppliers() {
         </div>
       </div>
     `).join('');
+    updateView();
+    hideLoading();
   } catch (error) {
     console.error('Error loading suppliers:', error);
     alert('Error al cargar los suplidores. Por favor, intenta de nuevo.');
+    hideLoading();
   }
 }
 
@@ -211,6 +238,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Preferencia de vista
+  if (viewToggle) {
+    viewToggle.addEventListener('change', () => {
+      localStorage.setItem('supplierView', viewToggle.value);
+      updateView();
+    });
+  }
+
+  // Onboarding
+  const onboardingMsg = document.getElementById('onboardingMsg');
+  if (onboardingMsg && !localStorage.getItem('suppliersOnboarded')) {
+    onboardingMsg.classList.remove('hidden');
+  }
+
   // Iniciar la carga de los suplidores
   loadSuppliers();
 });
+
+function dismissOnboarding() {
+  localStorage.setItem('suppliersOnboarded', '1');
+  const msg = document.getElementById('onboardingMsg');
+  if (msg) msg.classList.add('hidden');
+}
