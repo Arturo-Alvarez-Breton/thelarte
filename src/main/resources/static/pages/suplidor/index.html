@@ -34,22 +34,27 @@
       <!-- Cabecera -->
       <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-8 gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-brandGold">
-            Gestión de Suplidores
-          </h1>
-          <p class="text-gray-600 mt-1">
-            Administra la información de tus proveedores
-          </p>
+          <h1 class="text-2xl font-bold text-brandGold">Gestión de Suplidores</h1>
+          <p class="text-gray-600 mt-1">Administra la información de tus proveedores</p>
         </div>
-        <div class="flex gap-3">
-          <a href="/pages/structure/home.html"
-             class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm">
-            ← Inicio
-          </a>
-          <a href="form.html"
-             class="bg-brandGold text-white px-4 py-2 rounded-lg hover:bg-brandBrown transition text-sm">
-            + Nuevo Suplidor
-          </a>
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div class="flex items-center gap-2">
+            <label for="viewToggle" class="text-sm text-gray-700">Vista</label>
+            <select id="viewToggle" class="border-gray-300 rounded-md text-sm p-1">
+              <option value="table">Tabla</option>
+              <option value="card">Tarjetas</option>
+            </select>
+          </div>
+          <div class="flex gap-3">
+            <a href="/pages/structure/home.html"
+               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm">
+              ← Inicio
+            </a>
+            <a href="form.html"
+               class="bg-brandGold text-white px-4 py-2 rounded-lg hover:bg-brandBrown transition text-sm">
+              + Nuevo Suplidor
+            </a>
+          </div>
         </div>
       </div>
 
@@ -97,6 +102,17 @@
     </div>
   </main>
 
-  <script src="/js/structure/sidebarloader.js"></script>
-</body>
+    <script src="/js/structure/sidebarloader.js"></script>
+
+    <!-- Onboarding message -->
+    <div id="onboardingMsg" class="hidden fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4 text-sm max-w-xs z-40">
+      <p class="mb-3">Usa el botón <strong>+ Nuevo Suplidor</strong> para registrar tu primer proveedor. Puedes cambiar la vista con el selector <strong>Vista</strong>.</p>
+      <button class="bg-brandGold text-white px-3 py-1 rounded w-full" onclick="dismissOnboarding()">Entendido</button>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+      <div class="animate-spin h-10 w-10 border-4 border-brandGold border-t-transparent rounded-full"></div>
+    </div>
+  </body>
 </html>

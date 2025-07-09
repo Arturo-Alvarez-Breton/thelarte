@@ -4,6 +4,18 @@ const descEl = document.getElementById('formDesc');
 const submitBtn = document.getElementById('submitBtn');
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
+const rncError = document.getElementById('rncError');
+const rncInput = document.getElementById('rnc');
+
+if (rncInput) {
+  rncInput.addEventListener('input', () => {
+    if (rncInput.value && !/^[0-9]{9}$/.test(rncInput.value)) {
+      rncError.classList.remove('hidden');
+    } else {
+      rncError.classList.add('hidden');
+    }
+  });
+}
 
 function setMode() {
   if (id) {
@@ -73,6 +85,13 @@ form.addEventListener('submit', async e => {
 
   if (!data.nombre || !data.ciudad) {
     alert('Por favor, completa los campos obligatorios (Nombre y Provincia).');
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    return;
+  }
+
+  if (form.rnc.value && !/^[0-9]{9}$/.test(form.rnc.value)) {
+    rncError.classList.remove('hidden');
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
     return;

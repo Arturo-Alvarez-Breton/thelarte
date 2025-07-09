@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Transacción</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { brandBrown: '#59391B', brandGold: '#7B5222' } } } }
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <main class="flex-1 p-6 md:p-8 max-w-4xl mx-auto">
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50">
+      <div class="animate-spin h-10 w-10 border-4 border-brandGold border-t-transparent rounded-full"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow border p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-brandGold">Detalle de Transacción</h1>
+        <button onclick="history.back()" class="text-sm text-gray-600 border px-3 py-1 rounded">Volver</button>
+      </div>
+      <div id="transaccionInfo" class="space-y-1 mb-6 text-sm text-gray-700"></div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm" id="lineasTable">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-3 py-2 text-left">Producto</th>
+              <th class="px-3 py-2 text-right">Cantidad</th>
+              <th class="px-3 py-2 text-right">Precio</th>
+              <th class="px-3 py-2 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="totales" class="mt-4 text-right text-sm"></div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Imprimir</button>
+        <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded" disabled title="Funcionalidad no implementada">Exportar</button>
+        <button id="emailBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" disabled title="Funcionalidad no implementada">Enviar por correo</button>
+      </div>
+    </div>
+  </main>
+  <script src="../../js/services/transaccionService.js"></script>
+  <script src="../../js/transaccion/detalle.js"></script>
+</body>
+</html>

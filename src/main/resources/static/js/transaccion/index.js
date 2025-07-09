@@ -1,20 +1,31 @@
 let transaccionService;
 let transacciones = [];
 let transaccionesFiltradas = [];
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+function showLoading(){ if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
+function hideLoading(){ if(loadingOverlay) loadingOverlay.classList.add('hidden'); }
 
 document.addEventListener('DOMContentLoaded', async function() {
     transaccionService = new TransaccionService();
+    const onboarding = document.getElementById('onboardingTx');
+    if(onboarding && !localStorage.getItem('txOnboarded')){
+        onboarding.classList.remove('hidden');
+    }
     await cargarTransacciones();
 });
 
 async function cargarTransacciones() {
     try {
+        showLoading();
         transacciones = await transaccionService.obtenerTransacciones();
         transaccionesFiltradas = [...transacciones];
         mostrarTransacciones();
+        hideLoading();
     } catch (error) {
         console.error('Error al cargar transacciones:', error);
         mostrarError('Error al cargar las transacciones');
+        hideLoading();
     }
 }
 
@@ -313,3 +324,8 @@ function mostrarExito(mensaje) {
         }
     }, 5000);
 }
+
+function dismissTxOnboarding(){
+    localStorage.setItem('txOnboarded','1');
+    const o = document.getElementById('onboardingTx');
+    if(o) o.classList.add('hidden');}
