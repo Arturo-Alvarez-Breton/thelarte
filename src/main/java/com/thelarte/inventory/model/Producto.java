@@ -25,6 +25,7 @@ public class Producto {
     public Producto() {
     }
 
+
     public Producto(String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra, BigDecimal precioVenta, String fotoURL) {
         this.id = id;
         this.nombre = nombre;
