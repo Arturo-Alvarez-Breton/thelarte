@@ -3,9 +3,25 @@ class TransaccionService {
         this.baseUrl = '/api/transacciones';
     }
 
+    // Helper method to get auth headers
+    getAuthHeaders() {
+        const token = localStorage.getItem('authToken');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        return headers;
+    }
+
     async obtenerTransacciones() {
         try {
-            const response = await fetch(this.baseUrl);
+            const response = await fetch(this.baseUrl, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) {
                 throw new Error('Error al obtener transacciones');
             }
@@ -18,7 +34,9 @@ class TransaccionService {
 
     async obtenerTransaccionPorId(id) {
         try {
-            const response = await fetch(`${this.baseUrl}/${id}`);
+            const response = await fetch(`${this.baseUrl}/${id}`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) {
                 throw new Error('Error al obtener transacción');
             }
@@ -33,9 +51,7 @@ class TransaccionService {
         try {
             const response = await fetch(this.baseUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(transaccion)
             });
             if (!response.ok) {
@@ -52,9 +68,7 @@ class TransaccionService {
         try {
             const response = await fetch(`${this.baseUrl}/${id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(transaccion)
             });
             if (!response.ok) {
@@ -70,7 +84,8 @@ class TransaccionService {
     async eliminarTransaccion(id) {
         try {
             const response = await fetch(`${this.baseUrl}/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
             });
             if (!response.ok) {
                 throw new Error('Error al eliminar transacción');
@@ -146,7 +161,9 @@ class TransaccionService {
 
     async canEditTransaction(id) {
         try {
-            const response = await fetch(`${this.baseUrl}/${id}/can-edit`);
+            const response = await fetch(`${this.baseUrl}/${id}/can-edit`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) {
                 throw new Error('Error al verificar si la transacción puede ser editada');
             }

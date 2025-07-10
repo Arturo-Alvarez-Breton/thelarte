@@ -6,10 +6,16 @@ import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.repository.ProductoRepository;
+import com.thelarte.inventory.service.UnidadService;
+import com.thelarte.inventory.util.EstadoUnidad;
 import com.thelarte.shared.exception.EntityNotFoundException;
+import com.thelarte.auth.entity.User;
+import com.thelarte.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,7 +35,27 @@ public class TransaccionService {
     @Autowired
     private PaymentMetadataValidator paymentMetadataValidator;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private UnidadService unidadService;
+
     public Transaccion crearTransaccion(Transaccion transaccion) {
+        // Asignar vendedor automáticamente para transacciones de venta
+        if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA || 
+            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
+            if (transaccion.getVendedorId() == null) {
+                try {
+                    Long vendedorId = obtenerUsuarioEnSesion();
+                    transaccion.setVendedorId(vendedorId);
+                } catch (IllegalArgumentException e) {
+                    // Si no se puede obtener el usuario de la sesión, lanzar un error más específico
+                    throw new IllegalArgumentException("Las ventas requieren un vendedor asignado. " + e.getMessage());
+                }
+            }
+        }
+        
         validateTransactionBusinessRules(transaccion);
         validatePaymentMetadata(transaccion);
         procesarLineasTransaccion(transaccion);
@@ -200,6 +226,15 @@ public class TransaccionService {
         
         transaccion.setEstado(Transaccion.EstadoTransaccion.RECIBIDA);
         transaccion.setFechaEntregaReal(LocalDateTime.now());
+        
+        // Crear unidades para cada producto en la compra
+        for (LineaTransaccion linea : transaccion.getLineas()) {
+            if (linea.getProductoId() != null) {
+                for (int i = 0; i < linea.getCantidad(); i++) {
+                    unidadService.registrarUnidad(linea.getProductoId(), EstadoUnidad.DISPONIBLE, true);
+                }
+            }
+        }
         
         return transaccionRepository.save(transaccion);
     }
@@ -478,5 +513,19 @@ public class TransaccionService {
                     String.join(", ", validationResult.getErrors()));
             }
         }
+    }
+
+    private Long obtenerUsuarioEnSesion() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            if (username != null && !username.equals("anonymousUser")) {
+                User user = userService.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + username));
+                return user.getId();
+            }
+        }
+        throw new IllegalArgumentException("No hay un usuario autenticado en la sesión");
     }
 }

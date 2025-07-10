@@ -62,7 +62,13 @@ public class UnidadService {
     public List<UnidadDTO> unidadesPorProducto(Long idProducto) {
         return unidadRepository.findByProducto_Id(idProducto)
                 .stream()
-                .map(this::toDto)
+                .map(unidad -> new UnidadDTO(
+                        unidad.getIdUnidad(),
+                        idProducto,
+                        unidad.getFechaIngreso(),
+                        unidad.getEstado(),
+                        unidad.isStock()
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -121,7 +127,13 @@ public class UnidadService {
         return unidadRepository.findByProducto_Id(idProducto)
                 .stream()
                 .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
-                .map(this::toDto)
+                .map(unidad -> new UnidadDTO(
+                        unidad.getIdUnidad(),
+                        idProducto,
+                        unidad.getFechaIngreso(),
+                        unidad.getEstado(),
+                        unidad.isStock()
+                ))
                 .collect(Collectors.toList());
     }
 }

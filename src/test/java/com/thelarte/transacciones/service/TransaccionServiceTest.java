@@ -3,7 +3,9 @@ package com.thelarte.transacciones.service;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.Transaccion.EstadoTransaccion;
 import com.thelarte.transacciones.model.Transaccion.TipoTransaccion;
+import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
+import com.thelarte.inventory.service.UnidadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,11 +13,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,6 +29,9 @@ class TransaccionServiceTest {
 
     @Mock
     private TransaccionRepository transaccionRepository;
+
+    @Mock
+    private UnidadService unidadService;
 
     @InjectMocks
     private TransaccionService transaccionService;
@@ -40,6 +49,15 @@ class TransaccionServiceTest {
         );
         transaccionCompra.setId(1L);
         transaccionCompra.setEstado(EstadoTransaccion.CONFIRMADA);
+        
+        // Add mock lines to the compra transaction
+        List<LineaTransaccion> lineasCompra = new ArrayList<>();
+        LineaTransaccion linea1 = new LineaTransaccion();
+        linea1.setProductoId(1L);
+        linea1.setCantidad(2);
+        linea1.setPrecioUnitario(BigDecimal.valueOf(100.0));
+        lineasCompra.add(linea1);
+        transaccionCompra.setLineas(lineasCompra);
 
         transaccionVenta = new Transaccion(
             TipoTransaccion.VENTA,
@@ -49,6 +67,15 @@ class TransaccionServiceTest {
         );
         transaccionVenta.setId(2L);
         transaccionVenta.setEstado(EstadoTransaccion.CONFIRMADA);
+        
+        // Add mock lines to the venta transaction
+        List<LineaTransaccion> lineasVenta = new ArrayList<>();
+        LineaTransaccion linea2 = new LineaTransaccion();
+        linea2.setProductoId(2L);
+        linea2.setCantidad(1);
+        linea2.setPrecioUnitario(BigDecimal.valueOf(200.0));
+        lineasVenta.add(linea2);
+        transaccionVenta.setLineas(lineasVenta);
     }
 
     @Test
@@ -64,6 +91,7 @@ class TransaccionServiceTest {
         assertEquals(EstadoTransaccion.RECIBIDA, result.getEstado());
         assertNotNull(result.getFechaEntregaReal());
         verify(transaccionRepository).save(transaccionCompra);
+        verify(unidadService, times(2)).registrarUnidad(eq(1L), any(), eq(true));
     }
 
     @Test
