@@ -49,6 +49,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
         existente.setEmail(datosActualizados.getEmail()); // Ahora sí seteamos email
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
+   
         // No modificamos fechaContratacion: se mantiene la original establecida en creación
         return empleadoRepository.save(existente);
     }
