@@ -57,8 +57,8 @@ async function loadProducto() {
         form.nombre.value = p.nombre || '';
         form.tipo.value = p.tipo || '';
         form.descripcion.value = p.descripcion || '';
-        form.marca.value = p.marca || '';
-        form.precio.value = p.precio || '';
+        form.precioCompra.value = p.precioCompra || '';
+        form.precioVenta.value = p.precioVenta || '';
         // Mostrar previsualización si existe foto
         if (p.fotoUrl && document.getElementById('fotoPreview')) {
             document.getElementById('fotoPreview').src = p.fotoUrl;
@@ -110,7 +110,13 @@ form.addEventListener('submit', async e => {
     }
 
     // Validación básica
-    if (!form.nombre.value.trim() || !form.tipo.value.trim() || !form.precio.value.trim()) {
+    if (!form.nombre.value.trim() || !form.tipo.value.trim() || !form.precioCompra.value.trim()) {
+        alert('Por favor, completa los campos obligatorios (Nombre, Tipo, Precio).');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+    if (!form.nombre.value.trim() || !form.tipo.value.trim() || !form.precioVenta.value.trim()) {
         alert('Por favor, completa los campos obligatorios (Nombre, Tipo, Precio).');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -122,8 +128,8 @@ form.addEventListener('submit', async e => {
         nombre: form.nombre.value.trim(),
         tipo: form.tipo.value.trim(),
         descripcion: form.descripcion.value.trim(),
-        marca: form.marca.value.trim(),
-        precio: parseFloat(form.precio.value) || 0,
+        precioCompra: parseFloat(form.precioCompra.value) || 0,
+        precioVenta: parseFloat(form.precioVenta.value) || 0,
         fotoBase64: fotoBase64
     };
 
