@@ -12,12 +12,13 @@ public class ProductoDTO {
     private BigDecimal precioCompra;
     private BigDecimal precioVenta;
     private String fotoBase64; // solo para recibir del frontend
-    private String fotoUrl;    // la URL del archivo en disco
+    private String fotoUrl;
+    private int cantidadDisponible;// la URL del archivo en disco
 
     public ProductoDTO() {
     }
 
-    public ProductoDTO(long id, String codigo, String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
+    public ProductoDTO(long id, String codigo, String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl, int cantidadDisponible) {
         this.id = id;
         this.codigo = codigo;
         this.nombre = nombre;
@@ -27,6 +28,7 @@ public class ProductoDTO {
         this.precioCompra = precioCompra;
         this.precioVenta = precioVenta;
         this.fotoUrl = fotoUrl;
+        this.cantidadDisponible = cantidadDisponible;
     }
 
     public long getId() { return id; }
@@ -57,4 +59,11 @@ public class ProductoDTO {
 
     public String getFotoBase64() { return fotoBase64; }
     public void setFotoBase64(String fotoBase64) { this.fotoBase64 = fotoBase64; }
+
+    public int getCantidadDisponible() {
+        return cantidadDisponible;
+    }
+    public void setCantidadDisponible(int cantidadDisponible) {
+        this.cantidadDisponible = cantidadDisponible;
+    }
 }

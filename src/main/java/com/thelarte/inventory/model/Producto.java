@@ -1,8 +1,11 @@
 package com.thelarte.inventory.model;
 
+import com.thelarte.inventory.util.EstadoUnidad;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -19,6 +22,8 @@ public class Producto {
     private BigDecimal precioCompra;
     private BigDecimal precioVenta;
     private String fotoURL;
+    @OneToMany(mappedBy = "producto", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Unidad> unidades = new ArrayList<>();
     
     @Column(name = "estado")
     @Enumerated(EnumType.STRING)
@@ -177,7 +182,22 @@ public class Producto {
     public enum EstadoProducto {
         DISPONIBLE,
         AGOTADO,
-        RESERVADO,
         DESCONTINUADO
+    }
+
+    public List<Unidad> getUnidades() {
+        return unidades;
+    }
+
+    public void actualizarEstadoPorUnidades() {
+        long disponibles = unidades.stream()
+                .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
+                .count();
+
+        if (disponibles > 0) {
+            this.estado = EstadoProducto.DISPONIBLE;
+        } else {
+            this.estado = EstadoProducto.AGOTADO;
+        }
     }
 }

@@ -396,9 +396,9 @@ public class TransaccionService {
                         nuevoProducto.setNombre(linea.getProductoNombre());
                         nuevoProducto.setTipo("Mueble"); // Tipo por defecto para compras
                         nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
-                        nuevoProducto.setMarca("Sin marca");
                         nuevoProducto.setItbis(18.0f); // 18% de ITBIS por defecto
-                        nuevoProducto.setPrecio(linea.getPrecioUnitario());
+                        nuevoProducto.setPrecioCompra(linea.getPrecioUnitario());
+                        nuevoProducto.setPrecioVenta(BigDecimal.valueOf(0.0)); // Precio de venta no se establece en compras
                         nuevoProducto.setFotoURL("");
                         nuevoProducto.setEsNuevo(true);
                         nuevoProducto.setCantidadDisponible(linea.getCantidad());

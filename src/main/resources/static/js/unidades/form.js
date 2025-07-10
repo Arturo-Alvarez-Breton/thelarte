@@ -52,7 +52,7 @@ async function handleSubmit(e) {
     const stock = form.stock.value === 'true';
 
     const unidad = {
-        producto: { id: Number(productoId) },
+        idProducto: Number(productoId),
         fechaIngreso: fechaIngreso,
         estado: estado,
         stock: stock

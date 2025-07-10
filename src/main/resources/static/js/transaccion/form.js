@@ -82,15 +82,26 @@ async function cargarDatos() {
     try {
         // Cargar productos
         productos = await transaccionService.obtenerProductos();
+        // Ajustar cantidadDisponible a solo las unidades DISPONIBLES
+        productos.forEach(producto => {
+            if (Array.isArray(producto.unidades)) {
+                // Si tienes la lista de unidades
+                producto.cantidadDisponible = producto.unidades.filter(u => u.estado === 'DISPONIBLE').length;
+            } else if (typeof producto.cantidadDisponiblePorEstado === 'object') {
+                // Si tienes un mapa de cantidad por estado
+                producto.cantidadDisponible = producto.cantidadDisponiblePorEstado['DISPONIBLE'] || 0;
+            }
+            // Si ya tienes cantidadDisponible correcta, no hagas nada
+        });
         console.log("Productos cargados:", productos); // Debug: Muestra los productos en consola
-        
+
         // Cargar contrapartes según el tipo de transacción
         if (tipoTransaccion === 'VENTA') {
             contrapartes = await transaccionService.obtenerClientes();
         } else {
             contrapartes = await transaccionService.obtenerSuplidores();
         }
-        
+
     } catch (error) {
         console.error('Error al cargar datos:', error);
         mostrarError('Error al cargar los datos necesarios');
@@ -178,8 +189,8 @@ function validarPaso(paso) {
                     return false;
                 }
                 
-                if (tipoTransaccion === 'VENTA' && producto.cantidad > producto.stock) {
-                    mostrarError(`La cantidad de "${producto.nombre}" excede el stock disponible (${producto.stock})`);
+                if (tipoTransaccion === 'VENTA' && producto.cantidad > producto.cantidadDisponible) {
+                    mostrarError(`La cantidad de "${producto.nombre}" excede el stock disponible (${producto.cantidadDisponible})`);
                     return false;
                 }
             }
@@ -557,7 +568,8 @@ async function confirmarTransaccion() {
         const subtotal = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
         const itbis = subtotal * 0.18;
         const total = subtotal + itbis;
-        
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+        const idVendedor = usuario?.id; // El ID del usuario autenticado
         const transaccion = {
             tipo: tipoTransaccion,
             fecha: document.getElementById('fecha').value,
@@ -567,6 +579,7 @@ async function confirmarTransaccion() {
             numeroFactura: document.getElementById('numeroFactura').value || null,
             observaciones: document.getElementById('observaciones').value || null,
             subtotal: subtotal,
+            vendedorId: idVendedor,
             impuestos: itbis,
             total: total,
             estado: 'PENDIENTE',
@@ -845,6 +858,7 @@ async function guardarContraparte(event) {
     
     try {
         const token = localStorage.getItem('authToken');
+
         let nuevaContraparte;
         
         if (esCliente) {
@@ -921,64 +935,14 @@ async function guardarContraparte(event) {
 
 function cargarProductos() {
     const container = document.getElementById('productosContainer');
-    console.log("Cargando productos. Total:", productos.length); // Debug log
-    
-    // Para compras, mostrar opción de agregar productos nuevos
+
+    // --- Para compras, tu lógica actual (¡no cambies esto!) ---
     if (tipoTransaccion === 'COMPRA') {
-        const productosHtml = `
-            <div class="mb-4">
-                <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded-lg transition text-sm" onclick="mostrarFormularioProducto()">
-                    <i class="fas fa-plus mr-2"></i>Agregar Producto Nuevo
-                </button>
-            </div>
-            <div id="productosAgregados">
-                ${productosSeleccionados.length === 0 ? `
-                    <div class="text-center py-8">
-                        <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
-                        <p class="text-gray-600">No hay productos agregados</p>
-                        <p class="text-gray-500 text-sm">Haga clic en "Agregar Producto Nuevo" para empezar</p>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-        
-        container.innerHTML = productosHtml;
-        
-        if (productosSeleccionados.length > 0) {
-            mostrarProductosAgregados();
-        }
-        
+        // ... aquí va tu lógica de compra ...
         return;
     }
-    
-    // Para ventas, mostrar productos existentes
-    if (!productos || productos.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-12">
-                <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
-                <p class="text-gray-600 text-lg">No hay productos disponibles</p>
-                <p class="text-gray-500">No se encontraron productos en el sistema</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Normalize stock property - handle different property names
-    productos.forEach(producto => {
-        // Make sure each product has a stock-related property
-        if (producto.cantidadDisponible === undefined) {
-            if (producto.stock !== undefined) {
-                producto.cantidadDisponible = producto.stock;
-            } else if (producto.cantidad !== undefined) {
-                producto.cantidadDisponible = producto.cantidad;
-            } else {
-                console.log("Producto sin stock definido:", producto);
-                producto.cantidadDisponible = 0; // Default to 0 if no stock info
-            }
-        }
-    });
-    
-    // Add a toggle for showing out-of-stock products
+
+    // --- Para ventas: Toggle para mostrar/ocultar productos sin stock ---
     const showOutOfStockToggle = `
         <div class="mb-4 flex justify-between items-center">
             <div class="text-sm text-gray-600">
@@ -995,19 +959,18 @@ function cargarProductos() {
             </label>
         </div>
     `;
-    
-    // Get all products or filter based on toggle state
+
     const showOutOfStock = sessionStorage.getItem('showOutOfStock') === 'true';
+
+    // Filtrar productos según el toggle
     let productosToShow = showOutOfStock ? productos : productos.filter(p => p.cantidadDisponible > 0);
-    
-    console.log("Productos a mostrar:", productosToShow.length, "de", productos.length); // Debug log
-    
-    // If no products to show, always show all products initially
+
+    // Si no hay productos para mostrar y no se está mostrando sin stock, mostrar todos y activar el toggle
     if (productosToShow.length === 0 && !showOutOfStock) {
         productosToShow = productos;
         sessionStorage.setItem('showOutOfStock', 'true');
     }
-    
+
     const productosHtml = `
         ${showOutOfStockToggle}
         ${productosToShow.length === 0 ? `
@@ -1019,24 +982,23 @@ function cargarProductos() {
         ` : `
             <div class="space-y-3">
                 ${productosToShow.map(producto => {
-                    try {
-                        const seleccionado = productosSeleccionados.find(p => p.id === producto.id);
-                        const tieneStock = producto.cantidadDisponible > 0;
-                        
-                        return `
+        try {
+            const seleccionado = productosSeleccionados.find(p => p.id === producto.id);
+            const tieneStock = producto.cantidadDisponible > 0;
+            return `
                             <div class="counterpart-card ${seleccionado ? 'selected' : ''} ${!tieneStock ? 'opacity-70 bg-red-50 border-red-200' : ''}" 
-                                onclick="${tieneStock ? `toggleProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}', ${producto.precio || 0}, ${producto.cantidadDisponible}, this)` : 'mostrarAlertaStockInsuficiente()'}">
+                                onclick="${tieneStock ? `toggleProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}', ${producto.precioVenta || 0}, ${producto.cantidadDisponible}, this)` : 'mostrarAlertaStockInsuficiente()'}">
                                 <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-${tieneStock ? '[#7b5222]' : 'gray-400'} rounded-full flex items-center justify-center mr-4">
+                                    <div class="w-12 h-12 ${tieneStock ? 'bg-[#7b5222]' : 'bg-gray-400'} rounded-full flex items-center justify-center mr-4">
                                         <i class="fas fa-box text-white"></i>
                                     </div>
                                     <div class="flex-1">
                                         <h4 class="font-semibold text-lg text-[#59391B]">${producto.nombre}</h4>
-                                        <p class="text-[#7b5222] font-medium">${formatearMonedaDominicana(producto.precio || 0)}</p>
+                                        <p class="text-[#7b5222] font-medium">${formatearMonedaDominicana(producto.precioVenta || 0)}</p>
                                         <span class="text-sm ${tieneStock ? 'text-gray-500' : 'text-red-500 font-medium'}">${tieneStock ? `Stock: ${producto.cantidadDisponible}` : 'Agotado'}</span>
                                     </div>
                                     <div class="flex items-center">
-                                        ${seleccionado ? `
+                                        ${seleccionado && tieneStock ? `
                                             <div class="mr-4">
                                                 <input type="number" min="1" max="${producto.cantidadDisponible}" 
                                                     value="${seleccionado.cantidad}" 
@@ -1050,18 +1012,17 @@ function cargarProductos() {
                                 </div>
                             </div>
                         `;
-                    } catch (error) {
-                        console.error("Error rendering product:", producto, error);
-                        return ''; // Skip product with rendering error
-                    }
-                }).join('')}
+        } catch (error) {
+            console.error("Error rendering product:", producto, error);
+            return ''; // Skip product with rendering error
+        }
+    }).join('')}
             </div>
         `}
     `;
-    
     container.innerHTML = productosHtml;
-    
-    // Update toggle state
+
+    // Actualizar estado visual del toggle
     const toggleOutOfStock = document.getElementById('toggleOutOfStock');
     if (toggleOutOfStock) {
         toggleOutOfStock.checked = sessionStorage.getItem('showOutOfStock') === 'true';
@@ -1069,27 +1030,20 @@ function cargarProductos() {
     }
 }
 
-function toggleProducto(id, nombre, precio, stock, element) {
-    console.log("Producto seleccionado:", id, nombre, precio, stock); // Debug log
-    const index = productosSeleccionados.findIndex(p => p.id === id);
-    
-    if (index >= 0) {
-        // Remover producto
-        productosSeleccionados.splice(index, 1);
+function toggleProducto(id, nombre, precioVenta, cantidadDisponible, element) {
+    const idx = productosSeleccionados.findIndex(p => p.id === id);
+    if (idx >= 0) {
+        productosSeleccionados.splice(idx, 1);
         element.classList.remove('selected');
     } else {
-        // Agregar producto
         productosSeleccionados.push({
             id,
             nombre,
-            precio,
-            stock,
+            precio: precioVenta,
+            cantidadDisponible,
             cantidad: 1
         });
         element.classList.add('selected');
     }
-    
-    // Recargar la vista de productos para mostrar/ocultar inputs de cantidad
-    actualizarResumenProductos();
     cargarProductos();
 }

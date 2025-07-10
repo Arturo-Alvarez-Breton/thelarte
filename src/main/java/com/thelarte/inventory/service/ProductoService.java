@@ -2,6 +2,7 @@ package com.thelarte.inventory.service;
 
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.dto.ProductoDTO;
+import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,7 +126,9 @@ public class ProductoService implements IProductoService {
                 p.getItbis(),
                 p.getPrecioCompra(),
                 p.getPrecioVenta(),
-                p.getFotoURL()
+                p.getFotoURL(),
+                p.getUnidades().size()
+
         );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
 
     }

@@ -1,5 +1,6 @@
 package com.thelarte.inventory.controller;
 
+import com.thelarte.inventory.dto.UnidadDTO;
 import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.util.EstadoUnidad;
 import com.thelarte.inventory.service.UnidadService;
@@ -19,9 +20,9 @@ public class UnidadController {
 
     // Registrar una nueva unidad
     @PostMapping
-    public ResponseEntity<Unidad> registrarUnidad(@RequestBody Unidad unidad) {
-        Unidad nueva = unidadService.registrarUnidad(
-                unidad.getProducto().getId(),
+    public ResponseEntity<UnidadDTO> registrarUnidad(@RequestBody UnidadDTO unidad) {
+        UnidadDTO nueva = unidadService.registrarUnidad(
+                unidad.getIdProducto(),
                 unidad.getEstado(),
                 unidad.isStock()
         );
@@ -30,51 +31,50 @@ public class UnidadController {
 
     // Cambiar el estado de una unidad
     @PutMapping("/{idUnidad}/estado")
-    public ResponseEntity<Unidad> cambiarEstado(
+    public ResponseEntity<UnidadDTO> cambiarEstado(
             @PathVariable Long idUnidad,
             @RequestParam EstadoUnidad estado,
             @RequestParam(required = false) Boolean disponible
     ) {
-        Unidad unidad = unidadService.cambiarEstado(idUnidad, estado);
+        UnidadDTO unidad = unidadService.cambiarEstado(idUnidad, estado);
         return ResponseEntity.ok(unidad);
     }
 
     // Mover unidad entre stock y almacén
     @PutMapping("/{idUnidad}/mover")
-    public ResponseEntity<Unidad> moverUnidad(
+    public ResponseEntity<UnidadDTO> moverUnidad(
             @PathVariable Long idUnidad,
             @RequestParam boolean stock
     ) {
-        Unidad unidad = unidadService.moverUnidad(idUnidad, stock);
+        UnidadDTO unidad = unidadService.moverUnidad(idUnidad, stock);
         return ResponseEntity.ok(unidad);
     }
 
     // Consultar todas las unidades de un producto
     @GetMapping("/producto/{idProducto}")
-    public ResponseEntity<List<Unidad>> unidadesPorProducto(@PathVariable Long idProducto) {
-        List<Unidad> lista = unidadService.unidadesPorProducto(idProducto);
+    public ResponseEntity<List<UnidadDTO>> unidadesPorProducto(@PathVariable Long idProducto) {
+        List<UnidadDTO> lista = unidadService.unidadesPorProducto(idProducto);
         return ResponseEntity.ok(lista);
     }
 
     // Consultar unidades por estado
     @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<Unidad>> unidadesPorEstado(@PathVariable EstadoUnidad estado) {
-        List<Unidad> lista = unidadService.unidadesPorEstado(estado);
+    public ResponseEntity<List<UnidadDTO>> unidadesPorEstado(@PathVariable EstadoUnidad estado) {
+        List<UnidadDTO> lista = unidadService.unidadesPorEstado(estado);
         return ResponseEntity.ok(lista);
     }
 
-
     // Consultar unidades por stock/almacén
     @GetMapping("/stock/{stock}")
-    public ResponseEntity<List<Unidad>> unidadesPorStock(@PathVariable boolean stock) {
-        List<Unidad> lista = unidadService.unidadesPorStock(stock);
+    public ResponseEntity<List<UnidadDTO>> unidadesPorStock(@PathVariable boolean stock) {
+        List<UnidadDTO> lista = unidadService.unidadesPorStock(stock);
         return ResponseEntity.ok(lista);
     }
 
     // Buscar una unidad por id
     @GetMapping("/{idUnidad}")
-    public ResponseEntity<Unidad> buscarPorId(@PathVariable Long idUnidad) {
-        Optional<Unidad> unidadOpt = unidadService.buscarPorId(idUnidad);
+    public ResponseEntity<UnidadDTO> buscarPorId(@PathVariable Long idUnidad) {
+        Optional<UnidadDTO> unidadOpt = unidadService.buscarPorId(idUnidad);
         return unidadOpt.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -87,8 +87,13 @@ public class UnidadController {
 
     // Actualizar una unidad (edición completa)
     @PutMapping("/{idUnidad}")
-    public ResponseEntity<Unidad> actualizarUnidad(@PathVariable Long idUnidad, @RequestBody Unidad unidad) {
-        Unidad actualizada = unidadService.actualizarUnidad(idUnidad, unidad);
+    public ResponseEntity<UnidadDTO> actualizarUnidad(@PathVariable Long idUnidad, @RequestBody UnidadDTO unidad) {
+        UnidadDTO actualizada = unidadService.actualizarUnidad(idUnidad, unidad);
         return ResponseEntity.ok(actualizada);
+    }
+    @GetMapping("/producto/{idProducto}/disponibles")
+    public ResponseEntity<List<UnidadDTO>> unidadesDisponiblesPorProducto(@PathVariable Long idProducto) {
+        List<UnidadDTO> lista = unidadService.unidadesDisponiblesPorProducto(idProducto);
+        return ResponseEntity.ok(lista);
     }
 }

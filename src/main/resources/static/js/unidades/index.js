@@ -48,7 +48,6 @@ async function loadUnidades() {
                 <th class="px-4 py-2">Fecha Ingreso</th>
                 <th class="px-4 py-2">Estado</th>
                 <th class="px-4 py-2">Stock</th>
-                <th class="px-4 py-2">Disponible</th>
                 <th class="px-4 py-2">Acción</th>
               </tr>
             </thead>
@@ -60,7 +59,6 @@ async function loadUnidades() {
               <td class="px-4 py-2 text-center">${u.fechaIngreso ? new Date(u.fechaIngreso).toLocaleDateString() : '-'}</td>
               <td class="px-4 py-2 text-center">${u.estado || '-'}</td>
               <td class="px-4 py-2 text-center">${u.stock ? 'En tienda' : 'Almacén'}</td>
-              <td class="px-4 py-2 text-center">${u.disponible ? 'Sí' : 'No'}</td>
               <td class="px-4 py-2 text-center">
                 <a href="form.html?productoId=${productoId}&idUnidad=${u.idUnidad}" class="px-2 text-blue-600 hover:underline">Editar</a>
                 <button type="button" class="px-2 text-red-600 hover:underline" data-id="${u.idUnidad}">Eliminar</button>

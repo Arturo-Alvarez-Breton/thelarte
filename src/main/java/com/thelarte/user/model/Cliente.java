@@ -13,10 +13,10 @@ import java.time.LocalDate;
 public class Cliente extends Persona {
 
     @NotBlank(message = "La dirección es obligatoria")
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String direccion;
 
-    @Column(name = "FECHA_REGISTRO", nullable = false)
+    @Column(name = "FECHA_REGISTRO", nullable = true)
     private LocalDate fechaRegistro;
 
     // Constructores

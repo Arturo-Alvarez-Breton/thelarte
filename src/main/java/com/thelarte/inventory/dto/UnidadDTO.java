@@ -5,13 +5,13 @@ import com.thelarte.inventory.util.EstadoUnidad;
 import java.util.Date;
 
 public class UnidadDTO {
-    private String idUnidad;
-    private String idProducto;
+    private long idUnidad;
+    private long idProducto;
     private Date fechaIngreso;
     private EstadoUnidad estado;
     private boolean stock; // en inventario o en almacen
 
-    public UnidadDTO(String idUnidad, String idProducto, Date fechaIngreso, EstadoUnidad disponible, boolean stock) {
+    public UnidadDTO(long idUnidad, long idProducto, Date fechaIngreso, EstadoUnidad estado, boolean stock) {
         this.idUnidad = idUnidad;
         this.idProducto = idProducto;
         this.fechaIngreso = fechaIngreso;
@@ -20,15 +20,15 @@ public class UnidadDTO {
     }
     public UnidadDTO() {
     }
-    public String getIdUnidad() {
+    public long getIdUnidad() {
         return idUnidad;
     }
 
-    public String getIdProducto() {
+    public long getIdProducto() {
         return idProducto;
     }
 
-    public void setIdProducto(String idProducto) {
+    public void setIdProducto(long idProducto) {
         this.idProducto = idProducto;
     }
 

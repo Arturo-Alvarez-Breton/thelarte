@@ -1,5 +1,6 @@
 package com.thelarte.inventory.service;
 
+import com.thelarte.inventory.dto.UnidadDTO;
 import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.repository.UnidadRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UnidadService {
@@ -22,8 +24,8 @@ public class UnidadService {
     @Autowired
     private ProductoRepository productoRepository;
 
-    // Registrar una nueva unidad para un producto
-    public Unidad registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
+    // Registrar una nueva unidad para un producto (devuelve DTO)
+    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
         Optional<Producto> productoOpt = productoRepository.findById(idProducto);
         if (productoOpt.isEmpty()) {
             throw new IllegalArgumentException("Producto no encontrado");
@@ -33,59 +35,93 @@ public class UnidadService {
         unidad.setFechaIngreso(new Date());
         unidad.setEstado(estadoUnidad);
         unidad.setStock(stock);
-        return unidadRepository.save(unidad);
+        productoOpt.get().getUnidades().add(unidad); // Agregar unidad al producto
+        Unidad saved = unidadRepository.save(unidad);
+        return toDto(saved);
     }
 
-    // Cambiar el estado de una unidad (por ejemplo: vender, reservar, dañar, etc)
-    public Unidad cambiarEstado(Long idUnidad, EstadoUnidad nuevoEstado) {
+    // Cambiar el estado de una unidad (devuelve DTO)
+    public UnidadDTO cambiarEstado(Long idUnidad, EstadoUnidad nuevoEstado) {
         Unidad unidad = unidadRepository.findById(idUnidad)
                 .orElseThrow(() -> new IllegalArgumentException("Unidad no encontrada"));
         unidad.setEstado(nuevoEstado);
-        return unidadRepository.save(unidad);
+        Unidad saved = unidadRepository.save(unidad);
+        return toDto(saved);
     }
 
-    // Mover unidad entre stock y almacén
-    public Unidad moverUnidad(Long idUnidad, boolean stock) {
+    // Mover unidad entre stock y almacén (devuelve DTO)
+    public UnidadDTO moverUnidad(Long idUnidad, boolean stock) {
         Unidad unidad = unidadRepository.findById(idUnidad)
                 .orElseThrow(() -> new IllegalArgumentException("Unidad no encontrada"));
         unidad.setStock(stock);
-        return unidadRepository.save(unidad);
+        Unidad saved = unidadRepository.save(unidad);
+        return toDto(saved);
     }
 
-    // Consultar todas las unidades de un producto
-    public List<Unidad> unidadesPorProducto(Long idProducto) {
-        return unidadRepository.findByProducto_Id(idProducto);
+    // Consultar todas las unidades de un producto (devuelve lista de DTO)
+    public List<UnidadDTO> unidadesPorProducto(Long idProducto) {
+        return unidadRepository.findByProducto_Id(idProducto)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    // Consultar unidades por estado
-    public List<Unidad> unidadesPorEstado(EstadoUnidad estado) {
-        return unidadRepository.findByEstado(estado);
+    // Consultar unidades por estado (devuelve lista de DTO)
+    public List<UnidadDTO> unidadesPorEstado(EstadoUnidad estado) {
+        return unidadRepository.findByEstado(estado)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-
-    // Consultar todas las unidades en stock/en almacén
-    public List<Unidad> unidadesPorStock(boolean stock) {
-        return unidadRepository.findByStock(stock);
+    // Consultar todas las unidades en stock/en almacén (devuelve lista de DTO)
+    public List<UnidadDTO> unidadesPorStock(boolean stock) {
+        return unidadRepository.findByStock(stock)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    // Consultar por ID
-    public Optional<Unidad> buscarPorId(Long idUnidad) {
-        return unidadRepository.findById(idUnidad);
+    // Consultar por ID (devuelve Optional<DTO>)
+    public Optional<UnidadDTO> buscarPorId(Long idUnidad) {
+        return unidadRepository.findById(idUnidad)
+                .map(this::toDto);
     }
 
-    // Eliminar una unidad
+    // Eliminar una unidad (no cambia)
     public void eliminarUnidad(Long idUnidad) {
+        Unidad unidad = unidadRepository.findById(idUnidad)
+                .orElseThrow(() -> new EntityNotFoundException("Unidad no encontrada"));
+        Producto producto = unidad.getProducto();
+        producto.getUnidades().remove(unidad);
         unidadRepository.deleteById(idUnidad);
     }
 
-    public Unidad actualizarUnidad(Long idUnidad, Unidad unidad) {
+    // Actualizar unidad (devuelve DTO)
+    public UnidadDTO actualizarUnidad(Long idUnidad, UnidadDTO unidad) {
         Unidad existente = unidadRepository.findById(idUnidad)
                 .orElseThrow(() -> new EntityNotFoundException("Unidad no encontrada"));
-        // Actualiza los campos deseados:
         existente.setEstado(unidad.getEstado());
         existente.setStock(unidad.isStock());
         existente.setFechaIngreso(unidad.getFechaIngreso());
-        // ...otros campos si corresponde
-        return unidadRepository.save(existente);
+        Unidad saved = unidadRepository.save(existente);
+        return toDto(saved);
+    }
+
+    public UnidadDTO toDto(Unidad unidad) {
+        return new UnidadDTO(
+                unidad.getIdUnidad(),
+                unidad.getProducto() != null ? unidad.getProducto().getId() : 0,
+                unidad.getFechaIngreso(),
+                unidad.getEstado(),
+                unidad.isStock()
+        );
+    }
+    public List<UnidadDTO> unidadesDisponiblesPorProducto(Long idProducto) {
+        return unidadRepository.findByProducto_Id(idProducto)
+                .stream()
+                .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 }
