@@ -198,6 +198,14 @@
                                     <input type="text" class="form-control w-full" id="numeroOrdenCompra">
                                 </div>
                             </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6" id="vendedorSection" style="display: none;">
+                                <div class="space-y-2">
+                                    <label for="vendedor" class="form-label block">Vendedor *</label>
+                                    <select class="form-select w-full" id="vendedor">
+                                        <option value="">Seleccionar vendedor</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Paso 2: Contraparte -->
@@ -263,18 +271,148 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-2">
                                     <label for="metodoPago" class="form-label block">Método de Pago</label>
-                                    <select class="form-select w-full" id="metodoPago">
+                                    <select class="form-select w-full" id="metodoPago" onchange="mostrarCamposMetodoPago()">
                                         <option value="">Seleccionar método</option>
                                         <option value="EFECTIVO">Efectivo</option>
-                                        <option value="TARJETA">Tarjeta</option>
-                                        <option value="TRANSFERENCIA">Transferencia</option>
+                                        <option value="TRANSFERENCIA_ACH">Transferencia ACH</option>
+                                        <option value="TRANSFERENCIA_LBTR">Transferencia LBTR</option>
                                         <option value="CHEQUE">Cheque</option>
                                         <option value="CREDITO">Crédito</option>
+                                        <option value="TRANSFERENCIA_INTERNACIONAL">Transferencia Internacional</option>
                                     </select>
                                 </div>
                                 <div class="space-y-2">
                                     <label for="condicionesPago" class="form-label block">Condiciones de Pago <span title="Días de crédito o notas adicionales" aria-label="Días de crédito o notas adicionales" class="cursor-pointer text-gray-400">?</span></label>
                                     <input type="text" class="form-control w-full" id="condicionesPago" placeholder="Ej: 30 días">
+                                </div>
+                            </div>
+                            
+                            <!-- Campos específicos para cada método de pago -->
+                            <div id="camposMetodoPago" class="mt-6" style="display: none;">
+                                <!-- Efectivo -->
+                                <div id="camposEfectivo" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información de Pago en Efectivo</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="recibidoPor" class="form-label block">Recibido por</label>
+                                            <input type="text" class="form-control w-full" id="recibidoPor" placeholder="Nombre de quien recibe">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Transferencia ACH -->
+                                <div id="camposTransferenciaACH" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información de Transferencia ACH</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="bancoOrigen" class="form-label block">Banco Origen *</label>
+                                            <input type="text" class="form-control w-full" id="bancoOrigen" placeholder="Banco emisor">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="bancoDestino" class="form-label block">Banco Destino *</label>
+                                            <input type="text" class="form-control w-full" id="bancoDestino" placeholder="Banco receptor">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="numeroCuentaOrigen" class="form-label block">Número de Cuenta Origen *</label>
+                                            <input type="text" class="form-control w-full" id="numeroCuentaOrigen" placeholder="Número de cuenta">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="numeroReferencia" class="form-label block">Número de Referencia *</label>
+                                            <input type="text" class="form-control w-full" id="numeroReferencia" placeholder="Referencia de la transferencia">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Transferencia LBTR -->
+                                <div id="camposTransferenciaLBTR" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información de Transferencia LBTR</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="bancoOrigenLBTR" class="form-label block">Banco Origen *</label>
+                                            <input type="text" class="form-control w-full" id="bancoOrigenLBTR" placeholder="Banco emisor">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="numeroReferenciaLBTR" class="form-label block">Número de Referencia *</label>
+                                            <input type="text" class="form-control w-full" id="numeroReferenciaLBTR" placeholder="Referencia de la transferencia">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="fechaHora" class="form-label block">Fecha y Hora *</label>
+                                            <input type="datetime-local" class="form-control w-full" id="fechaHora">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="costoTransferencia" class="form-label block">Costo de Transferencia</label>
+                                            <input type="number" class="form-control w-full" id="costoTransferencia" placeholder="0.00" step="0.01">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cheque -->
+                                <div id="camposCheque" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información del Cheque</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="numeroCheque" class="form-label block">Número de Cheque *</label>
+                                            <input type="text" class="form-control w-full" id="numeroCheque" placeholder="Número del cheque">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="banco" class="form-label block">Banco Emisor *</label>
+                                            <input type="text" class="form-control w-full" id="banco" placeholder="Banco del cheque">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="titular" class="form-label block">Titular del Cheque *</label>
+                                            <input type="text" class="form-control w-full" id="titular" placeholder="Nombre del titular">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="fechaVencimiento" class="form-label block">Fecha de Vencimiento *</label>
+                                            <input type="date" class="form-control w-full" id="fechaVencimiento">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Crédito -->
+                                <div id="camposCredito" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información de Crédito</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="bancoCredito" class="form-label block">Banco Acreedor *</label>
+                                            <input type="text" class="form-control w-full" id="bancoCredito" placeholder="Banco que otorga el crédito">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="plazoPagos" class="form-label block">Plazo de Pagos (meses) *</label>
+                                            <input type="number" class="form-control w-full" id="plazoPagos" placeholder="12" min="1" max="72">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="tasaInteres" class="form-label block">Tasa de Interés (%) *</label>
+                                            <input type="number" class="form-control w-full" id="tasaInteres" placeholder="5.5" step="0.1" min="0" max="100">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="fechaVencimientoCredito" class="form-label block">Fecha de Vencimiento *</label>
+                                            <input type="date" class="form-control w-full" id="fechaVencimientoCredito">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Transferencia Internacional -->
+                                <div id="camposTransferenciaIntl" class="payment-fields hidden">
+                                    <h5 class="text-[#59391B] font-semibold mb-3">Información de Transferencia Internacional</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label for="swiftOrigen" class="form-label block">Código SWIFT Origen *</label>
+                                            <input type="text" class="form-control w-full" id="swiftOrigen" placeholder="ABCDUS33" maxlength="11">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="swiftDestino" class="form-label block">Código SWIFT Destino *</label>
+                                            <input type="text" class="form-control w-full" id="swiftDestino" placeholder="XYZEUS44" maxlength="11">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="tasaCambio" class="form-label block">Tasa de Cambio *</label>
+                                            <input type="number" class="form-control w-full" id="tasaCambio" placeholder="1.15" step="0.01" min="0.01">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="comisionTransferencia" class="form-label block">Comisión de Transferencia *</label>
+                                            <input type="number" class="form-control w-full" id="comisionTransferencia" placeholder="25.00" step="0.01">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

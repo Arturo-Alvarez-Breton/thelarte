@@ -3,6 +3,7 @@ let pasoActual = 1;
 let productos = [];
 let suplidores = [];
 let clientes = [];
+let empleados = [];
 let lineasTransaccion = [];
 let contraparteSeleccionada = null;
 let editando = false;
@@ -23,6 +24,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         await cargarTransaccion(id);
     } else if (tipo) {
         document.getElementById('tipo').value = tipo;
+        // Trigger change event to apply automatic configurations
+        document.getElementById('tipo').dispatchEvent(new Event('change'));
     }
     
     // Configurar fecha actual
@@ -36,11 +39,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 async function cargarDatos() {
     try {
-        [productos, suplidores, clientes] = await Promise.all([
+        [productos, suplidores, clientes, empleados] = await Promise.all([
             transaccionService.obtenerProductos(),
             transaccionService.obtenerSuplidores(),
-            transaccionService.obtenerClientes()
+            transaccionService.obtenerClientes(),
+            transaccionService.obtenerEmpleados()
         ]);
+        
+        // Cargar empleados en el select
+        const vendedorSelect = document.getElementById('vendedor');
+        empleados.forEach(empleado => {
+            const option = document.createElement('option');
+            option.value = empleado.id;
+            option.textContent = empleado.nombre;
+            vendedorSelect.appendChild(option);
+        });
     } catch (error) {
         console.error('Error al cargar datos:', error);
         mostrarError('Error al cargar los datos necesarios');
@@ -90,18 +103,35 @@ function configurarEventos() {
         const clienteRadio = document.getElementById('cliente');
         const suplidorRadio = document.getElementById('suplidor');
         
+        // Limpiar productos existentes cuando cambia el tipo
+        lineasTransaccion = [];
+        document.getElementById('productosContainer').innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 text-base">No hay productos agregados</p>
+            </div>
+        `;
+        actualizarResumen();
+        
         // Configurar automáticamente el tipo de contraparte según el tipo de transacción
         if (tipo === 'COMPRA' || tipo === 'DEVOLUCION_COMPRA') {
             suplidorRadio.checked = true;
             clienteRadio.disabled = true;
             suplidorRadio.disabled = false;
+            document.getElementById('vendedorSection').style.display = 'none';
+            
+            mostrarNotificacion('info', 'Compra seleccionada: Solo suplidores disponibles. Los muebles serán marcados como nuevos.');
         } else if (tipo === 'VENTA' || tipo === 'DEVOLUCION_VENTA') {
             clienteRadio.checked = true;
             suplidorRadio.disabled = true;
             clienteRadio.disabled = false;
+            document.getElementById('vendedorSection').style.display = 'block';
+            
+            mostrarNotificacion('info', 'Venta seleccionada: Solo clientes disponibles. Los muebles serán tomados del inventario. Vendedor requerido.');
         } else {
             clienteRadio.disabled = false;
             suplidorRadio.disabled = false;
+            document.getElementById('vendedorSection').style.display = 'none';
         }
         
         if (clienteRadio.checked || suplidorRadio.checked) {
@@ -133,7 +163,7 @@ async function cargarContrapartes() {
     
     const contrapartesHtml = lista.map(item => `
         <div class="counterpart-selector ${contraparteSeleccionada?.id === item.id ? 'selected' : ''}" 
-             onclick="seleccionarContraparte(${item.id}, '${tipoContraparte}', '${item.nombre}')">
+             onclick="seleccionarContraparte(${item.id}, '${tipoContraparte}', '${item.nombre}', this)">
             <div class="d-flex align-items-center">
                 <i class="fas ${tipoContraparte === 'CLIENTE' ? 'fa-user' : 'fa-truck'} me-3 text-primary"></i>
                 <div>
@@ -147,14 +177,14 @@ async function cargarContrapartes() {
     container.innerHTML = contrapartesHtml;
 }
 
-function seleccionarContraparte(id, tipo, nombre) {
+function seleccionarContraparte(id, tipo, nombre, element) {
     // Remover selección anterior
     document.querySelectorAll('.counterpart-selector').forEach(el => {
         el.classList.remove('selected');
     });
     
     // Agregar selección actual
-    event.currentTarget.classList.add('selected');
+    element.classList.add('selected');
     
     contraparteSeleccionada = { id, tipo, nombre };
 }
@@ -170,21 +200,24 @@ function agregarProducto() {
     
     // Si es compra, permitir agregar productos nuevos
     if (tipoTransaccion === 'COMPRA' || tipoTransaccion === 'DEVOLUCION_COMPRA') {
-        productoLabel = 'Producto (nuevo)';
+        productoLabel = 'Producto Nuevo 🆕';
         productoInput = `
-            <input type="text" class="form-control" placeholder="Nombre del producto" onchange="actualizarNombreProducto(${lineaId}, this)" required>
+            <input type="text" class="form-control" placeholder="Nombre del mueble nuevo" onchange="actualizarNombreProducto(${lineaId}, this)" required>
+            <small class="text-muted">Este producto se agregará al inventario como nuevo</small>
         `;
     } else {
         // Si es venta o devolución de venta, usar productos existentes
-        productoLabel = 'Producto (existente)';
-        productosOptions = productos.map(producto => 
-            `<option value="${producto.id}" data-precio="${producto.precio}">${producto.nombre}</option>`
+        productoLabel = 'Producto del Inventario 📦';
+        const productosDisponibles = productos.filter(p => p.cantidadDisponible > 0);
+        productosOptions = productosDisponibles.map(producto => 
+            `<option value="${producto.id}" data-precio="${producto.precio}" data-stock="${producto.cantidadDisponible}">${producto.nombre} (Stock: ${producto.cantidadDisponible})</option>`
         ).join('');
         productoInput = `
             <select class="form-select" onchange="actualizarPrecioProducto(${lineaId}, this)" required>
-                <option value="">Seleccionar producto</option>
+                <option value="">Seleccionar producto del inventario</option>
                 ${productosOptions}
             </select>
+            <small class="text-muted">Solo productos con stock disponible</small>
         `;
     }
     
@@ -417,19 +450,40 @@ async function guardarTransaccion() {
         return;
     }
     
+    // Mostrar loading
+    const btnGuardar = document.getElementById('btnGuardar');
+    const textoOriginal = btnGuardar.innerHTML;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+    btnGuardar.disabled = true;
+    
     const subtotal = lineasTransaccion.reduce((sum, linea) => sum + linea.total, 0);
     const impuestos = subtotal * 0.18;
     const total = subtotal + impuestos;
     
+    const metadatosPago = recopilarMetadatosPago();
+    
+    const tipoTransaccion = document.getElementById('tipo').value;
+    const vendedorId = document.getElementById('vendedor').value;
+    
+    // Validar vendedor para ventas
+    if ((tipoTransaccion === 'VENTA' || tipoTransaccion === 'DEVOLUCION_VENTA') && !vendedorId) {
+        mostrarError('Debe seleccionar un vendedor para las ventas');
+        btnGuardar.innerHTML = textoOriginal;
+        btnGuardar.disabled = false;
+        return;
+    }
+    
     const transaccion = {
-        tipo: document.getElementById('tipo').value,
+        tipo: tipoTransaccion,
         fecha: document.getElementById('fecha').value,
         contraparteId: contraparteSeleccionada.id,
         tipoContraparte: contraparteSeleccionada.tipo,
         contraparteNombre: contraparteSeleccionada.nombre,
+        vendedorId: vendedorId || null,
         numeroFactura: document.getElementById('numeroFactura').value,
         numeroOrdenCompra: document.getElementById('numeroOrdenCompra').value,
         metodoPago: document.getElementById('metodoPago').value,
+        metadatosPago: metadatosPago,
         condicionesPago: document.getElementById('condicionesPago').value,
         fechaEntregaEsperada: document.getElementById('fechaEntregaEsperada').value,
         direccionEntrega: document.getElementById('direccionEntrega').value,
@@ -461,7 +515,11 @@ async function guardarTransaccion() {
         }, 1500);
     } catch (error) {
         console.error('Error al guardar transacción:', error);
-        mostrarError('Error al guardar la transacción');
+        mostrarError(error.message || 'Error al guardar la transacción');
+        
+        // Restaurar botón
+        btnGuardar.innerHTML = textoOriginal;
+        btnGuardar.disabled = false;
     }
 }
 
@@ -502,6 +560,153 @@ function mostrarExito(mensaje) {
     
     document.body.appendChild(toast);
     const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
+}
+
+function mostrarCamposMetodoPago() {
+    const metodoPago = document.getElementById('metodoPago').value;
+    const camposContainer = document.getElementById('camposMetodoPago');
+    
+    // Ocultar todos los campos de método de pago
+    document.querySelectorAll('.payment-fields').forEach(field => {
+        field.classList.add('hidden');
+    });
+    
+    if (!metodoPago) {
+        camposContainer.style.display = 'none';
+        return;
+    }
+    
+    camposContainer.style.display = 'block';
+    
+    // Mostrar campos específicos según el método de pago
+    switch (metodoPago) {
+        case 'EFECTIVO':
+            document.getElementById('camposEfectivo').classList.remove('hidden');
+            break;
+        case 'TRANSFERENCIA_ACH':
+            document.getElementById('camposTransferenciaACH').classList.remove('hidden');
+            break;
+        case 'TRANSFERENCIA_LBTR':
+            document.getElementById('camposTransferenciaLBTR').classList.remove('hidden');
+            break;
+        case 'CHEQUE':
+            document.getElementById('camposCheque').classList.remove('hidden');
+            break;
+        case 'CREDITO':
+            document.getElementById('camposCredito').classList.remove('hidden');
+            break;
+        case 'TRANSFERENCIA_INTERNACIONAL':
+            document.getElementById('camposTransferenciaIntl').classList.remove('hidden');
+            break;
+    }
+}
+
+function recopilarMetadatosPago() {
+    const metodoPago = document.getElementById('metodoPago').value;
+    if (!metodoPago) return null;
+    
+    let metadatos = {};
+    
+    switch (metodoPago) {
+        case 'EFECTIVO':
+            const recibidoPor = document.getElementById('recibidoPor').value;
+            if (recibidoPor) {
+                metadatos.recibidoPor = recibidoPor;
+            }
+            break;
+            
+        case 'TRANSFERENCIA_ACH':
+            metadatos = {
+                tipoTransferencia: 'ACH',
+                bancoOrigen: document.getElementById('bancoOrigen').value,
+                bancoDestino: document.getElementById('bancoDestino').value,
+                numeroCuentaOrigen: document.getElementById('numeroCuentaOrigen').value,
+                numeroReferencia: document.getElementById('numeroReferencia').value
+            };
+            break;
+            
+        case 'TRANSFERENCIA_LBTR':
+            metadatos = {
+                tipoTransferencia: 'LBTR',
+                bancoOrigen: document.getElementById('bancoOrigenLBTR').value,
+                numeroReferencia: document.getElementById('numeroReferenciaLBTR').value,
+                fechaHora: document.getElementById('fechaHora').value
+            };
+            const costo = document.getElementById('costoTransferencia').value;
+            if (costo) {
+                metadatos.costoTransferencia = parseFloat(costo);
+            }
+            break;
+            
+        case 'CHEQUE':
+            metadatos = {
+                numeroCheque: document.getElementById('numeroCheque').value,
+                banco: document.getElementById('banco').value,
+                titular: document.getElementById('titular').value,
+                fechaVencimiento: document.getElementById('fechaVencimiento').value
+            };
+            break;
+            
+        case 'CREDITO':
+            metadatos = {
+                banco: document.getElementById('bancoCredito').value,
+                plazoPagos: parseInt(document.getElementById('plazoPagos').value),
+                tasaInteres: parseFloat(document.getElementById('tasaInteres').value),
+                fechaVencimiento: document.getElementById('fechaVencimientoCredito').value
+            };
+            break;
+            
+        case 'TRANSFERENCIA_INTERNACIONAL':
+            metadatos = {
+                swiftOrigen: document.getElementById('swiftOrigen').value,
+                swiftDestino: document.getElementById('swiftDestino').value,
+                tasaCambio: parseFloat(document.getElementById('tasaCambio').value),
+                comisionTransferencia: parseFloat(document.getElementById('comisionTransferencia').value)
+            };
+            break;
+    }
+    
+    return Object.keys(metadatos).length > 0 ? JSON.stringify(metadatos) : null;
+}
+
+function mostrarNotificacion(tipo, mensaje) {
+    const colores = {
+        'info': 'bg-blue-500',
+        'success': 'bg-green-500',
+        'warning': 'bg-yellow-500',
+        'error': 'bg-red-500'
+    };
+    
+    const iconos = {
+        'info': 'fa-info-circle',
+        'success': 'fa-check-circle',
+        'warning': 'fa-exclamation-triangle',
+        'error': 'fa-times-circle'
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white ${colores[tipo]} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas ${iconos[tipo]} me-2"></i>${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 4000 });
     bsToast.show();
     
     toast.addEventListener('hidden.bs.toast', () => {

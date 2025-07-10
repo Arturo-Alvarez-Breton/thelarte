@@ -1,6 +1,7 @@
 let transaccionService;
 let transacciones = [];
 let transaccionesFiltradas = [];
+let estadisticas = {};
 const loadingOverlay = document.getElementById('loadingOverlay');
 
 function showLoading(){ if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         onboarding.classList.remove('hidden');
     }
     await cargarTransacciones();
+    await cargarEstadisticas();
 });
 
 async function cargarTransacciones() {
@@ -26,6 +28,39 @@ async function cargarTransacciones() {
         console.error('Error al cargar transacciones:', error);
         mostrarError('Error al cargar las transacciones');
         hideLoading();
+    }
+}
+
+async function cargarEstadisticas() {
+    try {
+        const ahora = new Date();
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+        
+        // Calcular estadísticas básicas
+        const ventasMes = transacciones.filter(t => 
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioMes
+        );
+        const comprasMes = transacciones.filter(t => 
+            t.tipo === 'COMPRA' && new Date(t.fecha) >= inicioMes
+        );
+        const ventasAnio = transacciones.filter(t => 
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioAnio
+        );
+        
+        estadisticas = {
+            totalVentasMes: ventasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalComprasMes: comprasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalVentasAnio: ventasAnio.reduce((sum, t) => sum + (t.total || 0), 0),
+            cantidadVentasMes: ventasMes.length,
+            cantidadComprasMes: comprasMes.length,
+            transaccionesPendientes: transacciones.filter(t => t.estado === 'PENDIENTE').length,
+            productosVendidos: ventasMes.reduce((sum, t) => sum + (t.lineas?.length || 0), 0)
+        };
+        
+        mostrarEstadisticas();
+    } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
     }
 }
 
@@ -137,7 +172,7 @@ function formatearTipo(tipo) {
 function obtenerColorTipo(tipo) {
     const colores = {
         'COMPRA': 'green-500',
-        'VENTA': 'yellow-500',
+        'VENTA': 'yellow-600',
         'DEVOLUCION_COMPRA': 'red-500',
         'DEVOLUCION_VENTA': 'red-500'
     };
@@ -323,6 +358,77 @@ function mostrarExito(mensaje) {
             toast.remove();
         }
     }, 5000);
+}
+
+function mostrarEstadisticas() {
+    const container = document.getElementById('estadisticasContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadVentasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-chart-line text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Compras del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalComprasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadComprasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Año</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasAnio)}</p>
+                        <p class="text-sm opacity-90">Acumulado 2024</p>
+                    </div>
+                    <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Pendientes</h3>
+                        <p class="text-3xl font-bold">${estadisticas.transaccionesPendientes}</p>
+                        <p class="text-sm opacity-90">Transacciones</p>
+                    </div>
+                    <i class="fas fa-clock text-4xl opacity-80"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-xl font-semibold text-[#59391B] mb-4">Resumen de Seguimiento</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600">${estadisticas.productosVendidos}</div>
+                    <div class="text-sm text-gray-600">Productos vendidos este mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">${estadisticas.cantidadVentasMes + estadisticas.cantidadComprasMes}</div>
+                    <div class="text-sm text-gray-600">Total transacciones del mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600">${formatearMoneda(estadisticas.totalVentasMes - estadisticas.totalComprasMes)}</div>
+                    <div class="text-sm text-gray-600">Ganancia neta del mes</div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function dismissTxOnboarding(){

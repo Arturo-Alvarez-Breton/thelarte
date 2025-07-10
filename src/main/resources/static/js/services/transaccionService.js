@@ -121,6 +121,19 @@ class TransaccionService {
         }
     }
 
+    async obtenerEmpleados() {
+        try {
+            const response = await fetch('/api/empleados');
+            if (!response.ok) {
+                throw new Error('Error al obtener empleados');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
     formatearFecha(fecha) {
         return new Date(fecha).toLocaleDateString('es-ES', {
             year: 'numeric',
