@@ -52,4 +52,21 @@ public class UserService implements UserDetailsService {
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
     }
+
+    public List<User> findAll() {
+        return userRepository.findAll();
+    }
+
+    public String encodePassword(String rawPassword) {
+        return passwordEncoder.encode(rawPassword);
+    }
+
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    public void deleteByUsername(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        userOpt.ifPresent(userRepository::delete);
+    }
 }
