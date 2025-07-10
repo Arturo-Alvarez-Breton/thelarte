@@ -300,6 +300,10 @@ function cargarContrapartes() {
     const container = document.getElementById('contraparteContainer');
     if (!container) return;
     
+    // Add debugging to see the actual structure of contrapartes
+    console.log('Estructura de contrapartes (edit):', contrapartes);
+    console.log('Primer elemento (edit):', contrapartes[0]);
+    
     if (contrapartes.length === 0) {
         const esVenta = tipoTransaccion === 'VENTA' || tipoTransaccion === 'DEVOLUCION_VENTA';
         const tipoLabel = esVenta ? 'clientes' : 'proveedores';
@@ -326,25 +330,46 @@ function cargarContrapartes() {
                 <i class="fas fa-plus mr-2"></i>Nuevo ${btnLabel}
             </button>
         </div>
-        ${contrapartes.map(contraparte => `
-            <div class="counterpart-card ${contraparteSeleccionada?.id === contraparte.id ? 'selected' : ''}" 
-                 onclick="seleccionarContraparte(${contraparte.id}, '${contraparte.nombre}', this)">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-[#59391B] rounded-full flex items-center justify-center mr-4">
-                        <i class="fas ${icon} text-white text-lg"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-lg text-[#59391B]">${contraparte.nombre}</h4>
-                        <p class="text-gray-600 text-sm">${contraparte.email || contraparte.telefono || (contraparte.telefonos && contraparte.telefonos.length > 0 ? contraparte.telefonos[0] : 'Sin contacto')}</p>
-                        ${contraparte.direccion ? `<p class="text-gray-500 text-xs">${contraparte.direccion}</p>` : ''}
-                        ${contraparte.ciudad ? `<p class="text-gray-500 text-xs">${contraparte.ciudad}</p>` : ''}
-                    </div>
-                    <div class="text-[#59391B]">
-                        <i class="fas fa-chevron-right"></i>
+        ${contrapartes.map(contraparte => {
+            // Handle different possible ID field names
+            const contraparteId = contraparte.id || contraparte.clienteId || contraparte.suplidorId;
+            
+            // Construir el nombre completo para clientes
+            const nombreCompleto = esVenta && contraparte.apellido 
+                ? `${contraparte.nombre} ${contraparte.apellido}` 
+                : contraparte.nombre;
+            
+            // Debug each contraparte
+            console.log(`Procesando contraparte (edit): ID=${contraparteId}, Nombre=${nombreCompleto}`);
+            
+            // Skip if no valid ID
+            if (!contraparteId) {
+                console.warn('Contraparte sin ID válido (edit):', contraparte);
+                return '';
+            }
+            
+            return `
+                <div class="counterpart-card ${contraparteSeleccionada?.id === contraparteId ? 'selected' : ''}" 
+                     data-id="${contraparteId}" 
+                     data-nombre="${nombreCompleto.replace(/"/g, '&quot;')}" 
+                     onclick="seleccionarContraparteData(this)">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-[#59391B] rounded-full flex items-center justify-center mr-4">
+                            <i class="fas ${icon} text-white text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-lg text-[#59391B]">${nombreCompleto}</h4>
+                            <p class="text-gray-600 text-sm">${contraparte.email || contraparte.telefono || (contraparte.telefonos && contraparte.telefonos.length > 0 ? contraparte.telefonos[0] : 'Sin contacto')}</p>
+                            ${contraparte.direccion ? `<p class="text-gray-500 text-xs">${contraparte.direccion}</p>` : ''}
+                            ${contraparte.ciudad ? `<p class="text-gray-500 text-xs">${contraparte.ciudad}</p>` : ''}
+                        </div>
+                        <div class="text-[#59391B]">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('')}
+            `;
+        }).filter(html => html !== '').join('')}
     `;
     
     container.innerHTML = contrapartesHtml;
@@ -360,6 +385,38 @@ function seleccionarContraparte(id, nombre, element) {
     element.classList.add('selected');
     
     contraparteSeleccionada = { id, nombre };
+    
+    // Mostrar feedback visual
+    const esVenta = tipoTransaccion === 'VENTA' || tipoTransaccion === 'DEVOLUCION_VENTA';
+    mostrarExito(`${esVenta ? 'Cliente' : 'Proveedor'} seleccionado: ${nombre}`);
+}
+
+function seleccionarContraparteData(element) {
+    console.log('CLICK DETECTADO en seleccionarContraparteData'); // Debug
+    console.log('Element:', element); // Debug
+    console.log('Dataset:', element.dataset); // Debug
+    
+    const id = parseInt(element.dataset.id);
+    const nombre = element.dataset.nombre;
+    
+    console.log('Datos extraídos - ID:', id, 'Nombre:', nombre); // Debug
+    
+    if (!id || !nombre) {
+        console.error('Error: ID o nombre no válidos', { id, nombre });
+        return;
+    }
+    
+    // Remover selección anterior
+    document.querySelectorAll('.counterpart-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Agregar selección actual
+    element.classList.add('selected');
+    
+    contraparteSeleccionada = { id, nombre };
+    
+    console.log('contraparteSeleccionada actualizada:', contraparteSeleccionada); // Debug
     
     // Mostrar feedback visual
     const esVenta = tipoTransaccion === 'VENTA' || tipoTransaccion === 'DEVOLUCION_VENTA';

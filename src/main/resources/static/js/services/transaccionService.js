@@ -126,7 +126,16 @@ class TransaccionService {
             if (!response.ok) {
                 throw new Error('Error al obtener suplidores');
             }
-            return await response.json();
+            const suplidores = await response.json();
+            console.log("Suplidores obtenidos del API:", suplidores);
+            
+            // Log the structure of the first supplier if available
+            if (suplidores.length > 0) {
+                console.log("Estructura del primer suplidor:", Object.keys(suplidores[0]));
+                console.log("Primer suplidor completo:", suplidores[0]);
+            }
+            
+            return suplidores;
         } catch (error) {
             console.error('Error:', error);
             throw error;
@@ -139,7 +148,16 @@ class TransaccionService {
             if (!response.ok) {
                 throw new Error('Error al obtener clientes');
             }
-            return await response.json();
+            const clientes = await response.json();
+            console.log("Clientes obtenidos del API:", clientes);
+            
+            // Log the structure of the first client if available
+            if (clientes.length > 0) {
+                console.log("Estructura del primer cliente:", Object.keys(clientes[0]));
+                console.log("Primer cliente completo:", clientes[0]);
+            }
+            
+            return clientes;
         } catch (error) {
             console.error('Error:', error);
             throw error;
