@@ -1,44 +1,46 @@
 package com.thelarte.inventory.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.thelarte.inventory.util.EstadoUnidad;
 import jakarta.persistence.*;
 import java.util.Date;
 
 @Entity
 public class Unidad {
     @Id
-    private String idUnidad;
-    private String idProducto;
-    private Date fechaIngreso;
-    private boolean disponible;  // disponible o vendido
-    private boolean stock; // en inventario o en almacen
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_unidad")
+    private Long idUnidad;
 
-    public Unidad(String idProducto, Date fechaIngreso, boolean disponible ,boolean stock) {
-        this.idProducto = idProducto;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_producto")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Producto producto;
+    private Date fechaIngreso;
+    private EstadoUnidad estado; // Estado de la unidad (DISPONIBLE, VENDIDO, RESERVADO, DAÑADO)
+    private boolean stock; // en inventario = true o en almacen = false
+
+    public Unidad(Producto producto, Date fechaIngreso ,boolean stock) {
+        this.producto = producto;
         this.fechaIngreso = fechaIngreso;
         this.stock = stock;
+        this.estado = EstadoUnidad.DISPONIBLE;
     }
 
     public Unidad() {
+        this.estado = EstadoUnidad.DISPONIBLE;
     }
 
-    public boolean isDisponible() {
-        return disponible;
-    }
-
-    public void setDisponible(boolean disponible) {
-        this.disponible = disponible;
-    }
-
-    public String getIdUnidad() {
+    public Long getIdUnidad() {
         return idUnidad;
     }
 
-    public String getIdProducto() {
-        return idProducto;
+    public Producto getProducto() {
+        return producto;
     }
 
-    public void setIdProducto(String idProducto) {
-        this.idProducto = idProducto;
+    public void setProducto(Producto producto) {
+        this.producto = producto;
     }
 
     public Date getFechaIngreso() {
@@ -55,5 +57,13 @@ public class Unidad {
 
     public void setStock(boolean stock) {
         this.stock = stock;
+    }
+
+    public EstadoUnidad getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoUnidad estado) {
+        this.estado = estado;
     }
 }

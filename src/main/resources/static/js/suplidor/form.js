@@ -4,6 +4,18 @@ const descEl = document.getElementById('formDesc');
 const submitBtn = document.getElementById('submitBtn');
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
+const rncError = document.getElementById('rncError');
+const rncInput = document.getElementById('rnc');
+
+if (rncInput) {
+  rncInput.addEventListener('input', () => {
+    if (rncInput.value && !/^[0-9]{9}$/.test(rncInput.value)) {
+      rncError.classList.remove('hidden');
+    } else {
+      rncError.classList.add('hidden');
+    }
+  });
+}
 
 function setMode() {
   if (id) {
@@ -36,7 +48,13 @@ async function loadSupplier() {
     }
     const s = await resp.json();
     form.nombre.value = s.nombre || '';
+    
+    // Wait for provinces to load before setting the value
+    if (form.ciudad.disabled) {
+      await cargarProvincias();
+    }
     form.ciudad.value = s.ciudad || '';
+    
     form.direccion.value = s.direccion || '';
     form.email.value = s.email || '';
     form.rnc.value = s.rNC || '';
@@ -55,6 +73,7 @@ form.addEventListener('submit', async e => {
   submitBtn.disabled = true;
   submitBtn.textContent = id ? 'Actualizando...' : 'Guardando...';
 
+  // Recoger datos directamente de los elementos del formulario
   const data = {
     nombre: form.nombre.value.trim(),
     ciudad: form.ciudad.value.trim(),
@@ -66,7 +85,14 @@ form.addEventListener('submit', async e => {
   };
 
   if (!data.nombre || !data.ciudad) {
-    alert('Por favor, completa los campos obligatorios (Nombre y Ciudad).');
+    alert('Por favor, completa los campos obligatorios (Nombre y Provincia).');
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    return;
+  }
+
+  if (form.rnc.value && !/^[0-9]{9}$/.test(form.rnc.value)) {
+    rncError.classList.remove('hidden');
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
     return;
@@ -108,6 +134,34 @@ form.addEventListener('submit', async e => {
  * Verifica si el token es válido haciendo una petición al endpoint de validación
  * @param {string} token Token JWT a verificar
  */
+// Cargar provincias desde API Digital.gob.do
+async function cargarProvincias() {
+  const ciudadSelect = document.getElementById('ciudad');
+  ciudadSelect.innerHTML = '<option value="">Cargando provincias...</option>';
+  ciudadSelect.disabled = true;
+  
+  try {
+    const resp = await fetch('https://api.digital.gob.do/v1/territories/provinces');
+    if (!resp.ok) throw new Error('Error al obtener provincias');
+    const json = await resp.json();
+    
+    ciudadSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
+    if (Array.isArray(json.data)) {
+      json.data.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.name;
+        opt.textContent = prov.name;
+        ciudadSelect.appendChild(opt);
+      });
+    }
+    ciudadSelect.disabled = false;
+  } catch (err) {
+    ciudadSelect.innerHTML = '<option value="">Error cargando provincias</option>';
+    console.error("Error cargando provincias:", err);
+    ciudadSelect.disabled = true;
+  }
+}
+
 async function verifyToken(token) {
   try {
     const resp = await fetch('/api/dashboard/validate', {
@@ -134,7 +188,7 @@ async function verifyToken(token) {
 }
 
 // Código para manejar navegación móvil y autenticación
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check if user is authenticated using local storage
   const token = localStorage.getItem('authToken');
   if (!token) {
@@ -176,6 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Cargar provincias antes de configurar el formulario
+  await cargarProvincias();
+  
   // Inicializar configuración del formulario
   setMode();
 });

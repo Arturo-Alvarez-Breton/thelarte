@@ -11,8 +11,8 @@ public class EmpleadoUpdateDTO {
     @NotBlank(message = "El teléfono es obligatorio")
     private String telefono;
 
-    @NotBlank(message = "El rol es obligatorio")
-    private String rol;
+    @NotBlank(message = "El rol es obligatorio") // Keep validation in DTO
+    private String rol; // Validation enforced here, but DB allows NULL for Cliente entities
 
     @NotNull(message = "El salario es obligatorio")
     @PositiveOrZero(message = "El salario no puede ser negativo")

@@ -46,11 +46,11 @@ public class JwtTokenProvider {
     }
 
     public Authentication getAuthentication(String token) {
-        Claims claims = Jwts.parserBuilder()
-            .setSigningKey(secretKey)
+        Claims claims = Jwts.parser()
+            .verifyWith(secretKey)
             .build()
-            .parseClaimsJws(token)
-            .getBody();
+            .parseSignedClaims(token)
+            .getPayload();
 
         Collection<? extends GrantedAuthority> authorities =
             Arrays.stream(claims.get("auth").toString().split(","))
@@ -64,7 +64,7 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
         } catch (Exception e) {
             return false;

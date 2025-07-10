@@ -16,7 +16,7 @@ public class Cliente extends Persona {
     @Column(nullable = true)
     private String direccion;
 
-    @Column(name = "FECHA_REGISTRO")
+    @Column(name = "FECHA_REGISTRO", nullable = true)
     private LocalDate fechaRegistro;
 
     // Constructores
