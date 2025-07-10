@@ -14,8 +14,8 @@ public class EmpleadoCreateDTO {
     @NotBlank(message = "El teléfono es obligatorio")
     private String telefono;
 
-    @NotBlank(message = "El rol es obligatorio")
-    private String rol; // valor del enum
+    @NotBlank(message = "El rol es obligatorio") // Only applies to Empleado
+    private String rol; // Validation enforced here, but DB allows NULL for Cliente entities
 
     @NotNull(message = "El salario es obligatorio")
     @PositiveOrZero(message = "El salario no puede ser negativo")

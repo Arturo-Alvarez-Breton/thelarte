@@ -1,20 +1,66 @@
 let transaccionService;
 let transacciones = [];
 let transaccionesFiltradas = [];
+let estadisticas = {};
+const loadingOverlay = document.getElementById('loadingOverlay');
+
+function showLoading(){ if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
+function hideLoading(){ if(loadingOverlay) loadingOverlay.classList.add('hidden'); }
 
 document.addEventListener('DOMContentLoaded', async function() {
     transaccionService = new TransaccionService();
+    const onboarding = document.getElementById('onboardingTx');
+    if(onboarding && !localStorage.getItem('txOnboarded')){
+        onboarding.classList.remove('hidden');
+    }
     await cargarTransacciones();
+    await cargarEstadisticas();
 });
 
 async function cargarTransacciones() {
     try {
+        showLoading();
         transacciones = await transaccionService.obtenerTransacciones();
         transaccionesFiltradas = [...transacciones];
         mostrarTransacciones();
+        hideLoading();
     } catch (error) {
         console.error('Error al cargar transacciones:', error);
         mostrarError('Error al cargar las transacciones');
+        hideLoading();
+    }
+}
+
+async function cargarEstadisticas() {
+    try {
+        const ahora = new Date();
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+        
+        // Calcular estadísticas básicas
+        const ventasMes = transacciones.filter(t => 
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioMes
+        );
+        const comprasMes = transacciones.filter(t => 
+            t.tipo === 'COMPRA' && new Date(t.fecha) >= inicioMes
+        );
+        const ventasAnio = transacciones.filter(t => 
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioAnio
+        );
+        
+        estadisticas = {
+            totalVentasMes: ventasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalComprasMes: comprasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalVentasAnio: ventasAnio.reduce((sum, t) => sum + (t.total || 0), 0),
+            cantidadVentasMes: ventasMes.length,
+            cantidadComprasMes: comprasMes.length,
+            transaccionesPendientes: transacciones.filter(t => t.estado === 'PENDIENTE').length,
+            productosVendidos: ventasMes.reduce((sum, t) => sum + (t.lineas?.length || 0), 0)
+        };
+        
+        mostrarEstadisticas();
+    } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
     }
 }
 
@@ -32,9 +78,14 @@ function mostrarTransacciones() {
         return;
     }
 
+    const editableEstados = ['PENDIENTE', 'CONFIRMADA'];
+
     const transaccionesHtml = `
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            ${transaccionesFiltradas.map(transaccion => `
+            ${transaccionesFiltradas.map(transaccion => {
+                const esEditable = editableEstados.includes(transaccion.estado);
+                
+                return `
                 <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-${obtenerColorTipo(transaccion.tipo)} overflow-hidden">
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
@@ -83,9 +134,17 @@ function mostrarTransacciones() {
                             <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="verDetalles(${transaccion.id})">
                                 <i class="fas fa-eye mr-1"></i>Ver
                             </button>
-                            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
-                                <i class="fas fa-edit mr-1"></i>Editar
-                            </button>
+                            
+                            ${esEditable ? `
+                                <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
+                                    <i class="fas fa-edit mr-1"></i>Editar
+                                </button>
+                            ` : `
+                                <button class="flex-1 bg-gray-400 text-white py-2 px-3 rounded-lg text-sm font-medium cursor-not-allowed" title="No se puede editar una transacción ${transaccion.estado}">
+                                    <i class="fas fa-lock mr-1"></i>Bloqueado
+                                </button>
+                            `}
+                            
                             <div class="relative">
                                 <button class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition text-sm" onclick="toggleDropdown(${transaccion.id})">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -106,7 +165,7 @@ function mostrarTransacciones() {
                         </div>
                     </div>
                 </div>
-            `).join('')}
+            `}).join('')}
         </div>
     `;
 
@@ -126,7 +185,7 @@ function formatearTipo(tipo) {
 function obtenerColorTipo(tipo) {
     const colores = {
         'COMPRA': 'green-500',
-        'VENTA': 'yellow-500',
+        'VENTA': 'yellow-600',
         'DEVOLUCION_COMPRA': 'red-500',
         'DEVOLUCION_VENTA': 'red-500'
     };
@@ -169,11 +228,15 @@ function formatearFecha(fecha) {
 }
 
 function formatearMoneda(cantidad) {
-    if (!cantidad) return '€0.00';
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(cantidad);
+    if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
+    
+    // Formateo manual para asegurar el formato dominicano correcto
+    const numero = Math.abs(cantidad);
+    const partes = numero.toFixed(2).split('.');
+    const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const decimal = partes[1];
+    
+    return `RD$ ${entero},${decimal}`;
 }
 
 function toggleDropdown(id) {
@@ -228,7 +291,7 @@ function verDetalles(id) {
 }
 
 function editarTransaccion(id) {
-    window.location.href = `form.html?id=${id}`;
+    window.location.href = `edit.html?id=${id}`;
 }
 
 async function duplicarTransaccion(id) {
@@ -313,3 +376,79 @@ function mostrarExito(mensaje) {
         }
     }, 5000);
 }
+
+function mostrarEstadisticas() {
+    const container = document.getElementById('estadisticasContainer');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadVentasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-chart-line text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Compras del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalComprasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadComprasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Año</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasAnio)}</p>
+                        <p class="text-sm opacity-90">Acumulado 2025</p>
+                    </div>
+                    <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Pendientes</h3>
+                        <p class="text-3xl font-bold">${estadisticas.transaccionesPendientes}</p>
+                        <p class="text-sm opacity-90">Transacciones</p>
+                    </div>
+                    <i class="fas fa-clock text-4xl opacity-80"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-xl font-semibold text-[#59391B] mb-4">Resumen de Seguimiento</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600">${estadisticas.productosVendidos}</div>
+                    <div class="text-sm text-gray-600">Productos vendidos este mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">${estadisticas.cantidadVentasMes + estadisticas.cantidadComprasMes}</div>
+                    <div class="text-sm text-gray-600">Total transacciones del mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600">${formatearMoneda(estadisticas.totalVentasMes - estadisticas.totalComprasMes)}</div>
+                    <div class="text-sm text-gray-600">Ganancia neta del mes</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function dismissTxOnboarding(){
+    localStorage.setItem('txOnboarded','1');
+    const o = document.getElementById('onboardingTx');
+    if(o) o.classList.add('hidden');}

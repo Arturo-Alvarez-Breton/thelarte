@@ -1,352 +1,118 @@
 let transaccionService;
 let pasoActual = 1;
-let productos = [];
-let suplidores = [];
-let clientes = [];
-let lineasTransaccion = [];
+let tipoTransaccion = '';
 let contraparteSeleccionada = null;
-let editando = false;
-let transaccionId = null;
+let productosSeleccionados = [];
+let productos = [];
+let contrapartes = [];
+
+// Configuración de moneda dominicana
+const CURRENCY_CONFIG = {
+    locale: 'es-DO',
+    currency: 'DOP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+};
+
+function formatearMonedaDominicana(cantidad) {
+    if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
+    
+    // Usar formateo manual para asegurar el formato correcto
+    const numero = Math.abs(cantidad);
+    const partes = numero.toFixed(2).split('.');
+    const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const decimal = partes[1];
+    
+    return `RD$ ${entero},${decimal}`;
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     transaccionService = new TransaccionService();
     
-    // Obtener parámetros de la URL
+    // Obtener tipo de transacción de la URL
     const urlParams = new URLSearchParams(window.location.search);
-    const tipo = urlParams.get('tipo');
-    const id = urlParams.get('id');
+    tipoTransaccion = urlParams.get('tipo');
     
-    if (id) {
-        editando = true;
-        transaccionId = id;
-        document.getElementById('tituloForm').innerHTML = '<i class="fas fa-edit text-primary me-2"></i>Editar Transacción';
-        await cargarTransaccion(id);
-    } else if (tipo) {
-        document.getElementById('tipo').value = tipo;
+    if (!tipoTransaccion) {
+        mostrarError('Tipo de transacción no especificado');
+        setTimeout(() => window.location.href = 'index.html', 2000);
+        return;
     }
+    
+    inicializarAsistente();
+    await cargarDatos();
+});
+
+function inicializarAsistente() {
+    // Configurar tipo de transacción
+    document.getElementById('tipo').value = tipoTransaccion;
+    
+    const tiposDisplay = {
+        'VENTA': 'Venta',
+        'COMPRA': 'Compra', 
+        'DEVOLUCION': 'Devolución'
+    };
+    
+    const tiposClasses = {
+        'VENTA': 'tipo-venta',
+        'COMPRA': 'tipo-compra',
+        'DEVOLUCION': 'tipo-devolucion'
+    };
+    
+    const tipoDisplay = tiposDisplay[tipoTransaccion] || tipoTransaccion;
+    document.getElementById('tipoDisplay').value = tipoDisplay;
+    
+    const badge = document.getElementById('tipoTransaccionBadge');
+    badge.textContent = tipoDisplay;
+    badge.className = `transaction-type-badge ${tiposClasses[tipoTransaccion] || ''}`;
+    
+    // Configurar etiquetas según el tipo
+    const contraparteLabel = tipoTransaccion === 'VENTA' ? 'Cliente' : 'Proveedor';
+    document.getElementById('contraparteStepLabel').textContent = contraparteLabel;
+    document.getElementById('contraparteTitle').textContent = `Seleccionar ${contraparteLabel}`;
+    document.getElementById('confirmContraparteLabel').textContent = `${contraparteLabel}:`;
     
     // Configurar fecha actual
     const ahora = new Date();
     ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
     document.getElementById('fecha').value = ahora.toISOString().slice(0, 16);
-    
-    await cargarDatos();
-    configurarEventos();
-});
+}
 
 async function cargarDatos() {
     try {
-        [productos, suplidores, clientes] = await Promise.all([
-            transaccionService.obtenerProductos(),
-            transaccionService.obtenerSuplidores(),
-            transaccionService.obtenerClientes()
-        ]);
+        // Cargar productos
+        productos = await transaccionService.obtenerProductos();
+        console.log("Productos cargados:", productos); // Debug: Muestra los productos en consola
+        
+        // Cargar contrapartes según el tipo de transacción
+        if (tipoTransaccion === 'VENTA') {
+            contrapartes = await transaccionService.obtenerClientes();
+        } else {
+            contrapartes = await transaccionService.obtenerSuplidores();
+        }
+        
     } catch (error) {
         console.error('Error al cargar datos:', error);
         mostrarError('Error al cargar los datos necesarios');
     }
 }
 
-async function cargarTransaccion(id) {
-    try {
-        const transaccion = await transaccionService.obtenerTransaccionPorId(id);
-        
-        // Llenar los campos del formulario
-        document.getElementById('tipo').value = transaccion.tipo;
-        document.getElementById('fecha').value = transaccion.fecha.slice(0, 16);
-        document.getElementById('numeroFactura').value = transaccion.numeroFactura || '';
-        document.getElementById('numeroOrdenCompra').value = transaccion.numeroOrdenCompra || '';
-        document.getElementById('metodoPago').value = transaccion.metodoPago || '';
-        document.getElementById('condicionesPago').value = transaccion.condicionesPago || '';
-        document.getElementById('fechaEntregaEsperada').value = transaccion.fechaEntregaEsperada?.slice(0, 16) || '';
-        document.getElementById('direccionEntrega').value = transaccion.direccionEntrega || '';
-        document.getElementById('observaciones').value = transaccion.observaciones || '';
-        
-        // Configurar contraparte
-        contraparteSeleccionada = {
-            id: transaccion.contraparteId,
-            tipo: transaccion.tipoContraparte,
-            nombre: transaccion.contraparteNombre
-        };
-        
-        // Cargar líneas de transacción
-        lineasTransaccion = transaccion.lineas || [];
-        
-    } catch (error) {
-        console.error('Error al cargar transacción:', error);
-        mostrarError('Error al cargar la transacción');
-    }
-}
-
-function configurarEventos() {
-    // Eventos para selección de contraparte
-    document.querySelectorAll('input[name="tipoContraparte"]').forEach(radio => {
-        radio.addEventListener('change', cargarContrapartes);
-    });
-    
-    // Evento para cambio de tipo de transacción
-    document.getElementById('tipo').addEventListener('change', function() {
-        const tipo = this.value;
-        const clienteRadio = document.getElementById('cliente');
-        const suplidorRadio = document.getElementById('suplidor');
-        
-        // Configurar automáticamente el tipo de contraparte según el tipo de transacción
-        if (tipo === 'COMPRA' || tipo === 'DEVOLUCION_COMPRA') {
-            suplidorRadio.checked = true;
-            clienteRadio.disabled = true;
-            suplidorRadio.disabled = false;
-        } else if (tipo === 'VENTA' || tipo === 'DEVOLUCION_VENTA') {
-            clienteRadio.checked = true;
-            suplidorRadio.disabled = true;
-            clienteRadio.disabled = false;
-        } else {
-            clienteRadio.disabled = false;
-            suplidorRadio.disabled = false;
-        }
-        
-        if (clienteRadio.checked || suplidorRadio.checked) {
-            cargarContrapartes();
-        }
-    });
-}
-
-async function cargarContrapartes() {
-    const tipoContraparte = document.querySelector('input[name="tipoContraparte"]:checked')?.value;
-    const container = document.getElementById('contraparteContainer');
-    
-    if (!tipoContraparte) {
-        container.innerHTML = '<p class="text-muted text-center py-4">Selecciona el tipo de contraparte</p>';
-        return;
-    }
-    
-    const lista = tipoContraparte === 'CLIENTE' ? clientes : suplidores;
-    
-    if (lista.length === 0) {
-        container.innerHTML = `
-            <p class="text-muted text-center py-4">
-                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
-                No hay ${tipoContraparte.toLowerCase()}s registrados
-            </p>
-        `;
-        return;
-    }
-    
-    const contrapartesHtml = lista.map(item => `
-        <div class="counterpart-selector ${contraparteSeleccionada?.id === item.id ? 'selected' : ''}" 
-             onclick="seleccionarContraparte(${item.id}, '${tipoContraparte}', '${item.nombre}')">
-            <div class="d-flex align-items-center">
-                <i class="fas ${tipoContraparte === 'CLIENTE' ? 'fa-user' : 'fa-truck'} me-3 text-primary"></i>
-                <div>
-                    <h6 class="mb-1">${item.nombre}</h6>
-                    <small class="text-muted">${item.email || item.telefono || 'Sin contacto'}</small>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    container.innerHTML = contrapartesHtml;
-}
-
-function seleccionarContraparte(id, tipo, nombre) {
-    // Remover selección anterior
-    document.querySelectorAll('.counterpart-selector').forEach(el => {
-        el.classList.remove('selected');
-    });
-    
-    // Agregar selección actual
-    event.currentTarget.classList.add('selected');
-    
-    contraparteSeleccionada = { id, tipo, nombre };
-}
-
-function agregarProducto() {
-    const productosContainer = document.getElementById('productosContainer');
-    const lineaId = Date.now();
-    const tipoTransaccion = document.getElementById('tipo').value;
-    
-    let productosOptions = '';
-    let productoLabel = 'Producto';
-    let productoInput = '';
-    
-    // Si es compra, permitir agregar productos nuevos
-    if (tipoTransaccion === 'COMPRA' || tipoTransaccion === 'DEVOLUCION_COMPRA') {
-        productoLabel = 'Producto (nuevo)';
-        productoInput = `
-            <input type="text" class="form-control" placeholder="Nombre del producto" onchange="actualizarNombreProducto(${lineaId}, this)" required>
-        `;
-    } else {
-        // Si es venta o devolución de venta, usar productos existentes
-        productoLabel = 'Producto (existente)';
-        productosOptions = productos.map(producto => 
-            `<option value="${producto.id}" data-precio="${producto.precio}">${producto.nombre}</option>`
-        ).join('');
-        productoInput = `
-            <select class="form-select" onchange="actualizarPrecioProducto(${lineaId}, this)" required>
-                <option value="">Seleccionar producto</option>
-                ${productosOptions}
-            </select>
-        `;
-    }
-    
-    const nuevaLinea = `
-        <div class="product-line" id="linea-${lineaId}">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6>Producto ${lineasTransaccion.length + 1}</h6>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${lineaId})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label">${productoLabel}</label>
-                        ${productoInput}
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label class="form-label">Cantidad</label>
-                        <input type="number" class="form-control" min="1" value="1" onchange="calcularLineaTotal(${lineaId})" required>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label class="form-label">Precio Unit.</label>
-                        <input type="number" class="form-control" step="0.01" min="0" onchange="calcularLineaTotal(${lineaId})" required>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label class="form-label">Descuento %</label>
-                        <input type="number" class="form-control" step="0.01" min="0" max="100" value="0" onchange="calcularLineaTotal(${lineaId})">
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="mb-3">
-                        <label class="form-label">Total</label>
-                        <input type="text" class="form-control total-linea" readonly>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    if (lineasTransaccion.length === 0) {
-        productosContainer.innerHTML = nuevaLinea;
-    } else {
-        productosContainer.insertAdjacentHTML('beforeend', nuevaLinea);
-    }
-    
-    lineasTransaccion.push({ 
-        id: lineaId, 
-        productoId: null, 
-        productoNombre: '', 
-        cantidad: 1, 
-        precioUnitario: 0, 
-        descuento: 0, 
-        total: 0 
-    });
-    actualizarResumen();
-}
-
-function actualizarPrecioProducto(lineaId, select) {
-    const productoId = select.value;
-    const precioInput = select.closest('.product-line').querySelector('input[type="number"][step="0.01"]');
-    
-    if (productoId) {
-        const producto = productos.find(p => p.id == productoId);
-        if (producto) {
-            precioInput.value = producto.precio;
-            
-            // Actualizar el objeto en el array
-            const lineaObj = lineasTransaccion.find(l => l.id === lineaId);
-            if (lineaObj) {
-                lineaObj.productoId = productoId;
-                lineaObj.productoNombre = producto.nombre;
-            }
-            
-            calcularLineaTotal(lineaId);
-        }
-    }
-}
-
-function actualizarNombreProducto(lineaId, input) {
-    const nombreProducto = input.value;
-    
-    // Actualizar el objeto en el array
-    const lineaObj = lineasTransaccion.find(l => l.id === lineaId);
-    if (lineaObj) {
-        lineaObj.productoNombre = nombreProducto;
-        lineaObj.productoId = null; // Para productos nuevos, no hay ID
-    }
-}
-
-function calcularLineaTotal(lineaId) {
-    const linea = document.getElementById(`linea-${lineaId}`);
-    const cantidad = parseInt(linea.querySelector('input[type="number"]').value) || 0;
-    const precio = parseFloat(linea.querySelector('input[type="number"][step="0.01"]').value) || 0;
-    const descuento = parseFloat(linea.querySelector('input[type="number"][step="0.01"][min="0"][max="100"]').value) || 0;
-    
-    const subtotal = cantidad * precio;
-    const descuentoMonto = subtotal * (descuento / 100);
-    const total = subtotal - descuentoMonto;
-    
-    linea.querySelector('.total-linea').value = transaccionService.formatearMoneda(total);
-    
-    // Actualizar el objeto en el array
-    const lineaObj = lineasTransaccion.find(l => l.id === lineaId);
-    if (lineaObj) {
-        lineaObj.cantidad = cantidad;
-        lineaObj.precioUnitario = precio;
-        lineaObj.descuento = descuento;
-        lineaObj.total = total;
-    }
-    
-    actualizarResumen();
-}
-
-function eliminarProducto(lineaId) {
-    const linea = document.getElementById(`linea-${lineaId}`);
-    linea.remove();
-    
-    lineasTransaccion = lineasTransaccion.filter(l => l.id !== lineaId);
-    
-    if (lineasTransaccion.length === 0) {
-        document.getElementById('productosContainer').innerHTML = `
-            <p class="text-muted text-center py-4">
-                <i class="fas fa-boxes fa-2x mb-2"></i><br>
-                No hay productos agregados
-            </p>
-        `;
-    }
-    
-    actualizarResumen();
-}
-
-function actualizarResumen() {
-    const resumen = document.getElementById('resumenTransaccion');
-    
-    if (lineasTransaccion.length === 0) {
-        resumen.style.display = 'none';
-        return;
-    }
-    
-    const subtotal = lineasTransaccion.reduce((sum, linea) => sum + linea.total, 0);
-    const impuestos = subtotal * 0.18; // 18% de impuestos
-    const total = subtotal + impuestos;
-    
-    document.getElementById('subtotalResumen').textContent = transaccionService.formatearMoneda(subtotal);
-    document.getElementById('impuestosResumen').textContent = transaccionService.formatearMoneda(impuestos);
-    document.getElementById('totalResumen').textContent = transaccionService.formatearMoneda(total);
-    
-    resumen.style.display = 'block';
-}
-
 function siguientePaso() {
-    if (validarPaso(pasoActual)) {
-        if (pasoActual < 4) {
-            pasoActual++;
-            mostrarPaso(pasoActual);
+    if (!validarPaso(pasoActual)) {
+        return;
+    }
+    
+    if (pasoActual < 4) {
+        pasoActual++;
+        mostrarPaso(pasoActual);
+        
+        // Cargar contenido específico del paso
+        if (pasoActual === 2) {
+            cargarContrapartes();
+        } else if (pasoActual === 3) {
+            cargarProductos();
+        } else if (pasoActual === 4) {
+            mostrarResumenFinal();
         }
     }
 }
@@ -378,133 +144,952 @@ function mostrarPaso(paso) {
     // Actualizar botones
     document.getElementById('btnAnterior').style.display = paso > 1 ? 'block' : 'none';
     document.getElementById('btnSiguiente').style.display = paso < 4 ? 'block' : 'none';
-    document.getElementById('btnGuardar').style.display = paso === 4 ? 'block' : 'none';
-    
-    // Cargar datos específicos del paso
-    if (paso === 2 && document.querySelector('input[name="tipoContraparte"]:checked')) {
-        cargarContrapartes();
-    }
+    document.getElementById('btnConfirmar').style.display = paso === 4 ? 'block' : 'none';
 }
 
 function validarPaso(paso) {
     switch (paso) {
         case 1:
-            const tipo = document.getElementById('tipo').value;
             const fecha = document.getElementById('fecha').value;
-            if (!tipo || !fecha) {
-                mostrarError('Por favor, completa todos los campos obligatorios');
+            if (!fecha) {
+                mostrarError('Por favor, selecciona una fecha válida');
                 return false;
             }
             break;
+            
         case 2:
             if (!contraparteSeleccionada) {
-                mostrarError('Por favor, selecciona una contraparte');
+                const label = tipoTransaccion === 'VENTA' ? 'cliente' : 'proveedor';
+                mostrarError(`Por favor, selecciona un ${label}`);
                 return false;
             }
             break;
+            
         case 3:
-            if (lineasTransaccion.length === 0) {
-                mostrarError('Por favor, agrega al menos un producto');
+            if (productosSeleccionados.length === 0) {
+                mostrarError('Por favor, selecciona al menos un producto');
                 return false;
+            }
+            
+            // Validar cantidades
+            for (let producto of productosSeleccionados) {
+                if (!producto.cantidad || producto.cantidad <= 0) {
+                    mostrarError('Todas las cantidades deben ser mayores a 0');
+                    return false;
+                }
+                
+                if (tipoTransaccion === 'VENTA' && producto.cantidad > producto.stock) {
+                    mostrarError(`La cantidad de "${producto.nombre}" excede el stock disponible (${producto.stock})`);
+                    return false;
+                }
             }
             break;
     }
     return true;
 }
 
-async function guardarTransaccion() {
-    if (!validarPaso(1) || !validarPaso(2) || !validarPaso(3)) {
+function seleccionarContraparte(id, nombre, element) {
+    // Remover selección anterior
+    document.querySelectorAll('.counterpart-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Agregar selección actual
+    element.classList.add('selected');
+    
+    contraparteSeleccionada = { id, nombre };
+    
+    // Mostrar feedback visual
+    mostrarExito(`${tipoTransaccion === 'VENTA' ? 'Cliente' : 'Proveedor'} seleccionado: ${nombre}`);
+}
+
+function cargarContrapartes() {
+    const container = document.getElementById('contraparteContainer');
+    
+    if (contrapartes.length === 0) {
+        const tipoLabel = tipoTransaccion === 'VENTA' ? 'clientes' : 'proveedores';
+        const btnLabel = tipoTransaccion === 'VENTA' ? 'Cliente' : 'Proveedor';
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-exclamation-triangle text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 text-lg mb-4">No hay ${tipoLabel} registrados</p>
+                <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded-lg transition" onclick="mostrarFormularioContraparte()">
+                    <i class="fas fa-plus mr-2"></i>Agregar ${btnLabel}
+                </button>
+            </div>
+        `;
         return;
     }
     
-    const subtotal = lineasTransaccion.reduce((sum, linea) => sum + linea.total, 0);
-    const impuestos = subtotal * 0.18;
-    const total = subtotal + impuestos;
+    const icon = tipoTransaccion === 'VENTA' ? 'fa-user' : 'fa-truck';
+    const btnLabel = tipoTransaccion === 'VENTA' ? 'Cliente' : 'Proveedor';
     
-    const transaccion = {
-        tipo: document.getElementById('tipo').value,
-        fecha: document.getElementById('fecha').value,
-        contraparteId: contraparteSeleccionada.id,
-        tipoContraparte: contraparteSeleccionada.tipo,
-        contraparteNombre: contraparteSeleccionada.nombre,
-        numeroFactura: document.getElementById('numeroFactura').value,
-        numeroOrdenCompra: document.getElementById('numeroOrdenCompra').value,
-        metodoPago: document.getElementById('metodoPago').value,
-        condicionesPago: document.getElementById('condicionesPago').value,
-        fechaEntregaEsperada: document.getElementById('fechaEntregaEsperada').value,
-        direccionEntrega: document.getElementById('direccionEntrega').value,
-        observaciones: document.getElementById('observaciones').value,
-        subtotal: subtotal,
-        impuestos: impuestos,
-        total: total,
-        lineas: lineasTransaccion.map(linea => ({
-            productoId: linea.productoId,
-            productoNombre: linea.productoNombre,
-            cantidad: linea.cantidad,
-            precioUnitario: linea.precioUnitario,
-            descuentoPorcentaje: linea.descuento,
-            total: linea.total
-        }))
+    const contrapartesHtml = `
+        <div class="mb-4 text-right">
+            <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded-lg transition text-sm" onclick="mostrarFormularioContraparte()">
+                <i class="fas fa-plus mr-2"></i>Nuevo ${btnLabel}
+            </button>
+        </div>
+        ${contrapartes.map(contraparte => `
+            <div class="counterpart-card ${contraparteSeleccionada?.id === contraparte.id ? 'selected' : ''}" 
+                 onclick="seleccionarContraparte(${contraparte.id}, '${contraparte.nombre}', this)">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-[#59391B] rounded-full flex items-center justify-center mr-4">
+                        <i class="fas ${icon} text-white text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-lg text-[#59391B]">${contraparte.nombre}</h4>
+                        <p class="text-gray-600 text-sm">${contraparte.email || contraparte.telefono || (contraparte.telefonos && contraparte.telefonos.length > 0 ? contraparte.telefonos[0] : 'Sin contacto')}</p>
+                        ${contraparte.direccion ? `<p class="text-gray-500 text-xs">${contraparte.direccion}</p>` : ''}
+                        ${contraparte.ciudad ? `<p class="text-gray-500 text-xs">${contraparte.ciudad}</p>` : ''}
+                    </div>
+                    <div class="text-[#59391B]">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+    `;
+    
+    container.innerHTML = contrapartesHtml;
+}
+
+function mostrarFormularioContraparte() {
+    const esCliente = tipoTransaccion === 'VENTA';
+    const tipoLabel = esCliente ? 'Cliente' : 'Proveedor';
+    
+    const formularioHtml = `
+        <div class="bg-white border rounded-lg p-6 mb-4" id="formularioContraparte">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-lg font-semibold text-[#59391B]">Agregar Nuevo ${tipoLabel}</h4>
+                <button type="button" class="text-gray-500 hover:text-gray-700" onclick="cargarContrapartes()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="formulario-contraparte">
+                ${esCliente ? `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Cédula *</label>
+                            <input type="text" name="cedula" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="000-0000000-0" oninput="formatCedulaInput(this)">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="cedulaFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Nombre *</label>
+                            <input type="text" name="nombre" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="nombreFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Apellido *</label>
+                            <input type="text" name="apellido" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="apellidoFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Teléfono *</label>
+                            <input type="tel" name="telefono" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="809-000-0000" oninput="formatTelefonoInput(this)">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="telefonoFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Email *</label>
+                            <input type="email" name="email" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="emailFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Provincia *</label>
+                            <select name="provincia" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" id="provinciaFormSelect">
+                                <option value="">Cargando provincias...</option>
+                            </select>
+                            <div class="text-xs text-red-500 mt-1 hidden" id="provinciaFormError"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Dirección Detallada *</label>
+                            <input type="text" name="direccionDetallada" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="Ej: Calle 10 #25, Ens. Naco">
+                            <div class="text-xs text-red-500 mt-1 hidden" id="direccionFormError"></div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Nombre *</label>
+                            <input type="text" name="nombre" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Ciudad</label>
+                            <input type="text" name="ciudad" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Dirección</label>
+                            <input type="text" name="direccion" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Email</label>
+                            <input type="email" name="email" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">RNC</label>
+                            <input type="text" name="rnc" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="000-00000000-0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">NCF</label>
+                            <input type="text" name="ncf" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Teléfono 1</label>
+                            <input type="tel" name="telefono1" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="809-000-0000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[#59391B] mb-1">Teléfono 2</label>
+                            <input type="tel" name="telefono2" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="809-000-0000">
+                        </div>
+                    </div>
+                `}
+                <div class="flex gap-3 mt-4">
+                    <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition" onclick="procesarGuardarContraparte()">
+                        <i class="fas fa-save mr-2"></i>Guardar ${tipoLabel}
+                    </button>
+                    <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition" onclick="cargarContrapartes()">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('contraparteContainer').innerHTML = formularioHtml;
+    
+    // Cargar provincias si es cliente
+    if (esCliente) {
+        cargarProvinciasFormulario();
+    }
+}
+
+function procesarGuardarContraparte() {
+    const formulario = document.querySelector('.formulario-contraparte');
+    
+    // Recopilar datos del formulario manualmente
+    const inputs = formulario.querySelectorAll('input, select');
+    const data = {};
+    inputs.forEach(input => {
+        if (input.value) {
+            data[input.name] = input.value;
+        }
+    });
+    
+    // Crear un evento simulado para mantener la compatibilidad
+    const mockEvent = {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        target: formulario
     };
     
-    try {
-        if (editando) {
-            await transaccionService.actualizarTransaccion(transaccionId, transaccion);
-            mostrarExito('Transacción actualizada exitosamente');
-        } else {
-            await transaccionService.crearTransaccion(transaccion);
-            mostrarExito('Transacción creada exitosamente');
+    guardarContraparte(mockEvent);
+}
+
+function mostrarFormularioProducto() {
+    const formularioHtml = `
+        <div class="bg-white border rounded-lg p-6 mb-4" id="formularioProducto">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-lg font-semibold text-[#59391B]">Agregar Producto Nuevo</h4>
+                <button type="button" class="text-gray-500 hover:text-gray-700" onclick="cargarProductos()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="formulario-producto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Nombre del Producto *</label>
+                        <input type="text" name="nombre" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="Ej: Mesa de madera roble">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Cantidad *</label>
+                        <input type="number" name="cantidad" min="1" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Precio Unitario (RD$) *</label>
+                        <input type="number" name="precio" step="0.01" min="0" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="0.00">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Descripción</label>
+                        <textarea name="descripcion" rows="3" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]" placeholder="Descripción detallada del producto..."></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition" onclick="procesarAgregarProducto()">
+                        <i class="fas fa-plus mr-2"></i>Agregar Producto
+                    </button>
+                    <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition" onclick="cargarProductos()">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const container = document.getElementById('productosContainer');
+    container.insertAdjacentHTML('afterbegin', formularioHtml);
+}
+
+function procesarAgregarProducto() {
+    const formulario = document.querySelector('.formulario-producto');
+    
+    // Recopilar datos del formulario manualmente
+    const inputs = formulario.querySelectorAll('input, textarea');
+    const data = {};
+    inputs.forEach(input => {
+        data[input.name] = input.value;
+    });
+    
+    const mockEvent = {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        target: formulario
+    };
+    
+    agregarProductoNuevo(mockEvent);
+}
+
+function editarProducto(id) {
+    const producto = productosSeleccionados.find(p => p.id === id);
+    if (!producto) return;
+    
+    const formularioHtml = `
+        <div class="bg-white border rounded-lg p-6 mb-4" id="formularioEditarProducto">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-lg font-semibold text-[#59391B]">Editar Producto</h4>
+                <button type="button" class="text-gray-500 hover:text-gray-700" onclick="cargarProductos()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="formulario-editar-producto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Nombre del Producto *</label>
+                        <input type="text" name="nombre" value="${producto.nombre}" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Cantidad *</label>
+                        <input type="number" name="cantidad" value="${producto.cantidad}" min="1" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Precio Unitario (RD$) *</label>
+                        <input type="number" name="precio" value="${producto.precio}" step="0.01" min="0" required class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-[#59391B] mb-1">Descripción</label>
+                        <textarea name="descripcion" rows="3" class="w-full px-3 py-2 border rounded-lg focus:border-[#59391B] focus:ring-1 focus:ring-[#59391B]">${producto.descripcion || ''}</textarea>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition" onclick="procesarGuardarEdicion(${id})">
+                        <i class="fas fa-save mr-2"></i>Guardar Cambios
+                    </button>
+                    <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition" onclick="cargarProductos()">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const container = document.getElementById('productosContainer');
+    container.insertAdjacentHTML('afterbegin', formularioHtml);
+}
+
+function procesarGuardarEdicion(id) {
+    const formulario = document.querySelector('.formulario-editar-producto');
+    const mockEvent = {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        target: {
+            ...formulario,
+            get: (name) => {
+                const input = formulario.querySelector(`[name="${name}"]`);
+                return input ? input.value : null;
+            }
         }
+    };
+    
+    guardarEdicionProducto(mockEvent, id);
+}
+
+function mostrarResumenFinal() {
+    // Información general
+    document.getElementById('confirmTipo').textContent = document.getElementById('tipoDisplay').value;
+    document.getElementById('confirmFecha').textContent = new Date(document.getElementById('fecha').value).toLocaleString('es-DO');
+    document.getElementById('confirmContraparte').textContent = contraparteSeleccionada.nombre;
+    
+    // Totales
+    const subtotal = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+    const itbis = subtotal * 0.18;
+    const total = subtotal + itbis;
+    
+    document.getElementById('confirmSubtotal').textContent = formatearMonedaDominicana(subtotal);
+    document.getElementById('confirmItbis').textContent = formatearMonedaDominicana(itbis);
+    document.getElementById('confirmTotal').textContent = formatearMonedaDominicana(total);
+    
+    // Lista de productos
+    const productosHtml = productosSeleccionados.map(producto => {
+        const totalProducto = producto.precio * producto.cantidad;
+        return `
+            <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                <div>
+                    <span class="font-medium">${producto.nombre}</span>
+                    <span class="text-gray-600 text-sm ml-2">(${producto.cantidad} × ${formatearMonedaDominicana(producto.precio)})</span>
+                </div>
+                <span class="font-bold text-[#7b5222]">${formatearMonedaDominicana(totalProducto)}</span>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('confirmProductos').innerHTML = productosHtml;
+}
+
+async function confirmarTransaccion() {
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const textoOriginal = btnConfirmar.innerHTML;
+    
+    // Mostrar loading
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
+    btnConfirmar.disabled = true;
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    
+    try {
+        const subtotal = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
+        const itbis = subtotal * 0.18;
+        const total = subtotal + itbis;
+        
+        const transaccion = {
+            tipo: tipoTransaccion,
+            fecha: document.getElementById('fecha').value,
+            contraparteId: contraparteSeleccionada.id,
+            tipoContraparte: tipoTransaccion === 'VENTA' ? 'CLIENTE' : 'SUPLIDOR',
+            contraparteNombre: contraparteSeleccionada.nombre,
+            numeroFactura: document.getElementById('numeroFactura').value || null,
+            observaciones: document.getElementById('observaciones').value || null,
+            subtotal: subtotal,
+            impuestos: itbis,
+            total: total,
+            estado: 'PENDIENTE',
+            lineas: productosSeleccionados.map(producto => ({
+                productoId: producto.esNuevo ? null : producto.id,
+                productoNombre: producto.nombre,
+                cantidad: producto.cantidad,
+                precioUnitario: producto.precio,
+                descuentoPorcentaje: 0,
+                total: producto.precio * producto.cantidad,
+                descripcionProducto: producto.descripcion || null
+            }))
+        };
+        
+        await transaccionService.crearTransaccion(transaccion);
+        
+        mostrarExito('¡Transacción creada exitosamente!');
         
         setTimeout(() => {
             window.location.href = 'index.html';
-        }, 1500);
+        }, 2000);
+        
     } catch (error) {
-        console.error('Error al guardar transacción:', error);
-        mostrarError('Error al guardar la transacción');
+        console.error('Error al crear transacción:', error);
+        mostrarError(error.message || 'Error al crear la transacción');
+        
+        // Restaurar botón
+        btnConfirmar.innerHTML = textoOriginal;
+        btnConfirmar.disabled = false;
+        document.getElementById('loadingOverlay').classList.add('hidden');
     }
 }
 
 function mostrarError(mensaje) {
     const toast = document.createElement('div');
-    toast.className = 'toast align-items-center text-white bg-danger border-0';
-    toast.setAttribute('role', 'alert');
+    toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
     toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-exclamation-circle me-2"></i>${mensaje}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-3 text-lg"></i>
+            <span class="font-medium">${mensaje}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `;
     
     document.body.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
     
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
-    });
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
 }
 
 function mostrarExito(mensaje) {
     const toast = document.createElement('div');
-    toast.className = 'toast align-items-center text-white bg-success border-0';
-    toast.setAttribute('role', 'alert');
+    toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
     toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-check-circle me-2"></i>${mensaje}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-3 text-lg"></i>
+            <span class="font-medium">${mensaje}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     `;
     
     document.body.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
     
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// Funciones de formateo para formularios
+function formatCedulaInput(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 11);
+    let part1 = digits.slice(0, 3);
+    let part2 = digits.slice(3, 10);
+    let part3 = digits.slice(10, 11);
+    let formatted = part1;
+    if (part2) formatted += '-' + part2;
+    if (part3) formatted += '-' + part3;
+    input.value = formatted;
+}
+
+function formatTelefonoInput(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 10);
+    let part1 = digits.slice(0, 3);
+    let part2 = digits.slice(3, 6);
+    let part3 = digits.slice(6, 10);
+    let formatted = part1;
+    if (part2) formatted += '-' + part2;
+    if (part3) formatted += '-' + part3;
+    input.value = formatted;
+}
+
+// Cargar provincias para el formulario
+async function cargarProvinciasFormulario() {
+    const provinciaSelect = document.getElementById('provinciaFormSelect');
+    if (!provinciaSelect) return;
+    
+    provinciaSelect.innerHTML = '<option value="">Cargando provincias...</option>';
+    provinciaSelect.disabled = true;
+    
+    try {
+        const resp = await fetch('https://api.digital.gob.do/v1/territories/provinces');
+        if (!resp.ok) throw new Error('Error al obtener provincias');
+        const json = await resp.json();
+        
+        provinciaSelect.innerHTML = '<option value="">Seleccione una provincia</option>';
+        if (Array.isArray(json.data)) {
+            json.data.forEach(prov => {
+                const opt = document.createElement('option');
+                opt.value = prov.name;
+                opt.textContent = prov.name;
+                provinciaSelect.appendChild(opt);
+            });
+        }
+        provinciaSelect.disabled = false;
+    } catch (err) {
+        provinciaSelect.innerHTML = '<option value="">Error cargando provincias</option>';
+        console.error("Error cargando provincias:", err);
+        provinciaSelect.disabled = true;
+    }
+}
+
+// Validaciones para el formulario de contraparte
+function validateContraparteForm(data, esCliente) {
+    const errors = {};
+    
+    if (esCliente) {
+        // Validaciones para cliente (mismo formato que cliente/form.js)
+        if (!data.cedula) {
+            errors.cedula = 'La cédula es obligatoria';
+        } else {
+            const digits = data.cedula.replace(/\D/g, '');
+            if (digits.length !== 11) {
+                errors.cedula = 'Formato de cédula inválido';
+            }
+        }
+        
+        if (!data.nombre) {
+            errors.nombre = 'El nombre es obligatorio';
+        }
+        
+        if (!data.apellido) {
+            errors.apellido = 'El apellido es obligatorio';
+        }
+        
+        if (!data.telefono) {
+            errors.telefono = 'El teléfono es obligatorio';
+        } else {
+            const telDigits = data.telefono.replace(/\D/g, '');
+            if (telDigits.length !== 10) {
+                errors.telefono = 'Formato de teléfono inválido';
+            }
+        }
+        
+        if (!data.email) {
+            errors.email = 'El correo es obligatorio';
+        } else {
+            const re = /\S+@\S+\.\S+/;
+            if (!re.test(data.email)) {
+                errors.email = 'Formato de correo inválido';
+            }
+        }
+        
+        if (!data.provincia) {
+            errors.provincia = 'La provincia es obligatoria';
+        }
+        
+        if (!data.direccionDetallada) {
+            errors.direccionDetallada = 'La dirección detallada es obligatoria';
+        }
+    } else {
+        // Validaciones para proveedor
+        if (!data.nombre) {
+            errors.nombre = 'El nombre es obligatorio';
+        }
+    }
+    
+    return errors;
+}
+
+function showFormError(fieldName, message) {
+    const errorEl = document.getElementById(fieldName + 'FormError');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+function clearFormErrors() {
+    const errorElements = document.querySelectorAll('[id$="FormError"]');
+    errorElements.forEach(el => {
+        el.textContent = '';
+        el.classList.add('hidden');
     });
+}
+
+async function guardarContraparte(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Obtener datos del formulario manualmente en lugar de usar FormData
+    const formulario = event.target;
+    const inputs = formulario.querySelectorAll('input, select');
+    const formData = {};
+    
+    inputs.forEach(input => {
+        if (input.name && input.value) {
+            formData[input.name] = input.value;
+        }
+    });
+    
+    const esCliente = tipoTransaccion === 'VENTA';
+    
+    // Limpiar errores previos
+    clearFormErrors();
+    
+    let datosContraparte;
+    
+    if (esCliente) {
+        datosContraparte = {
+            cedula: formData.cedula,
+            nombre: formData.nombre,
+            apellido: formData.apellido,
+            telefono: formData.telefono,
+            email: formData.email,
+            provincia: formData.provincia,
+            direccionDetallada: formData.direccionDetallada
+        };
+        
+        // Validar datos del cliente
+        const errors = validateContraparteForm(datosContraparte, true);
+        if (Object.keys(errors).length > 0) {
+            Object.entries(errors).forEach(([field, message]) => {
+                showFormError(field, message);
+            });
+            return;
+        }
+        
+        // Combinar provincia y dirección detallada
+        datosContraparte.direccion = `${datosContraparte.provincia}: ${datosContraparte.direccionDetallada}`;
+        delete datosContraparte.provincia;
+        delete datosContraparte.direccionDetallada;
+        
+    } else {
+        const telefonos = [];
+        if (formData.telefono1) telefonos.push(formData.telefono1);
+        if (formData.telefono2) telefonos.push(formData.telefono2);
+        
+        datosContraparte = {
+            nombre: formData.nombre,
+            ciudad: formData.ciudad,
+            direccion: formData.direccion,
+            email: formData.email,
+            RNC: formData.rnc,
+            NCF: formData.ncf,
+            telefonos: telefonos
+        };
+        
+        // Validar datos del proveedor
+        const errors = validateContraparteForm(datosContraparte, false);
+        if (Object.keys(errors).length > 0) {
+            Object.entries(errors).forEach(([field, message]) => {
+                showFormError(field, message);
+            });
+            return;
+        }
+    }
+    
+    try {
+        const token = localStorage.getItem('authToken');
+        let nuevaContraparte;
+        
+        if (esCliente) {
+            const response = await fetch('/api/clientes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(datosContraparte)
+            });
+            
+            if (response.status === 400) {
+                const serverErrors = await response.json();
+                Object.entries(serverErrors).forEach(([field, message]) => {
+                    showFormError(field, message);
+                });
+                return;
+            }
+            
+            if (!response.ok) {
+                throw new Error('Error al crear cliente');
+            }
+            
+            nuevaContraparte = await response.json();
+        } else {
+            const response = await fetch('/api/suplidores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(datosContraparte)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al crear proveedor');
+            }
+            
+            nuevaContraparte = await response.json();
+        }
+        
+        // Agregar nueva contraparte a la lista local
+        contrapartes.push(nuevaContraparte);
+        
+        // Mostrar mensaje de éxito
+        mostrarExito(`${esCliente ? 'Cliente' : 'Proveedor'} creado exitosamente`);
+        
+        // Recargar lista de contrapartes sin cambiar el paso del wizard
+        cargarContrapartes();
+        
+        // Auto-seleccionar la contraparte recién creada
+        setTimeout(() => {
+            contraparteSeleccionada = { 
+                id: nuevaContraparte.id, 
+                nombre: esCliente ? `${nuevaContraparte.nombre} ${nuevaContraparte.apellido}` : nuevaContraparte.nombre 
+            };
+            
+            // Buscar y marcar como seleccionada
+            const cards = document.querySelectorAll('.counterpart-card');
+            cards.forEach(card => {
+                if (card.textContent.includes(contraparteSeleccionada.nombre)) {
+                    card.classList.add('selected');
+                }
+            });
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error al guardar contraparte:', error);
+        mostrarError(error.message || 'Error al guardar la información');
+    }
+}
+
+function cargarProductos() {
+    const container = document.getElementById('productosContainer');
+    console.log("Cargando productos. Total:", productos.length); // Debug log
+    
+    // Para compras, mostrar opción de agregar productos nuevos
+    if (tipoTransaccion === 'COMPRA') {
+        const productosHtml = `
+            <div class="mb-4">
+                <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded-lg transition text-sm" onclick="mostrarFormularioProducto()">
+                    <i class="fas fa-plus mr-2"></i>Agregar Producto Nuevo
+                </button>
+            </div>
+            <div id="productosAgregados">
+                ${productosSeleccionados.length === 0 ? `
+                    <div class="text-center py-8">
+                        <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600">No hay productos agregados</p>
+                        <p class="text-gray-500 text-sm">Haga clic en "Agregar Producto Nuevo" para empezar</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        container.innerHTML = productosHtml;
+        
+        if (productosSeleccionados.length > 0) {
+            mostrarProductosAgregados();
+        }
+        
+        return;
+    }
+    
+    // Para ventas, mostrar productos existentes
+    if (!productos || productos.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <i class="fas fa-boxes text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 text-lg">No hay productos disponibles</p>
+                <p class="text-gray-500">No se encontraron productos en el sistema</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Normalize stock property - handle different property names
+    productos.forEach(producto => {
+        // Make sure each product has a stock-related property
+        if (producto.cantidadDisponible === undefined) {
+            if (producto.stock !== undefined) {
+                producto.cantidadDisponible = producto.stock;
+            } else if (producto.cantidad !== undefined) {
+                producto.cantidadDisponible = producto.cantidad;
+            } else {
+                console.log("Producto sin stock definido:", producto);
+                producto.cantidadDisponible = 0; // Default to 0 if no stock info
+            }
+        }
+    });
+    
+    // Add a toggle for showing out-of-stock products
+    const showOutOfStockToggle = `
+        <div class="mb-4 flex justify-between items-center">
+            <div class="text-sm text-gray-600">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-100 border border-red-300 mr-1"></span>
+                Productos sin stock disponible
+            </div>
+            <label class="inline-flex items-center cursor-pointer">
+                <span class="mr-2 text-sm text-gray-700">Mostrar productos sin stock</span>
+                <div class="relative">
+                    <input type="checkbox" id="toggleOutOfStock" class="sr-only" onchange="toggleShowOutOfStock()">
+                    <div class="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                    <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                </div>
+            </label>
+        </div>
+    `;
+    
+    // Get all products or filter based on toggle state
+    const showOutOfStock = sessionStorage.getItem('showOutOfStock') === 'true';
+    let productosToShow = showOutOfStock ? productos : productos.filter(p => p.cantidadDisponible > 0);
+    
+    console.log("Productos a mostrar:", productosToShow.length, "de", productos.length); // Debug log
+    
+    // If no products to show, always show all products initially
+    if (productosToShow.length === 0 && !showOutOfStock) {
+        productosToShow = productos;
+        sessionStorage.setItem('showOutOfStock', 'true');
+    }
+    
+    const productosHtml = `
+        ${showOutOfStockToggle}
+        ${productosToShow.length === 0 ? `
+            <div class="text-center py-8">
+                <i class="fas fa-exclamation-circle text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 text-lg">No hay productos disponibles</p>
+                <p class="text-gray-500">No se encontraron productos que mostrar</p>
+            </div>
+        ` : `
+            <div class="space-y-3">
+                ${productosToShow.map(producto => {
+                    try {
+                        const seleccionado = productosSeleccionados.find(p => p.id === producto.id);
+                        const tieneStock = producto.cantidadDisponible > 0;
+                        
+                        return `
+                            <div class="counterpart-card ${seleccionado ? 'selected' : ''} ${!tieneStock ? 'opacity-70 bg-red-50 border-red-200' : ''}" 
+                                onclick="${tieneStock ? `toggleProducto(${producto.id}, '${producto.nombre.replace(/'/g, "\\'")}', ${producto.precio || 0}, ${producto.cantidadDisponible}, this)` : 'mostrarAlertaStockInsuficiente()'}">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-${tieneStock ? '[#7b5222]' : 'gray-400'} rounded-full flex items-center justify-center mr-4">
+                                        <i class="fas fa-box text-white"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="font-semibold text-lg text-[#59391B]">${producto.nombre}</h4>
+                                        <p class="text-[#7b5222] font-medium">${formatearMonedaDominicana(producto.precio || 0)}</p>
+                                        <span class="text-sm ${tieneStock ? 'text-gray-500' : 'text-red-500 font-medium'}">${tieneStock ? `Stock: ${producto.cantidadDisponible}` : 'Agotado'}</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        ${seleccionado ? `
+                                            <div class="mr-4">
+                                                <input type="number" min="1" max="${producto.cantidadDisponible}" 
+                                                    value="${seleccionado.cantidad}" 
+                                                    class="w-20 px-2 py-1 border rounded text-center"
+                                                    onclick="event.stopPropagation()"
+                                                    onchange="actualizarCantidad(${producto.id}, this.value)">
+                                            </div>
+                                        ` : ''}
+                                        <i class="fas ${seleccionado ? 'fa-check-circle text-green-600' : tieneStock ? 'fa-plus-circle text-[#59391B]' : 'fa-ban text-red-500'}"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } catch (error) {
+                        console.error("Error rendering product:", producto, error);
+                        return ''; // Skip product with rendering error
+                    }
+                }).join('')}
+            </div>
+        `}
+    `;
+    
+    container.innerHTML = productosHtml;
+    
+    // Update toggle state
+    const toggleOutOfStock = document.getElementById('toggleOutOfStock');
+    if (toggleOutOfStock) {
+        toggleOutOfStock.checked = sessionStorage.getItem('showOutOfStock') === 'true';
+        toggleOutOfStock.nextElementSibling.nextElementSibling.classList.toggle('translate-x-4', toggleOutOfStock.checked);
+    }
+}
+
+function toggleProducto(id, nombre, precio, stock, element) {
+    console.log("Producto seleccionado:", id, nombre, precio, stock); // Debug log
+    const index = productosSeleccionados.findIndex(p => p.id === id);
+    
+    if (index >= 0) {
+        // Remover producto
+        productosSeleccionados.splice(index, 1);
+        element.classList.remove('selected');
+    } else {
+        // Agregar producto
+        productosSeleccionados.push({
+            id,
+            nombre,
+            precio,
+            stock,
+            cantidad: 1
+        });
+        element.classList.add('selected');
+    }
+    
+    // Recargar la vista de productos para mostrar/ocultar inputs de cantidad
+    actualizarResumenProductos();
+    cargarProductos();
 }

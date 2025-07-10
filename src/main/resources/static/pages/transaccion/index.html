@@ -17,6 +17,9 @@
         .transaction-card.compra {
             border-left-color: #28a745;
         }
+        .transaction-card.venta {
+            border-left-color: #7b5222;
+        }
         .transaction-card.devolucion {
             border-left-color: #dc3545;
         }
@@ -65,9 +68,21 @@
           <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('COMPRA')">
             <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
           </button>
+          <button type="button" class="bg-[#7b5222] hover:bg-[#59391B] text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('VENTA')">
+            <i class="fas fa-cash-register mr-2"></i>Nueva Venta
+          </button>
           <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('DEVOLUCION')">
             <i class="fas fa-undo mr-2"></i>Devolución
           </button>
+        </div>
+      </div>
+
+      <!-- Estadísticas de Seguimiento -->
+      <div id="estadisticasContainer" class="mb-6">
+        <div class="text-center py-8 md:py-12">
+          <div class="animate-spin inline-block w-6 h-6 md:w-8 md:h-8 border-4 border-current border-t-transparent text-[#7b5222] rounded-full">
+            <span class="sr-only">Cargando estadísticas...</span>
+          </div>
         </div>
       </div>
 
@@ -79,7 +94,9 @@
             <select class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="filtroTipo" onchange="filtrarTransacciones()">
               <option value="">Todos los tipos</option>
               <option value="COMPRA">Compras</option>
+              <option value="VENTA">Ventas</option>
               <option value="DEVOLUCION_COMPRA">Devolución Compra</option>
+              <option value="DEVOLUCION_VENTA">Devolución Venta</option>
             </select>
           </div>
           <div class="space-y-2">
@@ -115,6 +132,15 @@
   </div>
 </main>
 
+<div id="onboardingTx" class="hidden fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4 text-sm max-w-xs z-40">
+  <p class="mb-3">Aquí podrás crear y revisar transacciones de contabilidad. Usa los botones superiores para añadir nuevas.</p>
+  <button class="bg-brandGold text-white px-3 py-1 rounded w-full" onclick="dismissTxOnboarding()">Entendido</button>
+</div>
+
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+  <div class="animate-spin h-10 w-10 border-4 border-brandGold border-t-transparent rounded-full"></div>
+</div>
+
 <footer class="w-full text-center py-4 text-gray-400 text-sm">
   &copy; 2025 Thelarte.
 </footer>
@@ -122,5 +148,4 @@
 <script src="../../js/structure/sidebarloader.js"></script>
 <script src="../../js/services/transaccionService.js"></script>
 <script src="../../js/transaccion/index.js"></script>
-</body>
-</html>
+</body></html>

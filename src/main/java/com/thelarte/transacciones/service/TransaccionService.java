@@ -30,6 +30,7 @@ public class TransaccionService {
     private PaymentMetadataValidator paymentMetadataValidator;
 
     public Transaccion crearTransaccion(Transaccion transaccion) {
+        validateTransactionBusinessRules(transaccion);
         validatePaymentMetadata(transaccion);
         procesarLineasTransaccion(transaccion);
         calcularTotalesTransaccion(transaccion);
@@ -289,24 +290,37 @@ public class TransaccionService {
         );
     }
 
-    public Transaccion actualizarTransaccion(Long id, Transaccion transaccionActualizada) {
-        Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+    /**
+     * Determines if a transaction can be edited based on its current state
+     * Only PENDIENTE and CONFIRMADA transactions can be edited
+     */
+    public boolean canEditTransaction(Transaccion transaccion) {
+        return transaccion.getEstado() == Transaccion.EstadoTransaccion.PENDIENTE ||
+               transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA;
+    }
+
+    /**
+     * Updates a transaction with validation for editable states
+     */
+    public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
+        Transaccion existingTransaction = transaccionRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Transacción no encontrada"));
         
-        transaccion.setObservaciones(transaccionActualizada.getObservaciones());
-        transaccion.setFechaEntregaEsperada(transaccionActualizada.getFechaEntregaEsperada());
-        transaccion.setCondicionesPago(transaccionActualizada.getCondicionesPago());
-        transaccion.setNumeroFactura(transaccionActualizada.getNumeroFactura());
-        transaccion.setNumeroOrdenCompra(transaccionActualizada.getNumeroOrdenCompra());
-        transaccion.setMetodoPago(transaccionActualizada.getMetodoPago());
-        transaccion.setMetadatosPago(transaccionActualizada.getMetadatosPago());
-        transaccion.setDireccionEntrega(transaccionActualizada.getDireccionEntrega());
-        
-        if (transaccionActualizada.getLineas() != null) {
-            transaccion.setLineas(transaccionActualizada.getLineas());
-            calcularTotalesTransaccion(transaccion);
+        // Check if the transaction can be edited
+        if (!canEditTransaction(existingTransaction)) {
+            throw new IllegalStateException("No se puede editar una transacción con estado: " + existingTransaction.getEstado());
         }
         
+        // Preserve the original ID
+        transaccion.setId(id);
+        
+        // Process transaction lines
+        procesarLineasTransaccion(transaccion);
+        
+        // Recalculate totals
+        calcularTotalesTransaccion(transaccion);
+        
+        // Save the updated transaction
         return transaccionRepository.save(transaccion);
     }
 
@@ -375,24 +389,79 @@ public class TransaccionService {
     private void procesarLineasTransaccion(Transaccion transaccion) {
         if (transaccion.getLineas() != null) {
             for (LineaTransaccion linea : transaccion.getLineas()) {
-                // Si el productoId es null, crear un nuevo producto
+                // Si el productoId es null, crear un nuevo producto (solo para compras)
                 if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
-                    Producto nuevoProducto = new Producto();
-                    nuevoProducto.setNombre(linea.getProductoNombre());
-                    nuevoProducto.setTipo("General"); // Tipo por defecto
-                    nuevoProducto.setDescripcion("Producto creado automáticamente");
-                    nuevoProducto.setMarca("Sin marca");
-                    nuevoProducto.setItbis(18.0f); // 18% de ITBIS por defecto
-                    nuevoProducto.setPrecio(linea.getPrecioUnitario());
-                    nuevoProducto.setFotoURL("");
-                    
-                    // Guardar el producto en la base de datos
-                    nuevoProducto = productoRepository.save(nuevoProducto);
-                    
-                    // Asignar el ID generado a la línea de transacción
-                    linea.setProductoId(nuevoProducto.getId());
+                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA) {
+                        Producto nuevoProducto = new Producto();
+                        nuevoProducto.setNombre(linea.getProductoNombre());
+                        nuevoProducto.setTipo("Mueble"); // Tipo por defecto para compras
+                        nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
+                        nuevoProducto.setMarca("Sin marca");
+                        nuevoProducto.setItbis(18.0f); // 18% de ITBIS por defecto
+                        nuevoProducto.setPrecio(linea.getPrecioUnitario());
+                        nuevoProducto.setFotoURL("");
+                        nuevoProducto.setEsNuevo(true);
+                        nuevoProducto.setCantidadDisponible(linea.getCantidad());
+                        
+                        // Guardar el producto en la base de datos
+                        nuevoProducto = productoRepository.save(nuevoProducto);
+                        
+                        // Asignar el ID generado a la línea de transacción
+                        linea.setProductoId(nuevoProducto.getId());
+                    } else {
+                        throw new IllegalArgumentException("Solo se pueden crear productos nuevos en compras");
+                    }
+                } else if (linea.getProductoId() != null) {
+                    // Para productos existentes, validar disponibilidad en ventas
+                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA) {
+                        Producto producto = productoRepository.findById(linea.getProductoId())
+                            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+                        
+                        if (producto.getCantidadDisponible() < linea.getCantidad()) {
+                            throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                        }
+                        
+                        // Reservar el producto
+                        producto.setCantidadReservada(producto.getCantidadReservada() + linea.getCantidad());
+                        producto.setCantidadDisponible(producto.getCantidadDisponible() - linea.getCantidad());
+                        
+                        if (producto.getCantidadDisponible() == 0) {
+                            producto.setEstado(Producto.EstadoProducto.AGOTADO);
+                        }
+                        
+                        productoRepository.save(producto);
+                    }
                 }
             }
+        }
+    }
+
+    private void validateTransactionBusinessRules(Transaccion transaccion) {
+        if (transaccion.getTipo() == null) {
+            throw new IllegalArgumentException("El tipo de transacción es obligatorio");
+        }
+        
+        if (transaccion.getTipoContraparte() == null) {
+            throw new IllegalArgumentException("El tipo de contraparte es obligatorio");
+        }
+        
+        // Validar reglas de negocio específicas por tipo de transacción
+        switch (transaccion.getTipo()) {
+            case COMPRA:
+            case DEVOLUCION_COMPRA:
+                if (transaccion.getTipoContraparte() != Transaccion.TipoContraparte.SUPLIDOR) {
+                    throw new IllegalArgumentException("Las compras solo pueden realizarse con suplidores");
+                }
+                break;
+            case VENTA:
+            case DEVOLUCION_VENTA:
+                if (transaccion.getTipoContraparte() != Transaccion.TipoContraparte.CLIENTE) {
+                    throw new IllegalArgumentException("Las ventas solo pueden realizarse con clientes");
+                }
+                if (transaccion.getVendedorId() == null) {
+                    throw new IllegalArgumentException("Las ventas requieren un vendedor asignado");
+                }
+                break;
         }
     }
 

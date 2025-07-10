@@ -4,6 +4,18 @@ const descEl = document.getElementById('formDesc');
 const submitBtn = document.getElementById('submitBtn');
 const params = new URLSearchParams(window.location.search);
 const id = params.get('id');
+const rncError = document.getElementById('rncError');
+const rncInput = document.getElementById('rnc');
+
+if (rncInput) {
+  rncInput.addEventListener('input', () => {
+    if (rncInput.value && !/^[0-9]{9}$/.test(rncInput.value)) {
+      rncError.classList.remove('hidden');
+    } else {
+      rncError.classList.add('hidden');
+    }
+  });
+}
 
 function setMode() {
   if (id) {
@@ -61,6 +73,7 @@ form.addEventListener('submit', async e => {
   submitBtn.disabled = true;
   submitBtn.textContent = id ? 'Actualizando...' : 'Guardando...';
 
+  // Recoger datos directamente de los elementos del formulario
   const data = {
     nombre: form.nombre.value.trim(),
     ciudad: form.ciudad.value.trim(),
@@ -73,6 +86,13 @@ form.addEventListener('submit', async e => {
 
   if (!data.nombre || !data.ciudad) {
     alert('Por favor, completa los campos obligatorios (Nombre y Provincia).');
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    return;
+  }
+
+  if (form.rnc.value && !/^[0-9]{9}$/.test(form.rnc.value)) {
+    rncError.classList.remove('hidden');
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
     return;
@@ -168,7 +188,7 @@ async function verifyToken(token) {
 }
 
 // Código para manejar navegación móvil y autenticación
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check if user is authenticated using local storage
   const token = localStorage.getItem('authToken');
   if (!token) {

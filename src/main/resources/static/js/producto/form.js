@@ -100,7 +100,6 @@ form.addEventListener('submit', async e => {
             submitBtn.textContent = originalText;
             return;
         }
-        // Si está editando y ya hay una imagen previa cargada
     } else if (
         id &&
         document.getElementById('fotoPreview').src &&
@@ -123,7 +122,7 @@ form.addEventListener('submit', async e => {
         return;
     }
 
-    // Armar el objeto producto
+    // Armar el objeto producto directamente de los elementos del formulario
     const producto = {
         nombre: form.nombre.value.trim(),
         tipo: form.tipo.value.trim(),

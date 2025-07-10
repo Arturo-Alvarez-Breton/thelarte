@@ -16,4 +16,9 @@ public interface ClienteRepository extends JpaRepository<Cliente, String> {
      * Encuentra un Cliente por su email.
      */
     Optional<Cliente> findByEmail(String email);
+    
+    /**
+     * Verifica si existe un cliente con la cédula dada
+     */
+    boolean existsByCedula(String cedula);
 }

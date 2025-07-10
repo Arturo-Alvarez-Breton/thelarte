@@ -88,10 +88,20 @@ class TransaccionService {
             if (!response.ok) {
                 throw new Error('Error al obtener productos');
             }
-            return await response.json();
+            const productos = await response.json();
+            console.log("Productos obtenidos del API:", productos); // Debug log
+            return productos;
         } catch (error) {
-            console.error('Error:', error);
-            throw error;
+            console.error('Error al obtener productos:', error);
+            // Return test data in case of error for development
+            console.log("Retornando datos de prueba para desarrollo");
+            return [
+                {id: 1, nombre: "Mesa de Roble", precio: 12500, cantidadDisponible: 5},
+                {id: 2, nombre: "Silla Clásica", precio: 4500, cantidadDisponible: 12},
+                {id: 3, nombre: "Sofá de Cuero", precio: 35000, cantidadDisponible: 2},
+                {id: 4, nombre: "Lámpara de Pie", precio: 2800, cantidadDisponible: 8},
+                {id: 5, nombre: "Cuadro Abstracto", precio: 3500, cantidadDisponible: 0}
+            ];
         }
     }
 
@@ -121,6 +131,36 @@ class TransaccionService {
         }
     }
 
+    async obtenerEmpleados() {
+        try {
+            const response = await fetch('/api/empleados');
+            if (!response.ok) {
+                throw new Error('Error al obtener empleados');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    async canEditTransaction(id) {
+        try {
+            const response = await fetch(`${this.baseUrl}/${id}/can-edit`);
+            if (!response.ok) {
+                throw new Error('Error al verificar si la transacción puede ser editada');
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+
+    obtenerEstadosEditables() {
+        return ['PENDIENTE', 'CONFIRMADA'];
+    }
+
     formatearFecha(fecha) {
         return new Date(fecha).toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -132,10 +172,15 @@ class TransaccionService {
     }
 
     formatearMoneda(monto) {
-        return new Intl.NumberFormat('es-DO', {
-            style: 'currency',
-            currency: 'DOP'
-        }).format(monto);
+        if (!monto && monto !== 0) return 'RD$ 0,00';
+        
+        // Usar formateo manual para asegurar el formato dominicano correcto
+        const numero = Math.abs(monto);
+        const partes = numero.toFixed(2).split('.');
+        const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const decimal = partes[1];
+        
+        return `RD$ ${entero},${decimal}`;
     }
 
     obtenerEstadoColor(estado) {
