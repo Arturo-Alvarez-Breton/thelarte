@@ -565,6 +565,11 @@ async function confirmarTransaccion() {
     document.getElementById('loadingOverlay').classList.remove('hidden');
     
     try {
+        // Validar que se haya seleccionado un cliente/proveedor
+        if (!contraparteSeleccionada || !contraparteSeleccionada.id) {
+            throw new Error(`Debe seleccionar un ${tipoTransaccion === 'VENTA' ? 'cliente' : 'proveedor'} antes de confirmar la transacción`);
+        }
+        
         const subtotal = productosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
         const itbis = subtotal * 0.18;
         const total = subtotal + itbis;

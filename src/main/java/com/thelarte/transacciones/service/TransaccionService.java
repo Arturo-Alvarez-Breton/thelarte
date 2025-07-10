@@ -5,6 +5,7 @@ import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.inventory.model.Producto;
+import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.inventory.service.UnidadService;
 import com.thelarte.inventory.util.EstadoUnidad;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -452,17 +454,25 @@ public class TransaccionService {
                         Producto producto = productoRepository.findById(linea.getProductoId())
                             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
                         
+                        // Actualizar cantidades basadas en unidades reales
+                        producto.actualizarEstadoPorUnidades();
+                        
                         if (producto.getCantidadDisponible() < linea.getCantidad()) {
                             throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
                         }
                         
-                        // Reservar el producto
-                        producto.setCantidadReservada(producto.getCantidadReservada() + linea.getCantidad());
-                        producto.setCantidadDisponible(producto.getCantidadDisponible() - linea.getCantidad());
+                        // Reservar unidades específicas
+                        List<Unidad> unidadesDisponibles = producto.getUnidades().stream()
+                            .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
+                            .limit(linea.getCantidad())
+                            .collect(Collectors.toList());
                         
-                        if (producto.getCantidadDisponible() == 0) {
-                            producto.setEstado(Producto.EstadoProducto.AGOTADO);
+                        for (Unidad unidad : unidadesDisponibles) {
+                            unidad.setEstado(EstadoUnidad.RESERVADO);
                         }
+                        
+                        // Actualizar estado del producto
+                        producto.actualizarEstadoPorUnidades();
                         
                         productoRepository.save(producto);
                     }

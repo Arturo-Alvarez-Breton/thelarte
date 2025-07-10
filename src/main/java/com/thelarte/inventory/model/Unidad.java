@@ -24,9 +24,11 @@ public class Unidad {
         this.producto = producto;
         this.fechaIngreso = fechaIngreso;
         this.stock = stock;
+        this.estado = EstadoUnidad.DISPONIBLE;
     }
 
     public Unidad() {
+        this.estado = EstadoUnidad.DISPONIBLE;
     }
 
     public Long getIdUnidad() {

@@ -127,7 +127,9 @@ public class ProductoService implements IProductoService {
                 p.getPrecioCompra(),
                 p.getPrecioVenta(),
                 p.getFotoURL(),
-                p.getUnidades().size()
+                (int) p.getUnidades().stream()
+                    .filter(u -> u.getEstado() == com.thelarte.inventory.util.EstadoUnidad.DISPONIBLE)
+                    .count()
 
         );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
 

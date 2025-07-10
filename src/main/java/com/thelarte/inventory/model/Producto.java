@@ -193,6 +193,13 @@ public class Producto {
         long disponibles = unidades.stream()
                 .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
                 .count();
+        
+        long reservadas = unidades.stream()
+                .filter(u -> u.getEstado() == EstadoUnidad.RESERVADO)
+                .count();
+
+        this.cantidadDisponible = (int) disponibles;
+        this.cantidadReservada = (int) reservadas;
 
         if (disponibles > 0) {
             this.estado = EstadoProducto.DISPONIBLE;

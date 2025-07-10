@@ -36,7 +36,16 @@ public class TransaccionController {
     @PostMapping
     public ResponseEntity<Transaccion> crearTransaccion(@RequestBody Transaccion transaccion) {
         try {
+            // Validar campos obligatorios
+            if (transaccion.getContraparteId() == null) {
+                throw new IllegalArgumentException("contraparteId es obligatorio");
+            }
+            if (transaccion.getTipo() == null) {
+                throw new IllegalArgumentException("tipo de transacción es obligatorio");
+            }
+            
             System.out.println("Recibida petición para crear transacción: " + transaccion.getTipo());
+            System.out.println("ContraparteId: " + transaccion.getContraparteId());
             Transaccion nuevaTransaccion = transaccionService.crearTransaccion(transaccion);
             return new ResponseEntity<>(nuevaTransaccion, HttpStatus.CREATED);
         } catch (Exception e) {
