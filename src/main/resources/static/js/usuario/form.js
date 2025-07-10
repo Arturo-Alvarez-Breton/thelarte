@@ -155,6 +155,7 @@ form.addEventListener('submit', async e => {
     let bodyPayload;
     if (userParam) {
         bodyPayload = {
+            username: usuarioInput,
             password: contrasena,
             roles: [rol]
         };

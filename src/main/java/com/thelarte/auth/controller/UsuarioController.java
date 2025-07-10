@@ -48,6 +48,14 @@ public class UsuarioController {
         if (userOpt.isEmpty()) return ResponseEntity.notFound().build();
         User user = userOpt.get();
 
+        // Cambiar username si es diferente y disponible
+        if (editDto.getUsername() != null && !editDto.getUsername().equals(user.getUsername())) {
+            if (userService.existsByUsername(editDto.getUsername())) {
+                return ResponseEntity.badRequest().build(); // username ya en uso
+            }
+            user.setUsername(editDto.getUsername());
+        }
+
         if (editDto.getPassword() != null && !editDto.getPassword().isEmpty()) {
             user.setPassword(userService.encodePassword(editDto.getPassword()));
         }
