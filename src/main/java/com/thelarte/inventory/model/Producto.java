@@ -11,13 +11,13 @@ public class Producto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private String codigo = UUID.randomUUID().toString(); // Genera un código único para cada producto
     private String nombre;
     private String tipo;
     private String descripcion;
-    private String marca;
     private float itbis;
-    private BigDecimal precio;
+    private BigDecimal precioCompra;
+    private BigDecimal precioVenta;
     private String fotoURL;
     
     @Column(name = "estado")
@@ -47,14 +47,14 @@ public class Producto {
         this.esNuevo = true;
     }
 
-    public Producto(String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precio, String fotoURL) {
-        this();
+    public Producto(String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra, BigDecimal precioVenta, String fotoURL) {
+        this.id = id;
         this.nombre = nombre;
         this.tipo = tipo;
         this.descripcion = descripcion;
-        this.marca = marca;
         this.itbis = itbis;
-        this.precio = precio;
+        this.precioCompra = precioCompra;
+        this.precioVenta = precioVenta;
         this.fotoURL = fotoURL;
     }
 
@@ -62,6 +62,9 @@ public class Producto {
         return id;
     }
 
+    public String getCodigo() {
+        return codigo;
+    }
     public String getNombre() {
         return nombre;
     }
@@ -86,13 +89,6 @@ public class Producto {
         this.descripcion = descripcion;
     }
 
-    public String getMarca() {
-        return marca;
-    }
-
-    public void setMarca(String marca) {
-        this.marca = marca;
-    }
 
     public float getItbis() {
         return itbis;
@@ -102,12 +98,21 @@ public class Producto {
         this.itbis = itbis;
     }
 
-    public BigDecimal getPrecio() {
-        return precio;
+    public BigDecimal getPrecioCompra() {
+        return precioCompra;
+    }
+    public void setPrecioCompra(BigDecimal precioCompra) {
+        this.precioCompra = precioCompra;
+    }
+    public BigDecimal getPrecioVenta() {
+        return precioVenta;
+    }
+    public void setPrecioVenta(BigDecimal precioVenta) {
+        this.precioVenta = precioVenta;
     }
 
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
+    public void setPrecio(BigDecimal precioVenta) {
+        this.precioVenta = precioVenta;
     }
     public String getFotoURL() {
         return fotoURL;
