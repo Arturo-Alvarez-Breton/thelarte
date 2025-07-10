@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -150,13 +152,52 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Transaccion> actualizarTransaccion(@PathVariable Long id, @RequestBody Transaccion transaccion) {
+    public ResponseEntity<?> actualizarTransaccion(@PathVariable Long id, @RequestBody Transaccion transaccion) {
         try {
+            Optional<Transaccion> existingTransaction = transaccionService.obtenerPorId(id);
+            if (existingTransaction.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check if transaction can be edited
+            Transaccion currentTransaction = existingTransaction.get();
+            if (!transaccionService.canEditTransaction(currentTransaction)) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "No se puede editar una transacción con estado: " + currentTransaction.getEstado());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
+            
             Transaccion transaccionActualizada = transaccionService.actualizarTransaccion(id, transaccion);
-            return new ResponseEntity<>(transaccionActualizada, HttpStatus.OK);
+            return ResponseEntity.ok(transaccionActualizada);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /**
+     * Check if a transaction can be edited based on its status
+     */
+    @GetMapping("/{id}/can-edit")
+    public ResponseEntity<Map<String, Object>> canEditTransaction(@PathVariable Long id) {
+        Optional<Transaccion> transaccionOpt = transaccionService.obtenerPorId(id);
+        
+        if (transaccionOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Transaccion transaccion = transaccionOpt.get();
+        boolean canEdit = transaccionService.canEditTransaction(transaccion);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("canEdit", canEdit);
+        
+        if (!canEdit) {
+            response.put("reason", "No se puede editar una transacción con estado: " + transaccion.getEstado());
+            response.put("estado", transaccion.getEstado().toString());
+        }
+        
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/estado")

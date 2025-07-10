@@ -27,21 +27,23 @@ public class EmpleadoController {
 
     @PostMapping
     public ResponseEntity<Empleado> crearEmpleado(@Valid @RequestBody EmpleadoCreateDTO dto) {
-        Empleado ent = new Empleado();
-        ent.setCedula(dto.getCedula());
-        ent.setNombre(dto.getNombre());
-        ent.setApellido(dto.getApellido());
-        ent.setTelefono(dto.getTelefono());
-        // email: no se asigna (permanece null)
-        // rol:
-        ent.setRol(Rol.valueOf(dto.getRol()));
-        ent.setSalario(dto.getSalario());
-        ent.setEmail(dto.getEmail());
-        // fechaContratacion será null aquí, PrePersist lo asigna a LocalDate.now()
+        try {
+            Empleado ent = new Empleado();
+            ent.setCedula(dto.getCedula());
+            ent.setNombre(dto.getNombre());
+            ent.setApellido(dto.getApellido());
+            ent.setTelefono(dto.getTelefono());
+            ent.setEmail(dto.getEmail()); // Asignar email desde el DTO
+            ent.setRol(Rol.valueOf(dto.getRol()));
+            ent.setSalario(dto.getSalario());
+            // fechaContratacion será null aquí, PrePersist lo asigna a LocalDate.now()
 
-        Empleado creado = empleadoService.crearEmpleado(ent);
-        URI uri = URI.create("/api/empleados/" + creado.getCedula());
-        return ResponseEntity.created(uri).body(creado);
+            Empleado creado = empleadoService.crearEmpleado(ent);
+            URI uri = URI.create("/api/empleados/" + creado.getCedula());
+            return ResponseEntity.created(uri).body(creado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping

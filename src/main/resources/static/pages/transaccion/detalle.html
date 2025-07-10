@@ -3,44 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Detalle de Transacción</title>
+  <title>Detalle de Transacción | Thelarte</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
-    tailwind.config = { theme: { extend: { colors: { brandBrown: '#59391B', brandGold: '#7B5222' } } } }
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          colors: { 
+            brandBrown: '#59391B', 
+            brandGold: '#7B5222' 
+          } 
+        } 
+      } 
+    }
   </script>
+  <style>
+    .transaction-type-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tipo-venta {
+      background: linear-gradient(135deg, #7b5222, #59391B);
+      color: white;
+    }
+    .tipo-compra {
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+    }
+    .tipo-devolucion {
+      background: linear-gradient(135deg, #dc3545, #c82333);
+      color: white;
+    }
+    .currency-amount {
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      color: #59391B;
+    }
+    .detail-card {
+      border-left: 4px solid #59391B;
+      background-color: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+  </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-  <main class="flex-1 p-6 md:p-8 max-w-4xl mx-auto">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50">
-      <div class="animate-spin h-10 w-10 border-4 border-brandGold border-t-transparent rounded-full"></div>
+  <!-- Header Thelarte -->
+  <header class="flex flex-col items-center mt-6 mb-4">
+    <div class="flex items-end">
+      <h1 class="font-serif text-2xl md:text-4xl font-bold bg-[#59391B] text-white tracking-wider mr-2 px-3 md:px-4 py-2 rounded">Thel</h1>
+      <h1 class="font-bold text-3xl md:text-5xl italic text-[#7b5222] font-cursive" style="font-family: cursive;">Arte</h1>
     </div>
-    <div class="bg-white rounded-lg shadow border p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-brandGold">Detalle de Transacción</h1>
-        <button onclick="history.back()" class="text-sm text-gray-600 border px-3 py-1 rounded">Volver</button>
+    <div class="font-serif text-gray-500 tracking-widest text-sm md:text-base font-medium mt-2">GALERÍA Y DECORACIÓN</div>
+  </header>
+
+  <main class="flex-1 px-4 md:px-8 lg:px-12 xl:px-16 w-full max-w-6xl mx-auto mb-8">
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50">
+      <div class="animate-spin h-10 w-10 border-4 border-[#7b5222] border-t-transparent rounded-full"></div>
+    </div>
+    
+    <!-- Back button and title -->
+    <div class="flex items-center justify-between mb-6">
+      <button onclick="history.back()" class="flex items-center text-[#59391B] hover:text-[#7b5222] font-medium transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i> Volver a Transacciones
+      </button>
+      <h1 class="text-xl md:text-2xl font-bold text-[#59391B]">Detalle de Transacción</h1>
+    </div>
+
+    <!-- Transaction header card -->
+    <div class="detail-card p-6 mb-6" id="transactionHeader">
+      <div class="flex justify-between flex-wrap gap-4">
+        <div>
+          <span id="transactionTypeBadge" class="transaction-type-badge mb-4">Tipo</span>
+          <h2 class="text-2xl font-bold text-[#59391B] mb-1" id="transactionTitle">Transacción #00000</h2>
+          <div class="flex items-center text-gray-500 mb-4">
+            <i class="far fa-calendar-alt mr-2"></i>
+            <span id="transactionDate">Fecha</span>
+          </div>
+        </div>
+        <div class="flex flex-col items-end justify-between">
+          <span id="transactionStatus" class="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 mb-3">
+            Estado
+          </span>
+          <div class="text-2xl md:text-3xl font-bold text-[#7b5222]" id="transactionTotal">RD$ 0,00</div>
+        </div>
       </div>
-      <div id="transaccionInfo" class="space-y-1 mb-6 text-sm text-gray-700"></div>
+    </div>
+
+    <!-- Transaction details grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <!-- Counterpart info -->
+      <div class="detail-card p-5">
+        <h3 class="text-lg font-semibold text-[#59391B] mb-3 flex items-center">
+          <i class="fas fa-user-tie mr-2"></i> Contraparte
+        </h3>
+        <div id="counterpartInfo" class="space-y-2">
+          <p class="font-medium text-gray-900" id="counterpartName">Nombre</p>
+          <p class="text-sm text-gray-600" id="counterpartType">Tipo</p>
+          <p class="text-sm text-gray-600" id="counterpartId">ID: 000</p>
+        </div>
+      </div>
+
+      <!-- Document info -->
+      <div class="detail-card p-5">
+        <h3 class="text-lg font-semibold text-[#59391B] mb-3 flex items-center">
+          <i class="fas fa-file-invoice mr-2"></i> Documento
+        </h3>
+        <div id="documentInfo" class="space-y-2">
+          <p class="text-sm">
+            <span class="text-gray-600">Factura:</span>
+            <span class="font-medium text-gray-900" id="invoiceNumber">N/A</span>
+          </p>
+          <p class="text-sm">
+            <span class="text-gray-600">Referencia:</span>
+            <span class="font-medium text-gray-900" id="referenceNumber">N/A</span>
+          </p>
+          <p class="text-sm">
+            <span class="text-gray-600">Creado:</span>
+            <span class="font-medium text-gray-900" id="creationDate">Fecha</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Payment info -->
+      <div class="detail-card p-5">
+        <h3 class="text-lg font-semibold text-[#59391B] mb-3 flex items-center">
+          <i class="fas fa-money-bill-wave mr-2"></i> Pago
+        </h3>
+        <div id="paymentInfo" class="space-y-2">
+          <p class="text-sm">
+            <span class="text-gray-600">Método:</span>
+            <span class="font-medium text-gray-900" id="paymentMethod">N/A</span>
+          </p>
+          <p class="text-sm">
+            <span class="text-gray-600">Condiciones:</span>
+            <span class="font-medium text-gray-900" id="paymentTerms">N/A</span>
+          </p>
+          <p class="text-sm">
+            <span class="text-gray-600">Estado:</span>
+            <span class="font-medium text-gray-900" id="paymentStatus">N/A</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes section if available -->
+    <div class="detail-card p-5 mb-6 hidden" id="notesSection">
+      <h3 class="text-lg font-semibold text-[#59391B] mb-2 flex items-center">
+        <i class="fas fa-sticky-note mr-2"></i> Observaciones
+      </h3>
+      <p class="text-gray-700" id="observationsText">No hay observaciones registradas.</p>
+    </div>
+
+    <!-- Products table -->
+    <div class="detail-card p-5 mb-6">
+      <h3 class="text-lg font-semibold text-[#59391B] mb-4 flex items-center">
+        <i class="fas fa-boxes mr-2"></i> Productos
+      </h3>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm" id="lineasTable">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 text-left">Producto</th>
-              <th class="px-3 py-2 text-right">Cantidad</th>
-              <th class="px-3 py-2 text-right">Precio</th>
-              <th class="px-3 py-2 text-right">Total</th>
+        <table class="min-w-full divide-y divide-gray-200" id="lineasTable">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Unitario</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody class="bg-white divide-y divide-gray-200"></tbody>
         </table>
       </div>
-      <div id="totales" class="mt-4 text-right text-sm"></div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Imprimir</button>
-        <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded" disabled title="Funcionalidad no implementada">Exportar</button>
-        <button id="emailBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" disabled title="Funcionalidad no implementada">Enviar por correo</button>
+    </div>
+
+    <!-- Totals card -->
+    <div class="detail-card p-5 mb-6">
+      <div class="flex justify-end">
+        <div class="w-full md:w-64">
+          <div class="space-y-2" id="totales">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Subtotal:</span>
+              <span class="currency-amount" id="subtotalAmount">RD$ 0,00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">ITBIS (18%):</span>
+              <span class="currency-amount" id="taxAmount">RD$ 0,00</span>
+            </div>
+            <div class="flex justify-between pt-2 border-t border-gray-300">
+              <span class="font-bold text-[#59391B]">Total:</span>
+              <span class="currency-amount text-xl" id="finalTotal">RD$ 0,00</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- Action buttons -->
+    <div class="flex flex-wrap justify-end gap-3 mt-6">
+      <button onclick="window.print()" class="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition">
+        <i class="fas fa-print mr-2"></i> Imprimir
+      </button>
+      <button onclick="exportPDF()" class="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition">
+        <i class="fas fa-file-pdf mr-2"></i> Exportar PDF
+      </button>
+      <button onclick="sendByEmail()" class="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
+        <i class="fas fa-envelope mr-2"></i> Enviar por correo
+      </button>
+      <button onclick="editTransaction()" class="flex items-center bg-[#59391B] hover:bg-[#7b5222] text-white px-4 py-2 rounded transition">
+        <i class="fas fa-edit mr-2"></i> Editar
+      </button>
+    </div>
   </main>
+
+  <footer class="w-full text-center py-4 text-gray-400 text-sm mt-auto">
+    &copy; 2025 Thelarte.
+  </footer>
+
   <script src="../../js/services/transaccionService.js"></script>
   <script src="../../js/transaccion/detalle.js"></script>
 </body>

@@ -290,24 +290,37 @@ public class TransaccionService {
         );
     }
 
-    public Transaccion actualizarTransaccion(Long id, Transaccion transaccionActualizada) {
-        Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+    /**
+     * Determines if a transaction can be edited based on its current state
+     * Only PENDIENTE and CONFIRMADA transactions can be edited
+     */
+    public boolean canEditTransaction(Transaccion transaccion) {
+        return transaccion.getEstado() == Transaccion.EstadoTransaccion.PENDIENTE ||
+               transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA;
+    }
+
+    /**
+     * Updates a transaction with validation for editable states
+     */
+    public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
+        Transaccion existingTransaction = transaccionRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Transacción no encontrada"));
         
-        transaccion.setObservaciones(transaccionActualizada.getObservaciones());
-        transaccion.setFechaEntregaEsperada(transaccionActualizada.getFechaEntregaEsperada());
-        transaccion.setCondicionesPago(transaccionActualizada.getCondicionesPago());
-        transaccion.setNumeroFactura(transaccionActualizada.getNumeroFactura());
-        transaccion.setNumeroOrdenCompra(transaccionActualizada.getNumeroOrdenCompra());
-        transaccion.setMetodoPago(transaccionActualizada.getMetodoPago());
-        transaccion.setMetadatosPago(transaccionActualizada.getMetadatosPago());
-        transaccion.setDireccionEntrega(transaccionActualizada.getDireccionEntrega());
-        
-        if (transaccionActualizada.getLineas() != null) {
-            transaccion.setLineas(transaccionActualizada.getLineas());
-            calcularTotalesTransaccion(transaccion);
+        // Check if the transaction can be edited
+        if (!canEditTransaction(existingTransaction)) {
+            throw new IllegalStateException("No se puede editar una transacción con estado: " + existingTransaction.getEstado());
         }
         
+        // Preserve the original ID
+        transaccion.setId(id);
+        
+        // Process transaction lines
+        procesarLineasTransaccion(transaccion);
+        
+        // Recalculate totals
+        calcularTotalesTransaccion(transaccion);
+        
+        // Save the updated transaction
         return transaccionRepository.save(transaccion);
     }
 

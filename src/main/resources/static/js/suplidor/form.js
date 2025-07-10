@@ -73,6 +73,7 @@ form.addEventListener('submit', async e => {
   submitBtn.disabled = true;
   submitBtn.textContent = id ? 'Actualizando...' : 'Guardando...';
 
+  // Recoger datos directamente de los elementos del formulario
   const data = {
     nombre: form.nombre.value.trim(),
     ciudad: form.ciudad.value.trim(),
@@ -187,7 +188,7 @@ async function verifyToken(token) {
 }
 
 // Código para manejar navegación móvil y autenticación
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Check if user is authenticated using local storage
   const token = localStorage.getItem('authToken');
   if (!token) {

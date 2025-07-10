@@ -78,9 +78,14 @@ function mostrarTransacciones() {
         return;
     }
 
+    const editableEstados = ['PENDIENTE', 'CONFIRMADA'];
+
     const transaccionesHtml = `
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            ${transaccionesFiltradas.map(transaccion => `
+            ${transaccionesFiltradas.map(transaccion => {
+                const esEditable = editableEstados.includes(transaccion.estado);
+                
+                return `
                 <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-${obtenerColorTipo(transaccion.tipo)} overflow-hidden">
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
@@ -129,9 +134,17 @@ function mostrarTransacciones() {
                             <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="verDetalles(${transaccion.id})">
                                 <i class="fas fa-eye mr-1"></i>Ver
                             </button>
-                            <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
-                                <i class="fas fa-edit mr-1"></i>Editar
-                            </button>
+                            
+                            ${esEditable ? `
+                                <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
+                                    <i class="fas fa-edit mr-1"></i>Editar
+                                </button>
+                            ` : `
+                                <button class="flex-1 bg-gray-400 text-white py-2 px-3 rounded-lg text-sm font-medium cursor-not-allowed" title="No se puede editar una transacción ${transaccion.estado}">
+                                    <i class="fas fa-lock mr-1"></i>Bloqueado
+                                </button>
+                            `}
+                            
                             <div class="relative">
                                 <button class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition text-sm" onclick="toggleDropdown(${transaccion.id})">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -152,7 +165,7 @@ function mostrarTransacciones() {
                         </div>
                     </div>
                 </div>
-            `).join('')}
+            `}).join('')}
         </div>
     `;
 
@@ -215,11 +228,15 @@ function formatearFecha(fecha) {
 }
 
 function formatearMoneda(cantidad) {
-    if (!cantidad) return '€0.00';
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(cantidad);
+    if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
+    
+    // Formateo manual para asegurar el formato dominicano correcto
+    const numero = Math.abs(cantidad);
+    const partes = numero.toFixed(2).split('.');
+    const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const decimal = partes[1];
+    
+    return `RD$ ${entero},${decimal}`;
 }
 
 function toggleDropdown(id) {
@@ -274,7 +291,7 @@ function verDetalles(id) {
 }
 
 function editarTransaccion(id) {
-    window.location.href = `form.html?id=${id}`;
+    window.location.href = `edit.html?id=${id}`;
 }
 
 async function duplicarTransaccion(id) {
@@ -393,7 +410,7 @@ function mostrarEstadisticas() {
                     <div>
                         <h3 class="text-lg font-semibold mb-2">Ventas del Año</h3>
                         <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasAnio)}</p>
-                        <p class="text-sm opacity-90">Acumulado 2024</p>
+                        <p class="text-sm opacity-90">Acumulado 2025</p>
                     </div>
                     <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
                 </div>
