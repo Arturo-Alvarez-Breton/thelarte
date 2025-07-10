@@ -14,7 +14,7 @@ public class Empleado extends Persona {
     @Column(name = "SALARIO", nullable = false)
     private Float salario;
 
-    @Column(name = "FECHA_CONTRATACION", nullable = false)
+    @Column(name = "FECHA_CONTRATACION")
     private LocalDate fechaContratacion;
 
     public Empleado() {

@@ -210,6 +210,76 @@ form.addEventListener('submit', async e => {
         };
     }
 
+    // Si es alta, pedir la contraseña antes de enviar
+    if (!cedulaParam) {
+        // Mostrar popout simple (puedes usar SweetAlert2, aquí un prompt básico)
+        let contrasena = prompt("Digite la contraseña para el usuario de este empleado:");
+        if (!contrasena || contrasena.length < 8) {
+            alert("Debe ingresar una contraseña de al menos 8 caracteres.");
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+
+        try {
+            // 1. Crear empleado
+            const resp = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(bodyPayload)
+            });
+            if (resp.status === 400) {
+                const errors = await resp.json();
+                Object.entries(errors).forEach(([field, msg]) => {
+                    showError(field, msg);
+                });
+                throw new Error('Validation error');
+            }
+            if (resp.status === 403) {
+                alert('No autorizado para esta acción');
+                throw new Error('Forbidden');
+            }
+            if (!resp.ok) {
+                throw new Error(`HTTP error! status: ${resp.status}`);
+            }
+            // 2. Crear usuario asociado
+            const username = (nombre + apellido).replace(/\s+/g, '');
+            const userPayload = {
+                username: username,
+                password: contrasena,
+                roles: [rol]
+            };
+            const userResp = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(userPayload)
+            });
+            if (!userResp.ok) {
+                alert('Empleado creado, pero hubo un problema creando el usuario. Puedes crearlo manualmente.');
+                window.location.href = 'index.html';
+                return;
+            }
+            alert('Empleado y usuario creados exitosamente!');
+            window.location.href = 'index.html';
+        } catch (err) {
+            if (err.message !== 'Validation error') {
+                console.error('Error:', err);
+                alert('Error al crear el empleado y usuario.');
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+        return; // ¡No continuar al flujo de edición!
+    }
+
+    // Si es edición, flujo normal
     try {
         const resp = await fetch(url, {
             method,
@@ -238,12 +308,12 @@ form.addEventListener('submit', async e => {
         if (!resp.ok) {
             throw new Error(`HTTP error! status: ${resp.status}`);
         }
-        alert(cedulaParam ? 'Empleado actualizado exitosamente!' : 'Empleado creado exitosamente!');
+        alert('Empleado actualizado exitosamente!');
         window.location.href = 'index.html';
     } catch (err) {
         if (err.message !== 'Validation error') {
             console.error('Error saving empleado:', err);
-            alert(cedulaParam ? 'Error al actualizar el empleado.' : 'Error al crear el empleado.');
+            alert('Error al actualizar el empleado.');
         }
     } finally {
         submitBtn.disabled = false;
