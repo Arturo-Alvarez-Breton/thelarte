@@ -79,7 +79,7 @@ function setMode() {
         descEl.textContent = 'Actualiza la información del usuario';
         submitBtn.textContent = 'Actualizar Usuario';
         // En edición, deshabilitar el username
-        document.getElementById('usuario').setAttribute('disabled', 'disabled');
+        // document.getElementById('usuario').setAttribute('disabled', 'disabled');
         loadUser();
     } else {
         document.title = 'Registrar Usuario - Thelarte';
