@@ -86,7 +86,6 @@ async function loadProducts() {
         if (search) {
             data = data.filter(p =>
                 (p.nombre && p.nombre.toLowerCase().includes(search)) ||
-                (p.marca && p.marca.toLowerCase().includes(search)) ||
                 (p.descripcion && p.descripcion.toLowerCase().includes(search))
             );
         }
@@ -105,9 +104,8 @@ async function loadProducts() {
                class="w-32 h-24 object-cover rounded-xl border border-gray-200 bg-gray-100" />
           <div>
             <h3 class="font-serif text-xl font-bold text-[#7b5222]">${p.nombre || 'Sin nombre'}</h3>
-            <p class="text-sm text-gray-600 font-serif mt-1">${p.tipo || ''} ${p.marca ? '| Marca: ' + p.marca : ''}</p>
             <p class="text-sm text-gray-500 font-serif mt-1">${p.descripcion || ''}</p>
-            <span class="inline-block mt-2 text-[#59391B] font-bold font-serif text-lg">$${p.precio ? Number(p.precio).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</span>
+            <span class="inline-block mt-2 text-[#59391B] font-bold font-serif text-lg">$${p.precioVenta ? Number(p.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</span>
           </div>
         </div>
         <div class="flex flex-row md:flex-col gap-2 mt-4 md:mt-0 md:ml-8">
@@ -119,6 +117,10 @@ async function loadProducts() {
                     class="delete text-red-600 hover:text-red-800 px-3 py-1 rounded-md hover:bg-red-50 transition-colors">
               🗑️ Eliminar
             </button>
+            <a href="/pages/unidades/index.html?productoId=${p.id}"
+               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">
+                📦 Unidades
+            </a>
         </div>
       </div>
     `).join('');

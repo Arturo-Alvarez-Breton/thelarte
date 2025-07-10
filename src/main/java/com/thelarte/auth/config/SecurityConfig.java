@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/productos/**").permitAll()
                 .requestMatchers("/producto/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/unidades/**").permitAll()
+                .requestMatchers("/unidades/**").permitAll()
                 .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
