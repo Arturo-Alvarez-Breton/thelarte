@@ -509,23 +509,13 @@ function mostrarFormularioProducto() {
 
 function procesarAgregarProducto() {
     const formulario = document.querySelector('.formulario-producto');
-    
-    // Recopilar datos del formulario manualmente
     const inputs = formulario.querySelectorAll('input, textarea');
     const data = {};
     inputs.forEach(input => {
         data[input.name] = input.value;
     });
-    
-    const mockEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        target: formulario
-    };
-    
-    agregarProductoNuevo(mockEvent);
+    agregarProductoNuevo(data); // <-- pásale los datos directamente
 }
-
 function editarProducto(id) {
     const producto = productosSeleccionados.find(p => p.id === id);
     if (!producto) return;
@@ -1344,24 +1334,19 @@ function eliminarProducto(id) {
 }
 
 // Agregar producto nuevo desde formulario
-function agregarProductoNuevo(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
+function agregarProductoNuevo(data) {
     const nuevoProducto = {
-        id: Date.now(), // ID temporal único
-        nombre: formData.get('nombre'),
-        descripcion: formData.get('descripcion'),
-        cantidad: parseInt(formData.get('cantidad')) || 1,
-        precio: parseFloat(formData.get('precio')) || 0,
+        id: Date.now(),
+        nombre: data.nombre,
+        descripcion: data.descripcion,
+        cantidad: parseInt(data.cantidad) || 1,
+        precio: parseFloat(data.precio) || 0,
         esNuevo: true
     };
-    
     if (!nuevoProducto.nombre || nuevoProducto.precio <= 0) {
         mostrarError('Por favor, complete todos los campos obligatorios');
         return;
     }
-    
     productosSeleccionados.push(nuevoProducto);
     mostrarExito('Producto agregado exitosamente');
     cargarProductos();

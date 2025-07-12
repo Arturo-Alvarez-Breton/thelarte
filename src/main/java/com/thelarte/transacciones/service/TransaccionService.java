@@ -19,7 +19,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -426,61 +428,64 @@ public class TransaccionService {
     private void procesarLineasTransaccion(Transaccion transaccion) {
         if (transaccion.getLineas() != null) {
             for (LineaTransaccion linea : transaccion.getLineas()) {
-                // Si el productoId es null, crear un nuevo producto (solo para compras)
-                if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
-                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA) {
+                if (transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA) {
+                    if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
+                        // Producto nuevo: crea el producto y las unidades
                         Producto nuevoProducto = new Producto();
                         nuevoProducto.setNombre(linea.getProductoNombre());
-                        nuevoProducto.setTipo("Mueble"); // Tipo por defecto para compras
+                        nuevoProducto.setTipo("Mueble");
                         nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
-                        nuevoProducto.setItbis(18.0f); // 18% de ITBIS por defecto
+                        nuevoProducto.setItbis(18.0f);
                         nuevoProducto.setPrecioCompra(linea.getPrecioUnitario());
-                        nuevoProducto.setPrecioVenta(BigDecimal.valueOf(0.0)); // Precio de venta no se establece en compras
+                        nuevoProducto.setPrecioVenta(BigDecimal.valueOf(0.0));
                         nuevoProducto.setFotoURL("");
                         nuevoProducto.setEsNuevo(true);
                         nuevoProducto.setCantidadDisponible(linea.getCantidad());
-                        
-                        // Guardar el producto en la base de datos
                         nuevoProducto = productoRepository.save(nuevoProducto);
-                        
-                        // Asignar el ID generado a la línea de transacción
-                        linea.setProductoId(nuevoProducto.getId());
-                    } else {
-                        throw new IllegalArgumentException("Solo se pueden crear productos nuevos en compras");
-                    }
-                } else if (linea.getProductoId() != null) {
-                    // Para productos existentes, validar disponibilidad en ventas
-                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA) {
-                        Producto producto = productoRepository.findById(linea.getProductoId())
-                            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
-                        
-                        // Actualizar cantidades basadas en unidades reales
-                        producto.actualizarEstadoPorUnidades();
-                        
-                        if (producto.getCantidadDisponible() < linea.getCantidad()) {
-                            throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+
+                        for (int i = 0; i < linea.getCantidad(); i++) {
+                            unidadService.registrarUnidad(nuevoProducto.getId(), EstadoUnidad.DISPONIBLE, false);
                         }
-                        
-                        // Reservar unidades específicas
-                        List<Unidad> unidadesDisponibles = producto.getUnidades().stream()
+
+                        linea.setProductoId(nuevoProducto.getId());
+                    } else if (linea.getProductoId() != null) {
+                        // Producto existente: CREA nuevas unidades para la compra
+                        Producto productoExistente = productoRepository.findById(linea.getProductoId())
+                                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+
+                        for (int i = 0; i < linea.getCantidad(); i++) {
+                            unidadService.registrarUnidad(productoExistente.getId(), EstadoUnidad.DISPONIBLE, false);
+                        }
+                        productoExistente.setCantidadDisponible(productoExistente.getCantidadDisponible() + linea.getCantidad());
+                        productoRepository.save(productoExistente);
+                    }
+                } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA && linea.getProductoId() != null) {
+                    // Lógica de ventas (reservar unidades)
+                    Producto producto = productoRepository.findById(linea.getProductoId())
+                            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+
+                    producto.actualizarEstadoPorUnidades();
+
+                    if (producto.getCantidadDisponible() < linea.getCantidad()) {
+                        throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                    }
+
+                    List<Unidad> unidadesDisponibles = producto.getUnidades().stream()
                             .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
                             .limit(linea.getCantidad())
                             .collect(Collectors.toList());
-                        
-                        for (Unidad unidad : unidadesDisponibles) {
-                            unidad.setEstado(EstadoUnidad.RESERVADO);
-                        }
-                        
-                        // Actualizar estado del producto
-                        producto.actualizarEstadoPorUnidades();
-                        
-                        productoRepository.save(producto);
+
+                    for (Unidad unidad : unidadesDisponibles) {
+                        unidad.setEstado(EstadoUnidad.RESERVADO);
                     }
+
+                    producto.actualizarEstadoPorUnidades();
+
+                    productoRepository.save(producto);
                 }
             }
         }
     }
-
     private void validateTransactionBusinessRules(Transaccion transaccion) {
         if (transaccion.getTipo() == null) {
             throw new IllegalArgumentException("El tipo de transacción es obligatorio");
