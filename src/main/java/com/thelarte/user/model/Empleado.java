@@ -8,13 +8,13 @@ import java.time.LocalDate;
 public class Empleado extends Persona {
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ROL", nullable = false, length = 20)
+    @Column(name = "ROL", nullable = true, length = 20) // Ensure nullable = true
     private com.thelarte.user.util.Rol rol;
 
-    @Column(name = "SALARIO", nullable = false)
+    @Column(name = "SALARIO", nullable = true)
     private Float salario;
 
-    @Column(name = "FECHA_CONTRATACION", nullable = false)
+    @Column(name = "FECHA_CONTRATACION", nullable = true)
     private LocalDate fechaContratacion;
 
     public Empleado() {

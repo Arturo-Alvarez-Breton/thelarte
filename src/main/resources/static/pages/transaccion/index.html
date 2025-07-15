@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transacciones | Thelarte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .transaction-card {
+            transition: transform 0.2s;
+            border-left: 4px solid #007bff;
+        }
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .transaction-card.compra {
+            border-left-color: #28a745;
+        }
+        .transaction-card.venta {
+            border-left-color: #7b5222;
+        }
+        .transaction-card.devolucion {
+            border-left-color: #dc3545;
+        }
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .counterpart-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .counterpart-info i {
+            width: 16px;
+            text-align: center;
+        }
+        .transaction-amount {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+<!-- Header Thelarte -->
+<header class="flex flex-col items-center mt-6 mb-4">
+  <div class="flex items-end">
+    <h1 class="font-serif text-2xl md:text-5xl font-bold bg-[#59391B] text-white tracking-wider mr-2 px-3 md:px-4 py-2 rounded">Thel</h1>
+    <h1 class="font-bold text-3xl md:text-6xl italic text-[#7b5222] font-cursive" style="font-family: cursive;">Arte</h1>
+  </div>
+  <div class="font-serif text-gray-500 tracking-widest text-sm md:text-lg font-medium mt-2">GALERÍA Y DECORACIÓN</div>
+</header>
+
+<main class="flex-1 px-4 md:px-8 lg:px-12 xl:px-16 w-full max-w-7xl mx-auto">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <!-- Contenido principal -->
+    <section class="flex-1 p-6 md:p-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <h2 class="text-2xl font-bold font-serif text-[#59391B]">Contabilidad</h2>
+        <div class="flex flex-wrap gap-3">
+          <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('COMPRA')">
+            <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
+          </button>
+          <button type="button" class="bg-[#7b5222] hover:bg-[#59391B] text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('VENTA')">
+            <i class="fas fa-cash-register mr-2"></i>Nueva Venta
+          </button>
+          <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-serif transition shadow-md hover:shadow-lg text-sm md:text-base font-medium" onclick="crearTransaccion('DEVOLUCION')">
+            <i class="fas fa-undo mr-2"></i>Devolución
+          </button>
+        </div>
+      </div>
+
+      <!-- Estadísticas de Seguimiento -->
+      <div id="estadisticasContainer" class="mb-6">
+        <div class="text-center py-8 md:py-12">
+          <div class="animate-spin inline-block w-6 h-6 md:w-8 md:h-8 border-4 border-current border-t-transparent text-[#7b5222] rounded-full">
+            <span class="sr-only">Cargando estadísticas...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section bg-[#f8f9fa] rounded-lg p-4 md:p-5 mb-6">
+        <h3 class="text-base md:text-lg font-semibold text-[#59391B] mb-4">Filtros</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Tipo de Transacción</label>
+            <select class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="filtroTipo" onchange="filtrarTransacciones()">
+              <option value="">Todos los tipos</option>
+              <option value="COMPRA">Compras</option>
+              <option value="VENTA">Ventas</option>
+              <option value="DEVOLUCION_COMPRA">Devolución Compra</option>
+              <option value="DEVOLUCION_VENTA">Devolución Venta</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Estado</label>
+            <select class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="filtroEstado" onchange="filtrarTransacciones()">
+              <option value="">Todos los estados</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="COMPLETADA">Completada</option>
+              <option value="CANCELADA">Cancelada</option>
+              <option value="FACTURADA">Facturada</option>
+              <option value="RECIBIDA">Recibida</option>
+              <option value="PAGADA">Pagada</option>
+              <option value="ENTREGADA">Entregada</option>
+              <option value="COBRADA">Cobrada</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-xs md:text-sm font-medium text-[#59391B]">Buscar</label>
+            <input type="text" class="w-full bg-white px-3 py-2 rounded-md border border-gray-300 text-gray-700 focus:ring-2 focus:ring-[#7b5222] focus:border-[#7b5222] transition text-xs md:text-sm" id="buscarTexto" placeholder="Buscar por nombre, factura o ID..." onkeyup="filtrarTransacciones()">
+          </div>
+        </div>
+      </div>
+
+      <div id="transaccionesContainer">
+        <div class="text-center py-8 md:py-12">
+          <div class="animate-spin inline-block w-6 h-6 md:w-8 md:h-8 border-4 border-current border-t-transparent text-[#7b5222] rounded-full">
+            <span class="sr-only">Cargando...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="onboardingTx" class="hidden fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4 text-sm max-w-xs z-40">
+  <p class="mb-3">Aquí podrás crear y revisar transacciones de contabilidad. Usa los botones superiores para añadir nuevas.</p>
+  <button class="bg-brandGold text-white px-3 py-1 rounded w-full" onclick="dismissTxOnboarding()">Entendido</button>
+</div>
+
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+  <div class="animate-spin h-10 w-10 border-4 border-brandGold border-t-transparent rounded-full"></div>
+</div>
+
+<footer class="w-full text-center py-4 text-gray-400 text-sm">
+  &copy; 2025 Thelarte.
+</footer>
+
+<script src="../../js/structure/sidebarloader.js"></script>
+<script src="../../js/services/transaccionService.js"></script>
+<script src="../../js/transaccion/index.js"></script>
+</body></html>
