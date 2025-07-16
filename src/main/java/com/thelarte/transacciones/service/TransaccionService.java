@@ -1,5 +1,7 @@
 package com.thelarte.transacciones.service;
 
+import com.thelarte.transacciones.dto.LineaTransaccionDTO;
+import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
@@ -46,9 +48,16 @@ public class TransaccionService {
     private UnidadService unidadService;
 
     public Transaccion crearTransaccion(Transaccion transaccion) {
+        // Asignar la transacción a cada línea para que se guarde el transaccion_id
+        if (transaccion.getLineas() != null) {
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                linea.setTransaccion(transaccion);
+            }
+        }
+
         // Asignar vendedor automáticamente para transacciones de venta
-        if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA || 
-            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
+        if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA ||
+                transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
             if (transaccion.getVendedorId() == null) {
                 try {
                     Long vendedorId = obtenerUsuarioEnSesion();
@@ -59,11 +68,41 @@ public class TransaccionService {
                 }
             }
         }
-        
+
         validateTransactionBusinessRules(transaccion);
         validatePaymentMetadata(transaccion);
         procesarLineasTransaccion(transaccion);
         calcularTotalesTransaccion(transaccion);
+        return transaccionRepository.save(transaccion);
+    }
+
+    // ACTUALIZADO: También en actualizarTransaccion, para edición de líneas
+    public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
+        Transaccion existingTransaction = transaccionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transacción no encontrada"));
+
+        // Check if the transaction can be edited
+        if (!canEditTransaction(existingTransaction)) {
+            throw new IllegalStateException("No se puede editar una transacción con estado: " + existingTransaction.getEstado());
+        }
+
+        // Preserve the original ID
+        transaccion.setId(id);
+
+        // Asignar la transacción a cada línea para que se guarde el transaccion_id
+        if (transaccion.getLineas() != null) {
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                linea.setTransaccion(transaccion);
+            }
+        }
+
+        // Process transaction lines
+        procesarLineasTransaccion(transaccion);
+
+        // Recalculate totals
+        calcularTotalesTransaccion(transaccion);
+
+        // Save the updated transaction
         return transaccionRepository.save(transaccion);
     }
 
@@ -341,27 +380,6 @@ public class TransaccionService {
     /**
      * Updates a transaction with validation for editable states
      */
-    public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
-        Transaccion existingTransaction = transaccionRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Transacción no encontrada"));
-        
-        // Check if the transaction can be edited
-        if (!canEditTransaction(existingTransaction)) {
-            throw new IllegalStateException("No se puede editar una transacción con estado: " + existingTransaction.getEstado());
-        }
-        
-        // Preserve the original ID
-        transaccion.setId(id);
-        
-        // Process transaction lines
-        procesarLineasTransaccion(transaccion);
-        
-        // Recalculate totals
-        calcularTotalesTransaccion(transaccion);
-        
-        // Save the updated transaction
-        return transaccionRepository.save(transaccion);
-    }
 
     public void eliminarTransaccion(Long id) {
         if (!transaccionRepository.existsById(id)) {
@@ -543,4 +561,73 @@ public class TransaccionService {
         }
         throw new IllegalArgumentException("No hay un usuario autenticado en la sesión");
     }
+    public TransaccionDTO toDTO(Transaccion transaccion) {
+        if (transaccion == null) {
+            return null;
+        }
+
+        TransaccionDTO dto = new TransaccionDTO(
+                transaccion.getId(),
+                transaccion.getTipo() != null ? transaccion.getTipo().toString() : null,
+                transaccion.getFecha(),
+                transaccion.getEstado() != null ? transaccion.getEstado().toString() : null,
+                transaccion.getContraparteId(),
+                transaccion.getTipoContraparte() != null ? transaccion.getTipoContraparte().toString() : null,
+                transaccion.getContraparteNombre(),
+                transaccion.getTotal()
+        );
+
+        // Mapeo de otras propiedades del DTO
+        dto.setSubtotal(transaccion.getSubtotal());
+        dto.setImpuestos(transaccion.getImpuestos());
+        dto.setNumeroFactura(transaccion.getNumeroFactura());
+        dto.setFechaEntregaEsperada(transaccion.getFechaEntregaEsperada());
+        dto.setFechaEntregaReal(transaccion.getFechaEntregaReal());
+        dto.setCondicionesPago(transaccion.getCondicionesPago());
+        dto.setNumeroOrdenCompra(transaccion.getNumeroOrdenCompra());
+        dto.setMetodoPago(transaccion.getMetodoPago());
+        dto.setNumeroTransaccion(transaccion.getNumeroTransaccion());
+        dto.setVendedorId(transaccion.getVendedorId());
+        dto.setDireccionEntrega(transaccion.getDireccionEntrega());
+        dto.setObservaciones(transaccion.getObservaciones());
+        dto.setMetadatosPago(transaccion.getMetadatosPago());
+        dto.setTransaccionOrigenId(transaccion.getTransaccionOrigenId());
+        dto.setNumeroReferencia(transaccion.getNumeroReferencia());
+        dto.setFechaCreacion(transaccion.getFechaCreacion());
+        dto.setFechaActualizacion(transaccion.getFechaActualizacion());
+
+        // Mapeo de líneas
+        if (transaccion.getLineas() != null) {
+            List<LineaTransaccionDTO> lineasDto = transaccion.getLineas().stream().map(linea -> {
+                LineaTransaccionDTO lDto = new LineaTransaccionDTO();
+                lDto.setId(linea.getId());
+                lDto.setProductoId(linea.getProductoId());
+                lDto.setCantidad(linea.getCantidad());
+                lDto.setPrecioUnitario(linea.getPrecioUnitario());
+                lDto.setSubtotal(linea.getSubtotal());
+                lDto.setImpuestoPorcentaje(linea.getImpuestoPorcentaje());
+                lDto.setImpuestoMonto(linea.getImpuestoMonto());
+                lDto.setTotal(linea.getTotal());
+                lDto.setDescuentoPorcentaje(linea.getDescuentoPorcentaje());
+                lDto.setDescuentoMonto(linea.getDescuentoMonto());
+                lDto.setObservaciones(linea.getObservaciones());
+
+                // Producto nombre: primero el campo, luego busca en BD si está el id
+                if (linea.getProductoNombre() != null && !linea.getProductoNombre().isEmpty()) {
+                    lDto.setProductoNombre(linea.getProductoNombre());
+                } else if (linea.getProductoId() != null) {
+                    Producto producto = productoRepository.findById(linea.getProductoId()).orElse(null);
+                    lDto.setProductoNombre(producto != null ? producto.getNombre() : null);
+                } else {
+                    lDto.setProductoNombre(null);
+                }
+
+                return lDto;
+            }).collect(Collectors.toList());
+            dto.setLineas(lineasDto);
+        }
+
+        return dto;
+    }
 }
+

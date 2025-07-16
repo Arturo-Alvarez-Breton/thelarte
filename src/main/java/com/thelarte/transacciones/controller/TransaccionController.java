@@ -1,5 +1,6 @@
 package com.thelarte.transacciones.controller;
 
+import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.service.TransaccionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/transacciones")
@@ -34,7 +36,7 @@ public class TransaccionController {
     }
 
     @PostMapping
-    public ResponseEntity<Transaccion> crearTransaccion(@RequestBody Transaccion transaccion) {
+    public ResponseEntity<TransaccionDTO> crearTransaccion(@RequestBody Transaccion transaccion) {
         try {
             // Validar campos obligatorios
             if (transaccion.getContraparteId() == null) {
@@ -43,11 +45,11 @@ public class TransaccionController {
             if (transaccion.getTipo() == null) {
                 throw new IllegalArgumentException("tipo de transacción es obligatorio");
             }
-            
+
             System.out.println("Recibida petición para crear transacción: " + transaccion.getTipo());
             System.out.println("ContraparteId: " + transaccion.getContraparteId());
             Transaccion nuevaTransaccion = transaccionService.crearTransaccion(transaccion);
-            return new ResponseEntity<>(nuevaTransaccion, HttpStatus.CREATED);
+            return new ResponseEntity<>(transaccionService.toDTO(nuevaTransaccion), HttpStatus.CREATED);
         } catch (Exception e) {
             System.err.println("Error al crear transacción: " + e.getMessage());
             e.printStackTrace();
@@ -56,47 +58,66 @@ public class TransaccionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Transaccion>> obtenerTodas() {
-        List<Transaccion> transacciones = transaccionService.obtenerTodas();
-        return new ResponseEntity<>(transacciones, HttpStatus.OK);
+    public ResponseEntity<List<TransaccionDTO>> obtenerTodas() {
+        List<TransaccionDTO> dtos = transaccionService.obtenerTodas()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Transaccion> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> obtenerPorId(@PathVariable Long id) {
         Optional<Transaccion> transaccion = transaccionService.obtenerPorId(id);
-        return transaccion.map(t -> new ResponseEntity<>(t, HttpStatus.OK))
-                         .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        return transaccion
+                .map(t -> ResponseEntity.ok(transaccionService.toDTO(t)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/compras")
-    public ResponseEntity<List<Transaccion>> obtenerCompras() {
-        List<Transaccion> compras = transaccionService.obtenerCompras();
+    public ResponseEntity<List<TransaccionDTO>> obtenerCompras() {
+        List<TransaccionDTO> compras = transaccionService.obtenerCompras()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(compras, HttpStatus.OK);
     }
 
     @GetMapping("/ventas")
-    public ResponseEntity<List<Transaccion>> obtenerVentas() {
-        List<Transaccion> ventas = transaccionService.obtenerVentas();
+    public ResponseEntity<List<TransaccionDTO>> obtenerVentas() {
+        List<TransaccionDTO> ventas = transaccionService.obtenerVentas()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 
     @GetMapping("/devoluciones-compra")
-    public ResponseEntity<List<Transaccion>> obtenerDevolucionesCompra() {
-        List<Transaccion> devoluciones = transaccionService.obtenerDevolucionesCompra();
+    public ResponseEntity<List<TransaccionDTO>> obtenerDevolucionesCompra() {
+        List<TransaccionDTO> devoluciones = transaccionService.obtenerDevolucionesCompra()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(devoluciones, HttpStatus.OK);
     }
 
     @GetMapping("/devoluciones-venta")
-    public ResponseEntity<List<Transaccion>> obtenerDevolucionesVenta() {
-        List<Transaccion> devoluciones = transaccionService.obtenerDevolucionesVenta();
+    public ResponseEntity<List<TransaccionDTO>> obtenerDevolucionesVenta() {
+        List<TransaccionDTO> devoluciones = transaccionService.obtenerDevolucionesVenta()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(devoluciones, HttpStatus.OK);
     }
 
     @GetMapping("/tipo/{tipo}")
-    public ResponseEntity<List<Transaccion>> obtenerPorTipo(@PathVariable String tipo) {
+    public ResponseEntity<List<TransaccionDTO>> obtenerPorTipo(@PathVariable String tipo) {
         try {
             Transaccion.TipoTransaccion tipoTransaccion = Transaccion.TipoTransaccion.valueOf(tipo.toUpperCase());
-            List<Transaccion> transacciones = transaccionService.obtenerPorTipo(tipoTransaccion);
+            List<TransaccionDTO> transacciones = transaccionService.obtenerPorTipo(tipoTransaccion)
+                    .stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
             return new ResponseEntity<>(transacciones, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -104,10 +125,13 @@ public class TransaccionController {
     }
 
     @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<Transaccion>> obtenerPorEstado(@PathVariable String estado) {
+    public ResponseEntity<List<TransaccionDTO>> obtenerPorEstado(@PathVariable String estado) {
         try {
             Transaccion.EstadoTransaccion estadoTransaccion = Transaccion.EstadoTransaccion.valueOf(estado.toUpperCase());
-            List<Transaccion> transacciones = transaccionService.obtenerPorEstado(estadoTransaccion);
+            List<TransaccionDTO> transacciones = transaccionService.obtenerPorEstado(estadoTransaccion)
+                    .stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
             return new ResponseEntity<>(transacciones, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -115,31 +139,43 @@ public class TransaccionController {
     }
 
     @GetMapping("/suplidor/{suplidorId}")
-    public ResponseEntity<List<Transaccion>> obtenerComprasPorSuplidor(@PathVariable Long suplidorId) {
-        List<Transaccion> compras = transaccionService.obtenerComprasPorSuplidor(suplidorId);
+    public ResponseEntity<List<TransaccionDTO>> obtenerComprasPorSuplidor(@PathVariable Long suplidorId) {
+        List<TransaccionDTO> compras = transaccionService.obtenerComprasPorSuplidor(suplidorId)
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(compras, HttpStatus.OK);
     }
 
     @GetMapping("/cliente/{clienteId}")
-    public ResponseEntity<List<Transaccion>> obtenerVentasPorCliente(@PathVariable Long clienteId) {
-        List<Transaccion> ventas = transaccionService.obtenerVentasPorCliente(clienteId);
+    public ResponseEntity<List<TransaccionDTO>> obtenerVentasPorCliente(@PathVariable Long clienteId) {
+        List<TransaccionDTO> ventas = transaccionService.obtenerVentasPorCliente(clienteId)
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 
     @GetMapping("/vendedor/{vendedorId}")
-    public ResponseEntity<List<Transaccion>> obtenerVentasPorVendedor(@PathVariable Long vendedorId) {
-        List<Transaccion> ventas = transaccionService.obtenerVentasPorVendedor(vendedorId);
+    public ResponseEntity<List<TransaccionDTO>> obtenerVentasPorVendedor(@PathVariable Long vendedorId) {
+        List<TransaccionDTO> ventas = transaccionService.obtenerVentasPorVendedor(vendedorId)
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 
     @GetMapping("/periodo")
-    public ResponseEntity<List<Transaccion>> obtenerEnPeriodo(
+    public ResponseEntity<List<TransaccionDTO>> obtenerEnPeriodo(
             @RequestParam String fechaInicio,
             @RequestParam String fechaFin) {
         try {
             LocalDateTime inicio = LocalDateTime.parse(fechaInicio);
             LocalDateTime fin = LocalDateTime.parse(fechaFin);
-            List<Transaccion> transacciones = transaccionService.obtenerEnPeriodo(inicio, fin);
+            List<TransaccionDTO> transacciones = transaccionService.obtenerEnPeriodo(inicio, fin)
+                    .stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
             return new ResponseEntity<>(transacciones, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -147,13 +183,16 @@ public class TransaccionController {
     }
 
     @GetMapping("/compras/periodo")
-    public ResponseEntity<List<Transaccion>> obtenerComprasEnPeriodo(
+    public ResponseEntity<List<TransaccionDTO>> obtenerComprasEnPeriodo(
             @RequestParam String fechaInicio,
             @RequestParam String fechaFin) {
         try {
             LocalDateTime inicio = LocalDateTime.parse(fechaInicio);
             LocalDateTime fin = LocalDateTime.parse(fechaFin);
-            List<Transaccion> compras = transaccionService.obtenerComprasEnPeriodo(inicio, fin);
+            List<TransaccionDTO> compras = transaccionService.obtenerComprasEnPeriodo(inicio, fin)
+                    .stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
             return new ResponseEntity<>(compras, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -167,7 +206,7 @@ public class TransaccionController {
             if (existingTransaction.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             // Check if transaction can be edited
             Transaccion currentTransaction = existingTransaction.get();
             if (!transaccionService.canEditTransaction(currentTransaction)) {
@@ -175,9 +214,9 @@ public class TransaccionController {
                 error.put("error", "No se puede editar una transacción con estado: " + currentTransaction.getEstado());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
             }
-            
+
             Transaccion transaccionActualizada = transaccionService.actualizarTransaccion(id, transaccion);
-            return ResponseEntity.ok(transaccionActualizada);
+            return ResponseEntity.ok(transaccionService.toDTO(transaccionActualizada));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -190,31 +229,31 @@ public class TransaccionController {
     @GetMapping("/{id}/can-edit")
     public ResponseEntity<Map<String, Object>> canEditTransaction(@PathVariable Long id) {
         Optional<Transaccion> transaccionOpt = transaccionService.obtenerPorId(id);
-        
+
         if (transaccionOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         Transaccion transaccion = transaccionOpt.get();
         boolean canEdit = transaccionService.canEditTransaction(transaccion);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("canEdit", canEdit);
-        
+
         if (!canEdit) {
             response.put("reason", "No se puede editar una transacción con estado: " + transaccion.getEstado());
             response.put("estado", transaccion.getEstado().toString());
         }
-        
+
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/estado")
-    public ResponseEntity<Transaccion> actualizarEstado(@PathVariable Long id, @RequestParam String estado) {
+    public ResponseEntity<TransaccionDTO> actualizarEstado(@PathVariable Long id, @RequestParam String estado) {
         try {
             Transaccion.EstadoTransaccion nuevoEstado = Transaccion.EstadoTransaccion.valueOf(estado.toUpperCase());
             Transaccion transaccionActualizada = transaccionService.actualizarEstado(id, nuevoEstado);
-            return new ResponseEntity<>(transaccionActualizada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionActualizada), HttpStatus.OK);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -223,40 +262,40 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}/confirmar")
-    public ResponseEntity<Transaccion> confirmarCompra(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> confirmarCompra(@PathVariable Long id) {
         try {
             Transaccion transaccionConfirmada = transaccionService.confirmarCompra(id);
-            return new ResponseEntity<>(transaccionConfirmada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionConfirmada), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}/completar")
-    public ResponseEntity<Transaccion> completarTransaccion(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> completarTransaccion(@PathVariable Long id) {
         try {
             Transaccion transaccionCompletada = transaccionService.completarTransaccion(id);
-            return new ResponseEntity<>(transaccionCompletada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionCompletada), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<Transaccion> cancelarTransaccion(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> cancelarTransaccion(@PathVariable Long id) {
         try {
             Transaccion transaccionCancelada = transaccionService.cancelarTransaccion(id);
-            return new ResponseEntity<>(transaccionCancelada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionCancelada), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}/recibir")
-    public ResponseEntity<Transaccion> marcarComoRecibida(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> marcarComoRecibida(@PathVariable Long id) {
         try {
             Transaccion transaccionRecibida = transaccionService.marcarComoRecibida(id);
-            return new ResponseEntity<>(transaccionRecibida, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionRecibida), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -265,10 +304,10 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}/pagar")
-    public ResponseEntity<Transaccion> marcarComoPagada(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> marcarComoPagada(@PathVariable Long id) {
         try {
             Transaccion transaccionPagada = transaccionService.marcarComoPagada(id);
-            return new ResponseEntity<>(transaccionPagada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionPagada), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -277,10 +316,10 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}/entregar")
-    public ResponseEntity<Transaccion> marcarComoEntregada(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> marcarComoEntregada(@PathVariable Long id) {
         try {
             Transaccion transaccionEntregada = transaccionService.marcarComoEntregada(id);
-            return new ResponseEntity<>(transaccionEntregada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionEntregada), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -289,10 +328,10 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}/cobrar")
-    public ResponseEntity<Transaccion> marcarComoCobrada(@PathVariable Long id) {
+    public ResponseEntity<TransaccionDTO> marcarComoCobrada(@PathVariable Long id) {
         try {
             Transaccion transaccionCobrada = transaccionService.marcarComoCobrada(id);
-            return new ResponseEntity<>(transaccionCobrada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionCobrada), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -301,10 +340,10 @@ public class TransaccionController {
     }
 
     @PutMapping("/{id}/facturar")
-    public ResponseEntity<Transaccion> facturarVenta(@PathVariable Long id, @RequestParam String numeroFactura) {
+    public ResponseEntity<TransaccionDTO> facturarVenta(@PathVariable Long id, @RequestParam String numeroFactura) {
         try {
             Transaccion transaccionFacturada = transaccionService.facturarVenta(id, numeroFactura);
-            return new ResponseEntity<>(transaccionFacturada, HttpStatus.OK);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionFacturada), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
@@ -371,8 +410,11 @@ public class TransaccionController {
     }
 
     @GetMapping("/origen/{transaccionOrigenId}")
-    public ResponseEntity<List<Transaccion>> obtenerTransaccionesPorOrigen(@PathVariable Long transaccionOrigenId) {
-        List<Transaccion> transacciones = transaccionService.obtenerTransaccionesPorOrigen(transaccionOrigenId);
+    public ResponseEntity<List<TransaccionDTO>> obtenerTransaccionesPorOrigen(@PathVariable Long transaccionOrigenId) {
+        List<TransaccionDTO> transacciones = transaccionService.obtenerTransaccionesPorOrigen(transaccionOrigenId)
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(transacciones, HttpStatus.OK);
     }
 
@@ -389,26 +431,38 @@ public class TransaccionController {
     }
 
     @GetMapping("/compras/pendientes-recepcion")
-    public ResponseEntity<List<Transaccion>> obtenerComprasPendientesRecepcion() {
-        List<Transaccion> compras = transaccionService.obtenerComprasPendientesRecepcion();
+    public ResponseEntity<List<TransaccionDTO>> obtenerComprasPendientesRecepcion() {
+        List<TransaccionDTO> compras = transaccionService.obtenerComprasPendientesRecepcion()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(compras, HttpStatus.OK);
     }
 
     @GetMapping("/compras/pendientes-pago")
-    public ResponseEntity<List<Transaccion>> obtenerComprasPendientesPago() {
-        List<Transaccion> compras = transaccionService.obtenerComprasPendientesPago();
+    public ResponseEntity<List<TransaccionDTO>> obtenerComprasPendientesPago() {
+        List<TransaccionDTO> compras = transaccionService.obtenerComprasPendientesPago()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(compras, HttpStatus.OK);
     }
 
     @GetMapping("/ventas/pendientes-entrega")
-    public ResponseEntity<List<Transaccion>> obtenerVentasPendientesEntrega() {
-        List<Transaccion> ventas = transaccionService.obtenerVentasPendientesEntrega();
+    public ResponseEntity<List<TransaccionDTO>> obtenerVentasPendientesEntrega() {
+        List<TransaccionDTO> ventas = transaccionService.obtenerVentasPendientesEntrega()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 
     @GetMapping("/ventas/pendientes-cobro")
-    public ResponseEntity<List<Transaccion>> obtenerVentasPendientesCobro() {
-        List<Transaccion> ventas = transaccionService.obtenerVentasPendientesCobro();
+    public ResponseEntity<List<TransaccionDTO>> obtenerVentasPendientesCobro() {
+        List<TransaccionDTO> ventas = transaccionService.obtenerVentasPendientesCobro()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
     }
 }

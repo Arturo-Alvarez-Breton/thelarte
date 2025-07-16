@@ -24,10 +24,11 @@ async function loadDetalle(){
     window.location.href = 'index.html';
     return;
   }
-  
+
   showLoading();
   try{
     currentTransaction = await service.obtenerTransaccionPorId(transactionId);
+    console.log("Transacción recibida:", currentTransaction); // <-- LOG AQUI
     document.title = `Transacción #${transactionId} | Thelarte`;
     renderTransaction(currentTransaction);
   } catch(e) {
