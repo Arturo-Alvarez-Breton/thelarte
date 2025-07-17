@@ -131,39 +131,34 @@ form.addEventListener('submit', async e => {
     submitBtn.disabled = true;
     submitBtn.textContent = userParam ? 'Actualizando...' : 'Guardando...';
 
-    // Recoger datos
     const usuarioInput = document.getElementById('usuario').value.trim();
     const contrasena = document.getElementById('contrasena').value;
     const rol = document.getElementById('rol').value;
 
-    const data = { usuario: usuarioInput, contrasena, rol };
-
-    // Validar
-    if (!validateForm(data)) {
+    // Validación: usuario obligatorio, contraseña solo en creación
+    let valid = true;
+    clearError('usuario'); clearError('contrasena'); clearError('rol');
+    if (!usuarioInput) { showError('usuario','El nombre de usuario es obligatorio'); valid = false; }
+    if (!rol) { showError('rol','El rol es obligatorio'); valid = false; }
+    if (!userParam && !contrasena) { showError('contrasena','La contraseña es obligatoria'); valid = false; }
+    if (!userParam && contrasena.length < 8) { showError('contrasena','La contraseña debe tener al menos 8 caracteres'); valid = false; }
+    if (!valid) {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
         return;
     }
 
     const token = localStorage.getItem('authToken');
-    // Si hay userParam, es edición (PUT), si no, creación (POST)
     const url = userParam ? `/api/usuarios/${encodeURIComponent(userParam)}` : '/register';
     const method = userParam ? 'PUT' : 'POST';
 
-    // Backend espera RegisterRequest: username, password. Rol se maneja en backend.
-    // Para edición, solo se permite modificar password y rol.
-    let bodyPayload;
-    if (userParam) {
-        bodyPayload = {
-            password: contrasena,
-            roles: [rol]
-        };
-    } else {
-        bodyPayload = {
-            username: usuarioInput,
-            password: contrasena,
-            roles: [rol]
-        };
+    // Payload: solo manda password si hay una nueva
+    let bodyPayload = {
+        username: usuarioInput,
+        roles: [rol]
+    };
+    if (contrasena) {
+        bodyPayload.password = contrasena;
     }
 
     try {
@@ -177,11 +172,8 @@ form.addEventListener('submit', async e => {
         });
 
         if (resp.status === 400) {
-            // Validación del servidor: asumimos que devuelve JSON { campo: mensaje }
             const errors = await resp.json();
-            Object.entries(errors).forEach(([field, msg]) => {
-                showError(field, msg);
-            });
+            Object.entries(errors).forEach(([field, msg]) => showError(field, msg));
             throw new Error('Validation error');
         }
         if (resp.status === 404) {
@@ -192,7 +184,6 @@ form.addEventListener('submit', async e => {
         if (!resp.ok) {
             throw new Error(`HTTP error! status: ${resp.status}`);
         }
-        const saved = await resp.json();
         alert(userParam ? 'Usuario actualizado exitosamente!' : 'Usuario creado exitosamente!');
         window.location.href = 'index.html';
     } catch (error) {
