@@ -283,7 +283,7 @@ function filtrarTransacciones() {
 }
 
 function crearTransaccion(tipo) {
-    window.location.href = `form.html?tipo=${tipo}`;
+    window.location.href = `devolucion.html?tipo=${tipo}`;
 }
 
 function verDetalles(id) {

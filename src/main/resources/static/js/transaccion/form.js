@@ -55,8 +55,7 @@ function inicializarAsistente() {
     
     const tiposClasses = {
         'VENTA': 'tipo-venta',
-        'COMPRA': 'tipo-compra',
-        'DEVOLUCION': 'tipo-devolucion'
+        'COMPRA': 'tipo-compra'
     };
     
     const tipoDisplay = tiposDisplay[tipoTransaccion] || tipoTransaccion;

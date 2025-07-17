@@ -19,6 +19,8 @@ public class Unidad {
     private Date fechaIngreso;
     private EstadoUnidad estado; // Estado de la unidad (DISPONIBLE, VENDIDO, RESERVADO, DAÑADO)
     private boolean stock; // en inventario = true o en almacen = false
+    @Column(name = "transaccion_origen_id")
+    private Long transaccionOrigenId;
 
     public Unidad(Producto producto, Date fechaIngreso ,boolean stock) {
         this.producto = producto;
@@ -65,5 +67,12 @@ public class Unidad {
 
     public void setEstado(EstadoUnidad estado) {
         this.estado = estado;
+    }
+
+    public Long getTransaccionOrigenId() {
+        return transaccionOrigenId;
+    }
+    public void setTransaccionOrigenId(Long transaccionOrigenId) {
+        this.transaccionOrigenId = transaccionOrigenId;
     }
 }

@@ -25,7 +25,7 @@ public class UnidadService {
     private ProductoRepository productoRepository;
 
     // Registrar una nueva unidad para un producto (devuelve DTO)
-    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
+    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock, Long transaccionOrigenId) {
         Optional<Producto> productoOpt = productoRepository.findById(idProducto);
         if (productoOpt.isEmpty()) {
             throw new IllegalArgumentException("Producto no encontrado");
@@ -35,9 +35,13 @@ public class UnidadService {
         unidad.setFechaIngreso(new Date());
         unidad.setEstado(estadoUnidad);
         unidad.setStock(stock);
+        unidad.setTransaccionOrigenId(transaccionOrigenId); // <<< NUEVO: asigna el id de la transacción de compra/venta
         productoOpt.get().getUnidades().add(unidad); // Agregar unidad al producto
         Unidad saved = unidadRepository.save(unidad);
         return toDto(saved);
+    }
+    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
+        return registrarUnidad(idProducto, estadoUnidad, stock, null);
     }
 
     // Cambiar el estado de una unidad (devuelve DTO)

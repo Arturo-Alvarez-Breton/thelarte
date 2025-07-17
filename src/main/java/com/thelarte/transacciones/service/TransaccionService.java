@@ -1,5 +1,6 @@
 package com.thelarte.transacciones.service;
 
+import com.thelarte.inventory.repository.UnidadRepository;
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
@@ -45,6 +46,9 @@ public class TransaccionService {
     @Autowired
     private UnidadService unidadService;
 
+    @Autowired
+    private UnidadRepository unidadRepository;
+
     public Transaccion crearTransaccion(Transaccion transaccion) {
         // Asignar la transacción a cada línea para que se guarde el transaccion_id
         if (transaccion.getLineas() != null) {
@@ -70,6 +74,55 @@ public class TransaccionService {
         validatePaymentMetadata(transaccion);
         procesarLineasTransaccion(transaccion);
         calcularTotalesTransaccion(transaccion);
+
+        // === LOGICA PARA DEVOLUCIONES ===
+        if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA ||
+                transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
+
+            if (transaccion.getTransaccionOrigenId() == null) {
+                throw new IllegalArgumentException("La devolución requiere el ID de la transacción original");
+            }
+
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                // Busca las unidades asociadas a la transacción original y producto
+                List<Unidad> unidadesOriginales = unidadRepository.findByTransaccionOrigenIdAndProductoId(
+                        transaccion.getTransaccionOrigenId(),
+                        linea.getProductoId()
+                );
+                int cantidadADevolver = linea.getCantidad();
+                int count = 0;
+
+                for (Unidad unidad : unidadesOriginales) {
+                    if (count >= cantidadADevolver) break;
+
+                    // Solo unidades que aún no han sido devueltas
+                    if (
+                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA &&
+                                    (unidad.getEstado() == EstadoUnidad.DISPONIBLE || unidad.getEstado() == EstadoUnidad.RESERVADO)
+                    ) {
+                        unidad.setEstado(EstadoUnidad.DEVUELTO_COMPRA);
+                        unidadRepository.save(unidad);
+                        count++;
+                    } else if (
+                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA &&
+                                    (unidad.getEstado() == EstadoUnidad.VENDIDO || unidad.getEstado() == EstadoUnidad.RESERVADO)
+                    ) {
+                        unidad.setEstado(EstadoUnidad.DEVUELTO_VENTA);
+                        unidadRepository.save(unidad);
+                        count++;
+                    }
+                }
+            }
+
+            // === MARCAR TRANSACCION ORIGINAL COMO CANCELADA ===
+            Optional<Transaccion> transaccionOriginalOpt = transaccionRepository.findById(transaccion.getTransaccionOrigenId());
+            if (transaccionOriginalOpt.isPresent()) {
+                Transaccion transaccionOriginal = transaccionOriginalOpt.get();
+                transaccionOriginal.setEstado(Transaccion.EstadoTransaccion.CANCELADA);
+                transaccionRepository.save(transaccionOriginal);
+            }
+        }
+
         return transaccionRepository.save(transaccion);
     }
 
@@ -280,7 +333,7 @@ public class TransaccionService {
         for (LineaTransaccion linea : transaccion.getLineas()) {
             if (linea.getProductoId() != null) {
                 for (int i = 0; i < linea.getCantidad(); i++) {
-                    unidadService.registrarUnidad(linea.getProductoId(), EstadoUnidad.DISPONIBLE, true);
+                    unidadService.registrarUnidad(linea.getProductoId(), EstadoUnidad.DISPONIBLE, true, transaccion.getId());
                 }
             }
         }
@@ -447,7 +500,7 @@ public class TransaccionService {
                         nuevoProducto = productoRepository.save(nuevoProducto);
 
                         for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(nuevoProducto.getId(), EstadoUnidad.DISPONIBLE, false);
+                            unidadService.registrarUnidad(nuevoProducto.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
                         }
 
                         linea.setProductoId(nuevoProducto.getId());
@@ -457,7 +510,7 @@ public class TransaccionService {
                                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
                         for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(productoExistente.getId(), EstadoUnidad.DISPONIBLE, false);
+                            unidadService.registrarUnidad(productoExistente.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
                         }
                         productoExistente.setCantidadDisponible(productoExistente.getCantidadDisponible() + linea.getCantidad());
                         productoRepository.save(productoExistente);
@@ -479,6 +532,8 @@ public class TransaccionService {
 
                     for (Unidad unidad : unidadesDisponibles) {
                         unidad.setEstado(EstadoUnidad.RESERVADO);
+                        unidad.setTransaccionOrigenId(transaccion.getId()); // <<< marca la venta!
+                        unidadRepository.save(unidad);
                     }
 
                     producto.actualizarEstadoPorUnidades();
