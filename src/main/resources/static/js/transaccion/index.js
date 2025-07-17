@@ -4,6 +4,10 @@ let transaccionesFiltradas = [];
 let estadisticas = {};
 const loadingOverlay = document.getElementById('loadingOverlay');
 
+// PAGINACIÓN
+let paginaActual = 1;
+const transaccionesPorPagina = 6;
+
 function showLoading(){ if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
 function hideLoading(){ if(loadingOverlay) loadingOverlay.classList.add('hidden'); }
 
@@ -22,6 +26,7 @@ async function cargarTransacciones() {
         showLoading();
         transacciones = await transaccionService.obtenerTransacciones();
         transaccionesFiltradas = [...transacciones];
+        paginaActual = 1;
         mostrarTransacciones();
         hideLoading();
     } catch (error) {
@@ -36,18 +41,18 @@ async function cargarEstadisticas() {
         const ahora = new Date();
         const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
         const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
-        
+
         // Calcular estadísticas básicas
-        const ventasMes = transacciones.filter(t => 
+        const ventasMes = transacciones.filter(t =>
             t.tipo === 'VENTA' && new Date(t.fecha) >= inicioMes
         );
-        const comprasMes = transacciones.filter(t => 
+        const comprasMes = transacciones.filter(t =>
             t.tipo === 'COMPRA' && new Date(t.fecha) >= inicioMes
         );
-        const ventasAnio = transacciones.filter(t => 
+        const ventasAnio = transacciones.filter(t =>
             t.tipo === 'VENTA' && new Date(t.fecha) >= inicioAnio
         );
-        
+
         estadisticas = {
             totalVentasMes: ventasMes.reduce((sum, t) => sum + (t.total || 0), 0),
             totalComprasMes: comprasMes.reduce((sum, t) => sum + (t.total || 0), 0),
@@ -57,16 +62,36 @@ async function cargarEstadisticas() {
             transaccionesPendientes: transacciones.filter(t => t.estado === 'PENDIENTE').length,
             productosVendidos: ventasMes.reduce((sum, t) => sum + (t.lineas?.length || 0), 0)
         };
-        
+
         mostrarEstadisticas();
     } catch (error) {
         console.error('Error al cargar estadísticas:', error);
     }
 }
 
+function filtrarTransacciones() {
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const buscarTexto = document.getElementById('buscarTexto').value.toLowerCase();
+
+    transaccionesFiltradas = transacciones.filter(transaccion => {
+        const cumpleTipo = !filtroTipo || transaccion.tipo === filtroTipo;
+        const cumpleEstado = !filtroEstado || transaccion.estado === filtroEstado;
+        const cumpleBusqueda = !buscarTexto ||
+            (transaccion.contraparteNombre && transaccion.contraparteNombre.toLowerCase().includes(buscarTexto)) ||
+            (transaccion.numeroFactura && transaccion.numeroFactura.toLowerCase().includes(buscarTexto)) ||
+            transaccion.id.toString().includes(buscarTexto);
+
+        return cumpleTipo && cumpleEstado && cumpleBusqueda;
+    });
+
+    paginaActual = 1;
+    mostrarTransacciones();
+}
+
 function mostrarTransacciones() {
     const container = document.getElementById('transaccionesContainer');
-    
+
     if (transaccionesFiltradas.length === 0) {
         container.innerHTML = `
             <div class="flex flex-col items-center justify-center py-16 text-center">
@@ -75,17 +100,22 @@ function mostrarTransacciones() {
                 <p class="text-gray-500 text-base">Crea tu primera transacción para empezar</p>
             </div>
         `;
+        mostrarPaginacion(container);
         return;
     }
 
-    const editableEstados = ['PENDIENTE', 'CONFIRMADA'];
+    // PAGINACIÓN
+    const inicio = (paginaActual - 1) * transaccionesPorPagina;
+    const fin = inicio + transaccionesPorPagina;
+    const transaccionesPagina = transaccionesFiltradas.slice(inicio, fin);
 
     const transaccionesHtml = `
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            ${transaccionesFiltradas.map(transaccion => {
-                const esEditable = editableEstados.includes(transaccion.estado);
-                
-                return `
+            ${transaccionesPagina.map(transaccion => {
+        const editableEstados = ['PENDIENTE', 'CONFIRMADA'];
+        const esEditable = editableEstados.includes(transaccion.estado);
+
+        return `
                 <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-${obtenerColorTipo(transaccion.tipo)} overflow-hidden">
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
@@ -100,12 +130,10 @@ function mostrarTransacciones() {
                                 ${transaccion.estado}
                             </span>
                         </div>
-
                         <div class="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
                             <i class="fas ${transaccion.tipoContraparte === 'CLIENTE' ? 'fa-user' : 'fa-truck'} text-gray-500 mr-3"></i>
                             <span class="font-medium text-gray-800 text-base">${transaccion.contraparteNombre}</span>
                         </div>
-
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center text-gray-600">
                                 <i class="fas fa-calendar mr-2"></i>
@@ -115,26 +143,22 @@ function mostrarTransacciones() {
                                 ${formatearMoneda(transaccion.total)}
                             </div>
                         </div>
-
                         ${transaccion.numeroFactura ? `
                             <div class="mb-3 flex items-center text-gray-600">
                                 <i class="fas fa-receipt mr-2"></i>
                                 <span class="text-sm">Factura: ${transaccion.numeroFactura}</span>
                             </div>
                         ` : ''}
-
                         ${transaccion.lineas && transaccion.lineas.length > 0 ? `
                             <div class="mb-4 flex items-center text-gray-600">
                                 <i class="fas fa-boxes mr-2"></i>
                                 <span class="text-sm">${transaccion.lineas.length} producto${transaccion.lineas.length > 1 ? 's' : ''}</span>
                             </div>
                         ` : ''}
-
                         <div class="flex gap-2 pt-3 border-t">
                             <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="verDetalles(${transaccion.id})">
                                 <i class="fas fa-eye mr-1"></i>Ver
                             </button>
-                            
                             ${esEditable ? `
                                 <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
                                     <i class="fas fa-edit mr-1"></i>Editar
@@ -144,7 +168,6 @@ function mostrarTransacciones() {
                                     <i class="fas fa-lock mr-1"></i>Bloqueado
                                 </button>
                             `}
-                            
                             <div class="relative">
                                 <button class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition text-sm" onclick="toggleDropdown(${transaccion.id})">
                                     <i class="fas fa-ellipsis-v"></i>
@@ -165,13 +188,45 @@ function mostrarTransacciones() {
                         </div>
                     </div>
                 </div>
-            `}).join('')}
+            `;
+    }).join('')}
         </div>
     `;
 
     container.innerHTML = transaccionesHtml;
+    mostrarPaginacion(container);
 }
 
+// PAGINACIÓN CONTROLS
+function mostrarPaginacion(container) {
+    const totalPaginas = Math.ceil(transaccionesFiltradas.length / transaccionesPorPagina);
+    if (totalPaginas <= 1) return;
+    let paginacionHtml = `<div class="flex justify-center items-center mt-8 gap-2">`;
+
+    paginacionHtml += `
+        <button onclick="cambiarPagina(${paginaActual - 1})" class="px-3 py-1 rounded ${paginaActual === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border text-[#59391B]'}" ${paginaActual === 1 ? 'disabled' : ''}>&laquo;</button>
+    `;
+    for(let i = 1; i <= totalPaginas; i++) {
+        paginacionHtml += `
+            <button onclick="cambiarPagina(${i})" class="px-3 py-1 rounded ${paginaActual === i ? 'bg-[#7b5222] text-white font-bold' : 'bg-white border text-[#59391B]'}">${i}</button>
+        `;
+    }
+    paginacionHtml += `
+        <button onclick="cambiarPagina(${paginaActual + 1})" class="px-3 py-1 rounded ${paginaActual === totalPaginas ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border text-[#59391B]'}" ${paginaActual === totalPaginas ? 'disabled' : ''}>&raquo;</button>
+    `;
+    paginacionHtml += `</div>`;
+
+    container.innerHTML += paginacionHtml;
+}
+
+window.cambiarPagina = function(nuevaPagina){
+    const totalPaginas = Math.ceil(transaccionesFiltradas.length / transaccionesPorPagina);
+    if(nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+    paginaActual = nuevaPagina;
+    mostrarTransacciones();
+}
+
+// Utilidades de formato
 function formatearTipo(tipo) {
     const tipos = {
         'COMPRA': 'Compra',
@@ -229,26 +284,26 @@ function formatearFecha(fecha) {
 
 function formatearMoneda(cantidad) {
     if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
-    
+
     // Formateo manual para asegurar el formato dominicano correcto
     const numero = Math.abs(cantidad);
     const partes = numero.toFixed(2).split('.');
     const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const decimal = partes[1];
-    
+
     return `RD$ ${entero},${decimal}`;
 }
 
 function toggleDropdown(id) {
     const dropdown = document.getElementById(`dropdown-${id}`);
     const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
-    
+
     allDropdowns.forEach(dd => {
         if (dd !== dropdown) {
             dd.classList.add('hidden');
         }
     });
-    
+
     dropdown.classList.toggle('hidden');
 }
 
@@ -261,29 +316,14 @@ document.addEventListener('click', function(event) {
     }
 });
 
-function filtrarTransacciones() {
-    const filtroTipo = document.getElementById('filtroTipo').value;
-    const filtroEstado = document.getElementById('filtroEstado').value;
-    const filtroContraparte = document.getElementById('filtroContraparte').value;
-    const buscarTexto = document.getElementById('buscarTexto').value.toLowerCase();
-
-    transaccionesFiltradas = transacciones.filter(transaccion => {
-        const cumpleTipo = !filtroTipo || transaccion.tipo === filtroTipo;
-        const cumpleEstado = !filtroEstado || transaccion.estado === filtroEstado;
-        const cumpleContraparte = !filtroContraparte || transaccion.tipoContraparte === filtroContraparte;
-        const cumpleBusqueda = !buscarTexto || 
-            transaccion.contraparteNombre.toLowerCase().includes(buscarTexto) ||
-            transaccion.numeroFactura?.toLowerCase().includes(buscarTexto) ||
-            transaccion.id.toString().includes(buscarTexto);
-
-        return cumpleTipo && cumpleEstado && cumpleContraparte && cumpleBusqueda;
-    });
-
-    mostrarTransacciones();
-}
-
 function crearTransaccion(tipo) {
-    window.location.href = `devolucion.html?tipo=${tipo}`;
+    if (tipo === "DEVOLUCION_COMPRA" || tipo === "DEVOLUCION_VENTA") {
+        window.location.href = `devolucion.html?tipo=${tipo}`;
+    } else if (tipo === "DEVOLUCION") {
+        window.location.href = `devolucion.html`;
+    } else {
+        window.location.href = `form.html?tipo=${tipo}`;
+    }
 }
 
 function verDetalles(id) {
@@ -306,7 +346,7 @@ async function duplicarTransaccion(id) {
             fechaActualizacion: null,
             estado: 'PENDIENTE'
         };
-        
+
         await transaccionService.crearTransaccion(nuevaTransaccion);
         await cargarTransacciones();
         mostrarExito('Transacción duplicada exitosamente');
@@ -345,9 +385,9 @@ function mostrarError(mensaje) {
             </button>
         </div>
     `;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         if (toast.parentElement) {
             toast.remove();
@@ -367,9 +407,9 @@ function mostrarExito(mensaje) {
             </button>
         </div>
     `;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         if (toast.parentElement) {
             toast.remove();
@@ -380,7 +420,7 @@ function mostrarExito(mensaje) {
 function mostrarEstadisticas() {
     const container = document.getElementById('estadisticasContainer');
     if (!container) return;
-    
+
     container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
@@ -451,4 +491,5 @@ function mostrarEstadisticas() {
 function dismissTxOnboarding(){
     localStorage.setItem('txOnboarded','1');
     const o = document.getElementById('onboardingTx');
-    if(o) o.classList.add('hidden');}
+    if(o) o.classList.add('hidden');
+}

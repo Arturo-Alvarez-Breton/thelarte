@@ -1,383 +1,498 @@
 let transaccionService;
-let pasoActual = 1;
-let transaccionOriginalSeleccionada = null;
-let productosSeleccionados = [];
-let transaccionesOriginales = [];
-let productosTransaccionOriginal = [];
-let tipoDevolucion = ''; // "DEVOLUCION_COMPRA" o "DEVOLUCION_VENTA"
+let transacciones = [];
+let transaccionesFiltradas = [];
+let estadisticas = {};
+const loadingOverlay = document.getElementById('loadingOverlay');
 
-// Configuración de moneda dominicana
-const CURRENCY_CONFIG = {
-    locale: 'es-DO',
-    currency: 'DOP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-};
+// PAGINACIÓN
+let paginaActual = 1;
+const transaccionesPorPagina = 6;
 
-function formatearMonedaDominicana(cantidad) {
+function showLoading(){ if(loadingOverlay) loadingOverlay.classList.remove('hidden'); }
+function hideLoading(){ if(loadingOverlay) loadingOverlay.classList.add('hidden'); }
+
+document.addEventListener('DOMContentLoaded', async function() {
+    transaccionService = new TransaccionService();
+    const onboarding = document.getElementById('onboardingTx');
+    if(onboarding && !localStorage.getItem('txOnboarded')){
+        onboarding.classList.remove('hidden');
+    }
+    await cargarTransacciones();
+    await cargarEstadisticas();
+});
+
+async function cargarTransacciones() {
+    try {
+        showLoading();
+        // Solo transacciones que NO estén canceladas
+        transacciones = (await transaccionService.obtenerTransacciones())
+            .filter(t => t.estado !== 'CANCELADA');
+        transaccionesFiltradas = [...transacciones];
+        paginaActual = 1;
+        mostrarTransacciones();
+        hideLoading();
+    } catch (error) {
+        console.error('Error al cargar transacciones:', error);
+        mostrarError('Error al cargar las transacciones');
+        hideLoading();
+    }
+}
+
+async function cargarEstadisticas() {
+    try {
+        const ahora = new Date();
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+        const inicioAnio = new Date(ahora.getFullYear(), 0, 1);
+
+        // Calcular estadísticas básicas
+        const ventasMes = transacciones.filter(t =>
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioMes
+        );
+        const comprasMes = transacciones.filter(t =>
+            t.tipo === 'COMPRA' && new Date(t.fecha) >= inicioMes
+        );
+        const ventasAnio = transacciones.filter(t =>
+            t.tipo === 'VENTA' && new Date(t.fecha) >= inicioAnio
+        );
+
+        estadisticas = {
+            totalVentasMes: ventasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalComprasMes: comprasMes.reduce((sum, t) => sum + (t.total || 0), 0),
+            totalVentasAnio: ventasAnio.reduce((sum, t) => sum + (t.total || 0), 0),
+            cantidadVentasMes: ventasMes.length,
+            cantidadComprasMes: comprasMes.length,
+            transaccionesPendientes: transacciones.filter(t => t.estado === 'PENDIENTE').length,
+            productosVendidos: ventasMes.reduce((sum, t) => sum + (t.lineas?.length || 0), 0)
+        };
+
+        mostrarEstadisticas();
+    } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+    }
+}
+
+function filtrarTransacciones() {
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroEstado = document.getElementById('filtroEstado').value;
+    const buscarTexto = document.getElementById('buscarTexto').value.toLowerCase();
+
+    transaccionesFiltradas = transacciones.filter(transaccion => {
+        // Ya no se muestran las CANCELADAS por el filtro global en cargarTransacciones
+        const cumpleTipo = !filtroTipo || transaccion.tipo === filtroTipo;
+        const cumpleEstado = !filtroEstado || transaccion.estado === filtroEstado;
+        const cumpleBusqueda = !buscarTexto ||
+            (transaccion.contraparteNombre && transaccion.contraparteNombre.toLowerCase().includes(buscarTexto)) ||
+            (transaccion.numeroFactura && transaccion.numeroFactura.toLowerCase().includes(buscarTexto)) ||
+            transaccion.id.toString().includes(buscarTexto);
+
+        return cumpleTipo && cumpleEstado && cumpleBusqueda;
+    });
+
+    paginaActual = 1;
+    mostrarTransacciones();
+}
+
+function mostrarTransacciones() {
+    const container = document.getElementById('transaccionesContainer');
+
+    if (transaccionesFiltradas.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-16 text-center">
+                <i class="fas fa-inbox text-6xl text-gray-400 mb-4"></i>
+                <h4 class="text-xl font-semibold text-gray-600 mb-2">No hay transacciones</h4>
+                <p class="text-gray-500 text-base">Crea tu primera transacción para empezar</p>
+            </div>
+        `;
+        mostrarPaginacion(container);
+        return;
+    }
+
+    // PAGINACIÓN
+    const inicio = (paginaActual - 1) * transaccionesPorPagina;
+    const fin = inicio + transaccionesPorPagina;
+    const transaccionesPagina = transaccionesFiltradas.slice(inicio, fin);
+
+    const transaccionesHtml = `
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            ${transaccionesPagina.map(transaccion => {
+        const editableEstados = ['PENDIENTE', 'CONFIRMADA'];
+        const esEditable = editableEstados.includes(transaccion.estado);
+
+        return `
+                <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border-l-4 border-${obtenerColorTipo(transaccion.tipo)} overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-[#59391B] mb-1 flex items-center">
+                                    <i class="${obtenerTipoIcon(transaccion.tipo)} mr-2 text-${obtenerColorTipo(transaccion.tipo)}"></i>
+                                    ${formatearTipo(transaccion.tipo)}
+                                </h3>
+                                <p class="text-sm text-gray-600 font-medium">#${transaccion.id}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium bg-${obtenerEstadoColor(transaccion.estado)}-100 text-${obtenerEstadoColor(transaccion.estado)}-800">
+                                ${transaccion.estado}
+                            </span>
+                        </div>
+                        <div class="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
+                            <i class="fas ${transaccion.tipoContraparte === 'CLIENTE' ? 'fa-user' : 'fa-truck'} text-gray-500 mr-3"></i>
+                            <span class="font-medium text-gray-800 text-base">${transaccion.contraparteNombre}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center text-gray-600">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <span class="text-sm">${formatearFecha(transaccion.fecha)}</span>
+                            </div>
+                            <div class="text-xl font-bold text-[#7b5222]">
+                                ${formatearMoneda(transaccion.total)}
+                            </div>
+                        </div>
+                        ${transaccion.numeroFactura ? `
+                            <div class="mb-3 flex items-center text-gray-600">
+                                <i class="fas fa-receipt mr-2"></i>
+                                <span class="text-sm">Factura: ${transaccion.numeroFactura}</span>
+                            </div>
+                        ` : ''}
+                        ${transaccion.lineas && transaccion.lineas.length > 0 ? `
+                            <div class="mb-4 flex items-center text-gray-600">
+                                <i class="fas fa-boxes mr-2"></i>
+                                <span class="text-sm">${transaccion.lineas.length} producto${transaccion.lineas.length > 1 ? 's' : ''}</span>
+                            </div>
+                        ` : ''}
+                        <div class="flex gap-2 pt-3 border-t">
+                            <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="verDetalles(${transaccion.id})">
+                                <i class="fas fa-eye mr-1"></i>Ver
+                            </button>
+                            ${esEditable ? `
+                                <button class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg transition text-sm font-medium" onclick="editarTransaccion(${transaccion.id})">
+                                    <i class="fas fa-edit mr-1"></i>Editar
+                                </button>
+                            ` : `
+                                <button class="flex-1 bg-gray-400 text-white py-2 px-3 rounded-lg text-sm font-medium cursor-not-allowed" title="No se puede editar una transacción ${transaccion.estado}">
+                                    <i class="fas fa-lock mr-1"></i>Bloqueado
+                                </button>
+                            `}
+                            <div class="relative">
+                                <button class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition text-sm" onclick="toggleDropdown(${transaccion.id})">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div id="dropdown-${transaccion.id}" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border hidden z-10">
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onclick="duplicarTransaccion(${transaccion.id})">
+                                        <i class="fas fa-copy mr-2"></i>Duplicar
+                                    </a>
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onclick="imprimirTransaccion(${transaccion.id})">
+                                        <i class="fas fa-print mr-2"></i>Imprimir
+                                    </a>
+                                    <hr class="border-gray-200">
+                                    <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50" onclick="eliminarTransaccion(${transaccion.id})">
+                                        <i class="fas fa-trash mr-2"></i>Eliminar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+    }).join('')}
+        </div>
+    `;
+
+    container.innerHTML = transaccionesHtml;
+    mostrarPaginacion(container);
+}
+
+// PAGINACIÓN CONTROLS
+function mostrarPaginacion(container) {
+    const totalPaginas = Math.ceil(transaccionesFiltradas.length / transaccionesPorPagina);
+    if (totalPaginas <= 1) return;
+    let paginacionHtml = `<div class="flex justify-center items-center mt-8 gap-2">`;
+
+    paginacionHtml += `
+        <button onclick="cambiarPagina(${paginaActual - 1})" class="px-3 py-1 rounded ${paginaActual === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border text-[#59391B]'}" ${paginaActual === 1 ? 'disabled' : ''}>&laquo;</button>
+    `;
+    for(let i = 1; i <= totalPaginas; i++) {
+        paginacionHtml += `
+            <button onclick="cambiarPagina(${i})" class="px-3 py-1 rounded ${paginaActual === i ? 'bg-[#7b5222] text-white font-bold' : 'bg-white border text-[#59391B]'}">${i}</button>
+        `;
+    }
+    paginacionHtml += `
+        <button onclick="cambiarPagina(${paginaActual + 1})" class="px-3 py-1 rounded ${paginaActual === totalPaginas ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white border text-[#59391B]'}" ${paginaActual === totalPaginas ? 'disabled' : ''}>&raquo;</button>
+    `;
+    paginacionHtml += `</div>`;
+
+    container.innerHTML += paginacionHtml;
+}
+
+window.cambiarPagina = function(nuevaPagina){
+    const totalPaginas = Math.ceil(transaccionesFiltradas.length / transaccionesPorPagina);
+    if(nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+    paginaActual = nuevaPagina;
+    mostrarTransacciones();
+}
+
+// Utilidades de formato
+function formatearTipo(tipo) {
+    const tipos = {
+        'COMPRA': 'Compra',
+        'VENTA': 'Venta',
+        'DEVOLUCION_COMPRA': 'Devolución Compra',
+        'DEVOLUCION_VENTA': 'Devolución Venta'
+    };
+    return tipos[tipo] || tipo;
+}
+
+function obtenerColorTipo(tipo) {
+    const colores = {
+        'COMPRA': 'green-500',
+        'VENTA': 'yellow-600',
+        'DEVOLUCION_COMPRA': 'red-500',
+        'DEVOLUCION_VENTA': 'red-500'
+    };
+    return colores[tipo] || 'blue-500';
+}
+
+function obtenerTipoIcon(tipo) {
+    const iconos = {
+        'COMPRA': 'fas fa-shopping-cart',
+        'VENTA': 'fas fa-cash-register',
+        'DEVOLUCION_COMPRA': 'fas fa-undo',
+        'DEVOLUCION_VENTA': 'fas fa-undo'
+    };
+    return iconos[tipo] || 'fas fa-exchange-alt';
+}
+
+function obtenerEstadoColor(estado) {
+    const colores = {
+        'PENDIENTE': 'yellow',
+        'CONFIRMADA': 'blue',
+        'COMPLETADA': 'green',
+        'CANCELADA': 'red',
+        'FACTURADA': 'purple',
+        'RECIBIDA': 'indigo',
+        'PAGADA': 'green',
+        'ENTREGADA': 'teal',
+        'COBRADA': 'emerald'
+    };
+    return colores[estado] || 'gray';
+}
+
+function formatearFecha(fecha) {
+    if (!fecha) return '';
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function formatearMoneda(cantidad) {
     if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
+
+    // Formateo manual para asegurar el formato dominicano correcto
     const numero = Math.abs(cantidad);
     const partes = numero.toFixed(2).split('.');
     const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const decimal = partes[1];
+
     return `RD$ ${entero},${decimal}`;
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-    transaccionService = new TransaccionService();
+function toggleDropdown(id) {
+    const dropdown = document.getElementById(`dropdown-${id}`);
+    const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
 
-    // 1. Detectar si viene por URL y seleccionar el tipo en el combobox
-    const urlParams = new URLSearchParams(window.location.search);
-    tipoDevolucion = urlParams.get('tipo') || '';
-    document.getElementById('tipoDevolucionSelect').value = tipoDevolucion;
-    document.getElementById('tipo').value = tipoDevolucion;
-
-    // 2. Actualizar display y badge inicial
-    let display = '';
-    if (tipoDevolucion === 'DEVOLUCION_COMPRA') display = 'Devolución de Compra';
-    else if (tipoDevolucion === 'DEVOLUCION_VENTA') display = 'Devolución de Venta';
-    document.getElementById('tipoDisplay').value = display;
-    document.getElementById('tipoTransaccionBadge').textContent = display;
-    document.getElementById('tipoTransaccionBadge').className = `transaction-type-badge tipo-devolucion`;
-
-    // 3. Listener para cambios en el combobox
-    document.getElementById('tipoDevolucionSelect').addEventListener('change', function() {
-        tipoDevolucion = this.value;
-        document.getElementById('tipo').value = tipoDevolucion;
-
-        let display = '';
-        if (tipoDevolucion === 'DEVOLUCION_COMPRA') display = 'Devolución de Compra';
-        else if (tipoDevolucion === 'DEVOLUCION_VENTA') display = 'Devolución de Venta';
-        else display = '';
-
-        document.getElementById('tipoDisplay').value = display;
-        document.getElementById('tipoTransaccionBadge').textContent = display;
-        document.getElementById('tipoTransaccionBadge').className = `transaction-type-badge tipo-devolucion`;
-
-        // Si deseas, puedes recargar las transacciones originales según el tipo
-        cargarTransaccionesOriginales();
-    });
-
-    inicializarAsistenteDevolucion();
-    await cargarTransaccionesOriginales();
-});
-
-function inicializarAsistenteDevolucion() {
-    document.getElementById('tipo').value = tipoDevolucion;
-    const display = tipoDevolucion === 'DEVOLUCION_COMPRA' ? 'Devolución de Compra' : 'Devolución de Venta';
-    document.getElementById('tipoDisplay').value = display;
-    document.getElementById('tipoTransaccionBadge').textContent = display;
-    document.getElementById('tipoTransaccionBadge').className = `transaction-type-badge tipo-devolucion`;
-
-    document.getElementById('contraparteStepLabel').textContent = 'Transacción';
-    document.getElementById('contraparteTitle').textContent = 'Seleccionar Transacción a Devolver';
-    document.getElementById('confirmContraparteLabel').textContent = 'Transacción:';
-
-    // Fecha actual
-    const ahora = new Date();
-    ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
-    document.getElementById('fecha').value = ahora.toISOString().slice(0, 16);
-}
-
-async function cargarTransaccionesOriginales() {
-    try {
-        // Para devolución de venta, listamos ventas; para compra, las compras
-        const endpoint = tipoDevolucion === 'DEVOLUCION_COMPRA'
-            ? '/api/transacciones/compras'
-            : '/api/transacciones/ventas';
-        const resp = await fetch(endpoint);
-        transaccionesOriginales = await resp.json();
-        cargarTransaccionesEnWizard();
-    } catch (error) {
-        mostrarError('Error al cargar transacciones originales');
-    }
-}
-
-function cargarTransaccionesEnWizard() {
-    const container = document.getElementById('contraparteContainer');
-
-    if (!transaccionesOriginales || transaccionesOriginales.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-12">
-            <i class="fas fa-exclamation-triangle text-4xl text-gray-400 mb-4"></i>
-            <p class="text-gray-600 text-lg mb-4">No hay transacciones para devolver</p>
-          </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = transaccionesOriginales.map(tx => `
-      <div class="counterpart-card ${transaccionOriginalSeleccionada?.id === tx.id ? 'selected' : ''}"
-           onclick="seleccionarTransaccionOriginal(${tx.id})">
-        <div>
-          <strong>#${tx.id}</strong> - ${tx.contraparteNombre || ''}
-          <br>
-          <span class="text-gray-500">Fecha: ${tx.fecha}</span>
-          <br>
-          <span class="text-gray-500">Total: ${formatearMonedaDominicana(tx.total)}</span>
-        </div>
-      </div>
-    `).join('');
-}
-
-window.seleccionarTransaccionOriginal = async function(id) {
-    transaccionOriginalSeleccionada = transaccionesOriginales.find(t => t.id === id);
-    if (!transaccionOriginalSeleccionada) {
-        mostrarError('Transacción no encontrada');
-        return;
-    }
-    productosTransaccionOriginal = transaccionOriginalSeleccionada.lineas || [];
-    productosSeleccionados = [];
-    cargarProductosDeTransaccionOriginal();
-    siguientePaso();
-};
-
-function siguientePaso() {
-    if (!validarPaso(pasoActual)) return;
-    if (pasoActual < 4) {
-        pasoActual++;
-        mostrarPaso(pasoActual);
-        if (pasoActual === 2) cargarTransaccionesEnWizard();
-        if (pasoActual === 3) cargarProductosDeTransaccionOriginal();
-        if (pasoActual === 4) mostrarResumenFinalDevolucion();
-    }
-}
-
-function anteriorPaso() {
-    if (pasoActual > 1) {
-        pasoActual--;
-        mostrarPaso(pasoActual);
-    }
-}
-
-function mostrarPaso(paso) {
-    document.querySelectorAll('.wizard-step').forEach((step, index) => {
-        step.classList.remove('active', 'completed');
-        if (index + 1 === paso) step.classList.add('active');
-        else if (index + 1 < paso) step.classList.add('completed');
-    });
-
-    document.querySelectorAll('.step-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById(`step${paso}`).classList.add('active');
-
-    document.getElementById('btnAnterior').style.display = paso > 1 ? 'block' : 'none';
-    document.getElementById('btnSiguiente').style.display = paso < 4 ? 'block' : 'none';
-    document.getElementById('btnConfirmar').style.display = paso === 4 ? 'block' : 'none';
-}
-
-function validarPaso(paso) {
-    switch (paso) {
-        case 1:
-            if (!document.getElementById('fecha').value) {
-                mostrarError('Por favor, selecciona una fecha válida');
-                return false;
-            }
-            break;
-        case 2:
-            if (!transaccionOriginalSeleccionada || !transaccionOriginalSeleccionada.id) {
-                mostrarError('Seleccione la transacción original');
-                return false;
-            }
-            break;
-        case 3:
-            if (productosSeleccionados.length === 0) {
-                mostrarError('Seleccione al menos un producto para devolver');
-                return false;
-            }
-            for (let prod of productosSeleccionados) {
-                const lineaOriginal = productosTransaccionOriginal.find(l => l.productoId === prod.productoId);
-                if (!lineaOriginal) {
-                    mostrarError(`Producto inválido`);
-                    return false;
-                }
-                if (prod.cantidad <= 0 || prod.cantidad > lineaOriginal.cantidad) {
-                    mostrarError(`Cantidad inválida para ${lineaOriginal.productoNombre}. Máx: ${lineaOriginal.cantidad}`);
-                    return false;
-                }
-            }
-            break;
-    }
-    return true;
-}
-
-function cargarProductosDeTransaccionOriginal() {
-    const container = document.getElementById('productosContainer');
-    if (!productosTransaccionOriginal || productosTransaccionOriginal.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-8">
-            <i class="fas fa-exclamation-circle text-4xl text-gray-400 mb-4"></i>
-            <p class="text-gray-600 text-lg">No hay productos en la transacción original</p>
-          </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = productosTransaccionOriginal.map(producto => {
-        const seleccionado = productosSeleccionados.find(p => p.productoId === producto.productoId);
-        return `
-        <div class="counterpart-card ${seleccionado ? 'selected' : ''}">
-            <div class="flex items-center">
-                <div class="w-12 h-12 bg-[#7b5222] rounded-full flex items-center justify-center mr-4">
-                    <i class="fas fa-box text-white"></i>
-                </div>
-                <div class="flex-1">
-                    <h4 class="font-semibold text-lg text-[#59391B]">${producto.productoNombre}</h4>
-                    <span class="text-sm text-gray-500">Vendidos: ${producto.cantidad}</span>
-                    <span class="text-sm text-gray-500 ml-2">Precio: ${formatearMonedaDominicana(producto.precioUnitario)}</span>
-                </div>
-                <div>
-                    <input type="number" min="0" max="${producto.cantidad}" value="${seleccionado ? seleccionado.cantidad : 0}"
-                        class="w-20 px-2 py-1 border rounded text-center"
-                        onchange="actualizarCantidadDevolucion(${producto.productoId}, this.value, '${producto.productoNombre}', ${producto.precioUnitario})">
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-    actualizarResumenProductosDevolucion();
-}
-
-window.actualizarCantidadDevolucion = function(productoId, nuevaCantidad, productoNombre, precioUnitario) {
-    nuevaCantidad = parseInt(nuevaCantidad) || 0;
-    const idx = productosSeleccionados.findIndex(p => p.productoId === productoId);
-    if (idx >= 0) {
-        if (nuevaCantidad > 0) {
-            productosSeleccionados[idx].cantidad = nuevaCantidad;
-        } else {
-            productosSeleccionados.splice(idx, 1);
+    allDropdowns.forEach(dd => {
+        if (dd !== dropdown) {
+            dd.classList.add('hidden');
         }
-    } else if (nuevaCantidad > 0) {
-        productosSeleccionados.push({
-            productoId,
-            productoNombre,
-            cantidad: nuevaCantidad,
-            precioUnitario
+    });
+
+    dropdown.classList.toggle('hidden');
+}
+
+// Cerrar dropdowns al hacer clic fuera
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('[onclick^="toggleDropdown"]')) {
+        document.querySelectorAll('[id^="dropdown-"]').forEach(dd => {
+            dd.classList.add('hidden');
         });
     }
-    cargarProductosDeTransaccionOriginal();
-};
+});
 
-function actualizarResumenProductosDevolucion() {
-    const productosDiv = document.getElementById('productosSeleccionados');
-    if (productosSeleccionados.length > 0) {
-        productosDiv.style.display = 'block';
-        const listaHtml = productosSeleccionados.map(producto => `
-            <div class="product-item flex justify-between items-center">
-                <div>
-                    <span class="font-medium">${producto.productoNombre}</span>
-                    <span class="text-gray-600 text-sm ml-2">(${producto.cantidad} × ${formatearMonedaDominicana(producto.precioUnitario)})</span>
-                </div>
-                <span class="font-bold text-[#7b5222]">${formatearMonedaDominicana(producto.precioUnitario * producto.cantidad)}</span>
-            </div>
-        `).join('');
-        document.getElementById('listaProductosSeleccionados').innerHTML = listaHtml;
+function crearTransaccion(tipo) {
+    if (tipo === "DEVOLUCION_COMPRA" || tipo === "DEVOLUCION_VENTA") {
+        window.location.href = `devolucion.html?tipo=${tipo}`;
+    } else if (tipo === "DEVOLUCION") {
+        window.location.href = `devolucion.html`;
     } else {
-        productosDiv.style.display = 'none';
+        window.location.href = `form.html?tipo=${tipo}`;
     }
 }
 
-function mostrarResumenFinalDevolucion() {
-    document.getElementById('confirmTipo').textContent = document.getElementById('tipoDisplay').value;
-    document.getElementById('confirmFecha').textContent = new Date(document.getElementById('fecha').value).toLocaleString('es-DO');
-    document.getElementById('confirmTransaccion').textContent = `#${transaccionOriginalSeleccionada.id} - ${transaccionOriginalSeleccionada.contraparteNombre || ''}`;
-
-    // Lista de productos
-    const productosHtml = productosSeleccionados.map(producto => {
-        const totalProducto = producto.precioUnitario * producto.cantidad;
-        return `
-            <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                <div>
-                    <span class="font-medium">${producto.productoNombre}</span>
-                    <span class="text-gray-600 text-sm ml-2">(${producto.cantidad} × ${formatearMonedaDominicana(producto.precioUnitario)})</span>
-                </div>
-                <span class="font-bold text-[#7b5222]">${formatearMonedaDominicana(totalProducto)}</span>
-            </div>
-        `;
-    }).join('');
-    document.getElementById('confirmProductos').innerHTML = productosHtml;
+function verDetalles(id) {
+    window.location.href = `detalle.html?id=${id}`;
 }
 
-async function confirmarTransaccion() {
-    const btnConfirmar = document.getElementById('btnConfirmar');
-    const textoOriginal = btnConfirmar.innerHTML;
-    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
-    btnConfirmar.disabled = true;
-    document.getElementById('loadingOverlay').classList.remove('hidden');
+function editarTransaccion(id) {
+    window.location.href = `edit.html?id=${id}`;
+}
 
+async function duplicarTransaccion(id) {
     try {
-        // Validaciones finales
-        if (!transaccionOriginalSeleccionada || !transaccionOriginalSeleccionada.id) {
-            throw new Error('Debe seleccionar la transacción original');
-        }
-        if (productosSeleccionados.length === 0) {
-            throw new Error('Seleccione al menos un producto para devolver');
-        }
-        for (let prod of productosSeleccionados) {
-            const lineaOriginal = productosTransaccionOriginal.find(l => l.productoId === prod.productoId);
-            if (!lineaOriginal || prod.cantidad > lineaOriginal.cantidad) {
-                throw new Error(`Cantidad inválida para ${prod.productoNombre}`);
-            }
-        }
-
-        // Calcular totales
-        const subtotal = productosSeleccionados.reduce((sum, p) => sum + (p.precioUnitario * p.cantidad), 0);
-        const itbis = subtotal * 0.18;
-        const total = subtotal + itbis;
-
-        // Construir transacción devolución
-        const devolucion = {
-            tipo: tipoDevolucion,
-            fecha: document.getElementById('fecha').value,
-            contraparteId: transaccionOriginalSeleccionada.contraparteId,
-            tipoContraparte: transaccionOriginalSeleccionada.tipoContraparte,
-            contraparteNombre: transaccionOriginalSeleccionada.contraparteNombre,
-            transaccionOrigenId: transaccionOriginalSeleccionada.id,
-            numeroFactura: document.getElementById('numeroFactura').value || null,
-            observaciones: document.getElementById('observaciones').value || null,
-            subtotal: subtotal,
-            impuestos: itbis,
-            total: total,
-            estado: 'PENDIENTE',
-            lineas: productosSeleccionados.map(producto => ({
-                productoId: producto.productoId,
-                productoNombre: producto.productoNombre,
-                cantidad: producto.cantidad,
-                precioUnitario: producto.precioUnitario,
-                impuestoPorcentaje: 18.0,
-                subtotal: producto.precioUnitario * producto.cantidad,
-                impuestoMonto: (producto.precioUnitario * producto.cantidad) * 0.18,
-                total: (producto.precioUnitario * producto.cantidad) * 1.18
-            }))
+        const transaccion = await transaccionService.obtenerTransaccionPorId(id);
+        const nuevaTransaccion = {
+            ...transaccion,
+            id: null,
+            numeroFactura: null,
+            numeroTransaccion: null,
+            fechaCreacion: null,
+            fechaActualizacion: null,
+            estado: 'PENDIENTE'
         };
 
-        await transaccionService.crearTransaccion(devolucion);
-
-        mostrarExito('¡Devolución registrada exitosamente!');
-        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
-
+        await transaccionService.crearTransaccion(nuevaTransaccion);
+        await cargarTransacciones();
+        mostrarExito('Transacción duplicada exitosamente');
     } catch (error) {
-        mostrarError(error.message || 'Error al crear la devolución');
-        btnConfirmar.innerHTML = textoOriginal;
-        btnConfirmar.disabled = false;
-        document.getElementById('loadingOverlay').classList.add('hidden');
+        console.error('Error al duplicar transacción:', error);
+        mostrarError('Error al duplicar la transacción');
     }
 }
 
-// Notificaciones
+function imprimirTransaccion(id) {
+    window.open(`print.html?id=${id}`, '_blank');
+}
+
+async function eliminarTransaccion(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
+        try {
+            await transaccionService.eliminarTransaccion(id);
+            await cargarTransacciones();
+            mostrarExito('Transacción eliminada exitosamente');
+        } catch (error) {
+            console.error('Error al eliminar transacción:', error);
+            mostrarError('Error al eliminar la transacción');
+        }
+    }
+}
+
 function mostrarError(mensaje) {
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
-    toast.innerHTML = `<div class="flex items-center"><i class="fas fa-exclamation-circle mr-3 text-lg"></i><span class="font-medium">${mensaje}</span><button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button></div>`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle mr-3 text-lg"></i>
+            <span class="text-sm font-medium">${mensaje}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
     document.body.appendChild(toast);
-    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
 }
 
 function mostrarExito(mensaje) {
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
-    toast.innerHTML = `<div class="flex items-center"><i class="fas fa-check-circle mr-3 text-lg"></i><span class="font-medium">${mensaje}</span><button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()"><i class="fas fa-times"></i></button></div>`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-3 text-lg"></i>
+            <span class="text-sm font-medium">${mensaje}</span>
+            <button type="button" class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
     document.body.appendChild(toast);
-    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 3000);
+
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function mostrarEstadisticas() {
+    const container = document.getElementById('estadisticasContainer');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadVentasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-chart-line text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Compras del Mes</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalComprasMes)}</p>
+                        <p class="text-sm opacity-90">${estadisticas.cantidadComprasMes} transacciones</p>
+                    </div>
+                    <i class="fas fa-shopping-cart text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Ventas del Año</h3>
+                        <p class="text-3xl font-bold">${formatearMoneda(estadisticas.totalVentasAnio)}</p>
+                        <p class="text-sm opacity-90">Acumulado 2025</p>
+                    </div>
+                    <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Pendientes</h3>
+                        <p class="text-3xl font-bold">${estadisticas.transaccionesPendientes}</p>
+                        <p class="text-sm opacity-90">Transacciones</p>
+                    </div>
+                    <i class="fas fa-clock text-4xl opacity-80"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h3 class="text-xl font-semibold text-[#59391B] mb-4">Resumen de Seguimiento</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600">${estadisticas.productosVendidos}</div>
+                    <div class="text-sm text-gray-600">Productos vendidos este mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">${estadisticas.cantidadVentasMes + estadisticas.cantidadComprasMes}</div>
+                    <div class="text-sm text-gray-600">Total transacciones del mes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600">${formatearMoneda(estadisticas.totalVentasMes - estadisticas.totalComprasMes)}</div>
+                    <div class="text-sm text-gray-600">Ganancia neta del mes</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function dismissTxOnboarding(){
+    localStorage.setItem('txOnboarded','1');
+    const o = document.getElementById('onboardingTx');
+    if(o) o.classList.add('hidden');
 }
