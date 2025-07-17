@@ -26,7 +26,6 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<Cliente> crearCliente(@Valid @RequestBody ClienteCreateDTO dto) {
-        // Mapear DTO a entidad
         Cliente cliente = new Cliente();
         cliente.setCedula(dto.getCedula());
         cliente.setNombre(dto.getNombre());
@@ -34,7 +33,6 @@ public class ClienteController {
         cliente.setTelefono(dto.getTelefono());
         cliente.setEmail(dto.getEmail());
         cliente.setDireccion(dto.getDireccion());
-        // fechaRegistro se asigna en @PrePersist
 
         Cliente creado = clienteService.crearCliente(cliente);
         URI ubicacion = URI.create("/api/clientes/" + creado.getCedula());
@@ -58,15 +56,12 @@ public class ClienteController {
             @PathVariable String cedula,
             @Valid @RequestBody ClienteUpdateDTO dto) {
 
-        // Mapear DTO a entidad parcial
         Cliente datos = new Cliente();
-        // No seteamos cedula en datos, pues se usa la ruta para encontrar existente
         datos.setNombre(dto.getNombre());
         datos.setApellido(dto.getApellido());
         datos.setTelefono(dto.getTelefono());
         datos.setEmail(dto.getEmail());
         datos.setDireccion(dto.getDireccion());
-        // fechaRegistro no se toca
 
         Cliente actualizado = clienteService.actualizarCliente(cedula, datos);
         return ResponseEntity.ok(actualizado);

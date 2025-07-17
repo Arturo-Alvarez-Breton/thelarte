@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@DiscriminatorValue("EMPLEADO")
-public class Empleado extends Persona {
+@Table(name = "empleados")
+public class Empleado {
 
     @Id
     @Column(name = "cedula", nullable = false, unique = true, length = 20)
@@ -36,41 +36,27 @@ public class Empleado extends Persona {
     @Column(name = "fecha_contratacion")
     private LocalDate fechaContratacion;
 
-    public Empleado() {
-        super();
-    }
+    public Empleado() {}
 
-    public Empleado(String cedula, String nombre, String apellido, String telefono,
-                    String email, com.thelarte.user.util.Rol rol, Float salario, LocalDate fechaContratacion) {
-        super(cedula, nombre, apellido, telefono, email);
-        this.rol = rol;
-        this.salario = salario;
-        this.fechaContratacion = fechaContratacion;
-    }
-
-    public com.thelarte.user.util.Rol getRol() {
-        return rol;
-    }
-    public void setRol(com.thelarte.user.util.Rol rol) {
-        this.rol = rol;
-    }
-
-    public Float getSalario() {
-        return salario;
-    }
-    public void setSalario(Float salario) {
-        this.salario = salario;
-    }
-
+    // Getters y setters
+    public String getCedula() { return cedula; }
+    public void setCedula(String cedula) { this.cedula = cedula; }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getApellido() { return apellido; }
+    public void setApellido(String apellido) { this.apellido = apellido; }
+    public String getTelefono() { return telefono; }
+    public void setTelefono(String telefono) { this.telefono = telefono; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public com.thelarte.user.util.Rol getRol() { return rol; }
+    public void setRol(com.thelarte.user.util.Rol rol) { this.rol = rol; }
+    public Float getSalario() { return salario; }
+    public void setSalario(Float salario) { this.salario = salario; }
     public Float getComision() { return comision; }
     public void setComision(Float comision) { this.comision = comision; }
-
-    public LocalDate getFechaContratacion() {
-        return fechaContratacion;
-    }
-    public void setFechaContratacion(LocalDate fechaContratacion) {
-        this.fechaContratacion = fechaContratacion;
-    }
+    public LocalDate getFechaContratacion() { return fechaContratacion; }
+    public void setFechaContratacion(LocalDate fechaContratacion) { this.fechaContratacion = fechaContratacion; }
 
     @PrePersist
     public void prePersist() {

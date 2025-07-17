@@ -22,7 +22,6 @@ public class EmpleadoServiceImpl implements EmpleadoService {
 
     @Override
     public Empleado crearEmpleado(Empleado empleado) {
-        // Validaciones adicionales si se desean (e.g. duplicados)
         if (empleado.getRol() != Rol.COMERCIAL) {
             empleado.setComision(null);
         }
@@ -60,7 +59,6 @@ public class EmpleadoServiceImpl implements EmpleadoService {
             existente.setComision(null);
         }
 
-        // No modificamos fechaContratacion: se mantiene la original establecida en creación
         return empleadoRepository.save(existente);
     }
 
