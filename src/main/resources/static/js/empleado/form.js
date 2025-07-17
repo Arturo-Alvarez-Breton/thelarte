@@ -87,7 +87,7 @@ function validateForm(data) {
             showError('comision', 'La comisión es obligatoria para empleados comerciales');
             valid = false;
         } else if (isNaN(data.comision) || data.comision < 0 || data.comision > 100) {
-            showError('comision', 'La comisión debe ser un número entre 0 y 100');
+            showError('comision', 'La comisión debe ser un valor numérico entre 0 y 100');
             valid = false;
         }
     }
