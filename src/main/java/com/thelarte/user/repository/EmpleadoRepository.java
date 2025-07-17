@@ -10,6 +10,5 @@ import com.thelarte.user.model.Empleado;
  */
 @Repository
 public interface EmpleadoRepository extends JpaRepository<Empleado, String> {
-    // Removed findByEmail method as it's not used and causing query creation errors
-    // If needed in the future, ensure the email property is accessible from Empleado entity
+    boolean existsById(String cedula);
 }

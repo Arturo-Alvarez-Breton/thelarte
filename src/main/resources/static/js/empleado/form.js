@@ -1,5 +1,3 @@
-// /js/empleado/form.js
-
 // Formateo de cédula y teléfono
 function formatCedula(e) {
     const input = e.target;
@@ -43,7 +41,7 @@ function clearError(fieldId) {
 // Validación local
 function validateForm(data) {
     let valid = true;
-    ['cedula','nombre','apellido','telefono','rol','salario','email'].forEach(f => clearError(f));
+    ['cedula','nombre','apellido','telefono','rol','salario','email','userPassword','comision'].forEach(f => clearError(f));
 
     if (!data.cedula) {
         showError('cedula','La cédula es obligatoria'); valid = false;
@@ -53,12 +51,8 @@ function validateForm(data) {
             showError('cedula','Formato de cédula inválido'); valid = false;
         }
     }
-    if (!data.nombre) {
-        showError('nombre','El nombre es obligatorio'); valid = false;
-    }
-    if (!data.apellido) {
-        showError('apellido','El apellido es obligatorio'); valid = false;
-    }
+    if (!data.nombre) { showError('nombre','El nombre es obligatorio'); valid = false; }
+    if (!data.apellido) { showError('apellido','El apellido es obligatorio'); valid = false; }
     if (!data.telefono) {
         showError('telefono','El teléfono es obligatorio'); valid = false;
     } else {
@@ -67,9 +61,7 @@ function validateForm(data) {
             showError('telefono','Formato de teléfono inválido'); valid = false;
         }
     }
-    if (!data.rol) {
-        showError('rol','El rol es obligatorio'); valid = false;
-    }
+    if (!data.rol) { showError('rol','El rol es obligatorio'); valid = false; }
     if (data.salario == null) {
         showError('salario','El salario es obligatorio'); valid = false;
     } else if (isNaN(data.salario) || data.salario < 0) {
@@ -78,32 +70,28 @@ function validateForm(data) {
     if (!data.email) {
         showError('email', 'El correo electrónico es obligatorio'); valid = false;
     } else {
-        // Validación básica de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(data.email)) {
             showError('email', 'El correo electrónico no es válido'); valid = false;
         }
     }
-    return valid;
-}
-
-async function verifyToken(token) {
-    try {
-        const resp = await fetch('/api/dashboard/validate', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!resp.ok) {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userEmail');
-            window.location.href = '/pages/login.html';
-            return false;
+    if (!cedulaParam) {
+        if (!data.userPassword) {
+            showError('userPassword', 'La contraseña para el usuario es obligatoria'); valid = false;
+        } else if (data.userPassword.length < 8) {
+            showError('userPassword', 'La contraseña debe tener al menos 8 caracteres'); valid = false;
         }
-        const data = await resp.json();
-        return data.authorized;
-    } catch (err) {
-        console.error('Error validating token:', err);
-        return false;
     }
+    if (data.rol === 'COMERCIAL') {
+        if (data.comision == null || data.comision === '') {
+            showError('comision', 'La comisión es obligatoria para empleados comerciales');
+            valid = false;
+        } else if (isNaN(data.comision) || data.comision < 0 || data.comision > 100) {
+            showError('comision', 'La comisión debe ser un valor numérico entre 0 y 100');
+            valid = false;
+        }
+    }
+    return valid;
 }
 
 const form = document.getElementById('empleadoForm');
@@ -114,6 +102,7 @@ const params = new URLSearchParams(window.location.search);
 const cedulaParam = params.get('cedula');
 
 function setMode() {
+    const userPasswordContainer = document.getElementById('userPasswordContainer');
     if (cedulaParam) {
         document.title = 'Editar Empleado - Thelarte';
         titleEl.textContent = 'Editar Empleado';
@@ -121,11 +110,13 @@ function setMode() {
         submitBtn.textContent = 'Actualizar Empleado';
         document.getElementById('cedula').setAttribute('disabled','disabled');
         loadEmpleado();
+        if (userPasswordContainer) userPasswordContainer.classList.add('hidden');
     } else {
         document.title = 'Nuevo Empleado - Thelarte';
         titleEl.textContent = 'Nuevo Empleado';
         descEl.textContent = 'Registra un nuevo empleado en el sistema';
         submitBtn.textContent = 'Guardar Empleado';
+        if (userPasswordContainer) userPasswordContainer.classList.remove('hidden');
     }
 }
 
@@ -150,6 +141,17 @@ async function loadEmpleado() {
         document.getElementById('apellido').value = e.apellido || '';
         document.getElementById('telefono').value = e.telefono || '';
         if (e.rol) document.getElementById('rol').value = e.rol;
+
+        // Mostrar automáticamente el campo comisión si el empleado ya es COMERCIAL
+        const comisionContainer = document.getElementById('comisionContainer');
+        if (e.rol === 'COMERCIAL') {
+            comisionContainer.classList.remove('hidden');
+            document.getElementById('comision').value = e.comision != null ? e.comision : '';
+        } else {
+            comisionContainer.classList.add('hidden');
+            document.getElementById('comision').value = '';
+        }
+
         if (e.salario != null) document.getElementById('salario').value = e.salario;
         if (e.email) document.getElementById('email').value = e.email;
     } catch (err) {
@@ -170,13 +172,18 @@ form.addEventListener('submit', async e => {
     const nombre = document.getElementById('nombre').value.trim();
     const apellido = document.getElementById('apellido').value.trim();
     const telefono = document.getElementById('telefono').value.trim();
-    const rol = document.getElementById('rol').value;
+    const rolEmpleado = document.getElementById('rol').value;
     const salarioVal = document.getElementById('salario').value;
     const salario = salarioVal !== '' ? parseFloat(salarioVal) : null;
     const email = document.getElementById('email').value.trim();
+    const userPassword = document.getElementById('userPassword').value;
+    const comisionVal = document.getElementById('comision').value;
+    const comision = comisionVal !== '' ? parseFloat(comisionVal) : null;
 
-    const data = { cedula, nombre, apellido, telefono, rol, salario, email };
+    // Username: nombre + apellido sin espacios y en minúsculas
+    const usuarioNombre = (nombre + apellido).replace(/\s+/g, '').toLowerCase();
 
+    const data = { cedula, nombre, apellido, telefono, rol: rolEmpleado, salario, email, userPassword, comision };
     if (!validateForm(data)) {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -190,42 +197,47 @@ form.addEventListener('submit', async e => {
     const method = cedulaParam ? 'PUT' : 'POST';
 
     let bodyPayload;
-    if (cedulaParam) {
-        bodyPayload = {
-            nombre,
-            apellido,
-            telefono,
-            rol,
-            salario,
-            email
-        };
-    } else {
+    // Si es alta (modo creación), incluir la cédula en el payload
+    if (!cedulaParam) {
         bodyPayload = {
             cedula,
             nombre,
             apellido,
             telefono,
-            rol,
+            rol: rolEmpleado,
             salario,
-            email
+            email,
+            comision
+        };
+    } else {
+        bodyPayload = {
+            nombre,
+            apellido,
+            telefono,
+            rol: rolEmpleado,
+            salario,
+            email,
+            comision
         };
     }
 
-    // Si es alta, pedir la contraseña antes de enviar
-    if (!cedulaParam) {
-        // Mostrar popout simple (puedes usar SweetAlert2, aquí un prompt básico)
-        let contrasena = prompt("Digite la contraseña para el usuario de este empleado:");
-        if (!contrasena || contrasena.length < 8) {
-            alert("Debe ingresar una contraseña de al menos 8 caracteres.");
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            return;
+    // Mapeo de rol empleado → userRole para crear usuario
+    function mapEmpleadoRolToUserRole(rol) {
+        switch (rol) {
+            case "ADMIN": return "GERENTE";
+            case "USER": return "TI";
+            case "COMERCIAL": return "VENDEDOR";
+            case "CAJERO": return "CONTABILIDAD";
+            default: return "VENDEDOR";
         }
+    }
+    const userRole = mapEmpleadoRolToUserRole(rolEmpleado);
 
+    if (!cedulaParam) {
         try {
             // 1. Crear empleado
             const resp = await fetch(url, {
-                method,
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -234,24 +246,16 @@ form.addEventListener('submit', async e => {
             });
             if (resp.status === 400) {
                 const errors = await resp.json();
-                Object.entries(errors).forEach(([field, msg]) => {
-                    showError(field, msg);
-                });
+                Object.entries(errors).forEach(([field, msg]) => showError(field, msg));
                 throw new Error('Validation error');
             }
-            if (resp.status === 403) {
-                alert('No autorizado para esta acción');
-                throw new Error('Forbidden');
-            }
-            if (!resp.ok) {
-                throw new Error(`HTTP error! status: ${resp.status}`);
-            }
-            // 2. Crear usuario asociado
-            const username = (nombre + apellido).replace(/\s+/g, '');
+            if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+
+            // 2. Crear usuario vinculado
             const userPayload = {
-                username: username,
-                password: contrasena,
-                roles: [rol]
+                username: usuarioNombre,
+                password: userPassword,
+                roles: [userRole]
             };
             const userResp = await fetch('/register', {
                 method: 'POST',
@@ -277,7 +281,7 @@ form.addEventListener('submit', async e => {
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
         }
-        return; // ¡No continuar al flujo de edición!
+        return;
     }
 
     // Si es edición, flujo normal
@@ -292,9 +296,7 @@ form.addEventListener('submit', async e => {
         });
         if (resp.status === 400) {
             const errors = await resp.json();
-            Object.entries(errors).forEach(([field, msg]) => {
-                showError(field, msg);
-            });
+            Object.entries(errors).forEach(([field, msg]) => showError(field, msg));
             throw new Error('Validation error');
         }
         if (resp.status === 403) {
@@ -323,33 +325,22 @@ form.addEventListener('submit', async e => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        window.location.href = '/pages/login.html';
-        return;
-    }
-    verifyToken(token);
-
-    const welcomeMessage = document.getElementById('welcomeMessage');
-    const userEmail = localStorage.getItem('userEmail') || 'Usuario';
-    if (welcomeMessage) welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
-    const roleInfo = document.getElementById('roleInfo');
-    if (roleInfo) roleInfo.textContent = 'Usuario';
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (confirm('¿Cerrar sesión?')) {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userEmail');
-                window.location.href = '/pages/login.html';
-            }
-        });
-    }
-
     const cedEl = document.getElementById('cedula');
     const telEl = document.getElementById('telefono');
     if (cedEl) cedEl.addEventListener('input', formatCedula);
     if (telEl) telEl.addEventListener('input', formatTelefono);
 
     setMode();
+});
+
+document.getElementById('rol').addEventListener('change', function () {
+    const rol = this.value;
+    const comisionContainer = document.getElementById('comisionContainer');
+    if (rol === 'COMERCIAL') {
+        comisionContainer.classList.remove('hidden');
+    } else {
+        comisionContainer.classList.add('hidden');
+        document.getElementById('comision').value = '';
+        clearError('comision');
+    }
 });

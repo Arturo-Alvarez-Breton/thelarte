@@ -2,6 +2,12 @@ package com.thelarte.config;
 
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.service.UserService;
+import com.thelarte.user.model.Cliente;
+import com.thelarte.user.model.Empleado;
+import com.thelarte.user.repository.ClienteRepository;
+import com.thelarte.user.repository.EmpleadoRepository;
+import com.thelarte.user.util.Rol;
+import org.h2.tools.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +15,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -18,90 +25,202 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private EmpleadoRepository empleadoRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
     @Override
     public void run(String... args) throws Exception {
-        // Iniciar H2 TCP Server si no está ejecutándose
+        // 1) Iniciar H2 TCP Server
         startH2ServerIfNeeded();
-        
-        // Pequeña pausa para que el servidor se establezca
+
+        // 2) Pequeña pausa para que arranque bien
         Thread.sleep(2000);
-        
-        // Crear usuarios por defecto si no existen
-        if (!userService.existsByUsername("edwinb")) {
-            userService.createUser("edwinb", "1234", java.util.Collections.singletonList(UserRole.VENDEDOR));
-            logger.info("Usuario creado: edwinb / 1234");
-        }
-        
-        if (!userService.existsByUsername("jeanp")) {
-            userService.createUser("jeanp", "1234");
-            logger.info("Usuario creado: jeanp / 1234");
-        }
-        
-        if (!userService.existsByUsername("arturob")) {
-            userService.createUser("arturob", "1234");
-            logger.info("Usuario creado: arturob / 1234");
-        }
-        
-        // Crear usuarios con roles específicos
-        if (!userService.existsByUsername("egerente")) {
-            userService.createUser("egerente", "1234", java.util.Collections.singletonList(UserRole.GERENTE));
-            logger.info("Usuario creado: egerente / 1234 (GERENTE)");
-        }
-        
-        if (!userService.existsByUsername("eti")) {
-            userService.createUser("eti", "1234", java.util.Collections.singletonList(UserRole.TI));
-            logger.info("Usuario creado: eti / 1234 (TI)");
-        }
-        
-        if (!userService.existsByUsername("evendedor")) {
-            userService.createUser("evendedor", "1234", java.util.Collections.singletonList(UserRole.VENDEDOR));
-            logger.info("Usuario creado: evendedor / 1234 (VENDEDOR)");
-        }
-        
-        if (!userService.existsByUsername("econtabilidad")) {
-            userService.createUser("econtabilidad", "1234", java.util.Collections.singletonList(UserRole.CONTABILIDAD));
-            logger.info("Usuario creado: econtabilidad / 1234 (CONTABILIDAD)");
-        }
+
+        // 3) Cargar datos de dominio
+        seedEmpleados();
+        seedClientes();
+        seedAdminRoot();
     }
-    
+
     private void startH2ServerIfNeeded() {
         try {
-            // Verificar si el servidor ya está ejecutándose
-            boolean serverRunning = isH2ServerRunning();
-            
-            if (!serverRunning) {
+            if (!isH2ServerRunning()) {
                 logger.info("Iniciando H2 TCP Server...");
-                // Crear y iniciar el servidor H2 TCP
-                org.h2.tools.Server server = org.h2.tools.Server.createTcpServer(
-                    "-tcp", 
-                    "-tcpPort", "9092", 
-                    "-tcpAllowOthers", 
-                    "-ifNotExists"
+                Server server = Server.createTcpServer(
+                        "-tcp",
+                        "-tcpPort", "9092",
+                        "-tcpAllowOthers",
+                        "-ifNotExists"
                 );
                 server.start();
-                logger.info("H2 TCP Server iniciado exitosamente en puerto 9092");
+                logger.info("H2 TCP Server iniciado en puerto 9092");
             } else {
-                logger.info("H2 TCP Server ya está ejecutándose");
+                logger.info("H2 TCP Server ya está en ejecución");
             }
         } catch (SQLException e) {
-            logger.error("Error al iniciar H2 TCP Server: " + e.getMessage());
-            logger.info("Intentando continuar sin servidor TCP...");
+            logger.error("Error al iniciar H2 TCP Server: {}", e.getMessage());
+            logger.info("Continuando sin servidor TCP H2...");
         } catch (Exception e) {
-            logger.warn("No se pudo iniciar H2 TCP Server automáticamente: " + e.getMessage());
-            logger.info("Asegúrate de que el servidor H2 esté ejecutándose manualmente o verifica la configuración");
+            logger.warn("No se pudo iniciar H2 automáticamente: {}", e.getMessage());
         }
     }
-    
+
     private boolean isH2ServerRunning() {
         try {
-            // Intentar crear una conexión de prueba
-            java.sql.Connection testConnection = java.sql.DriverManager.getConnection(
-                "jdbc:h2:tcp://localhost:9092/~/thelarte", "sa", "");
-            testConnection.close();
+            // Intentar conexión de prueba
+            java.sql.Connection conn = java.sql.DriverManager.getConnection(
+                    "jdbc:h2:tcp://localhost:9092/~/thelarte", "sa", ""
+            );
+            conn.close();
             return true;
         } catch (Exception e) {
             return false;
         }
     }
 
+    private void seedEmpleados() {
+        // Edwin Brito - Comercial
+        if (!empleadoRepository.existsById("40222022001")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022001");
+            emp.setNombre("Edwin");
+            emp.setApellido("Brito");
+            emp.setTelefono("809-555-1001");
+            emp.setEmail("edwin.brito@ejemplo.com");
+            emp.setRol(Rol.COMERCIAL);
+            emp.setSalario(25000f);
+            emp.setComision(10.0f);
+            empleadoRepository.save(emp);
+
+            if (!userService.existsByUsername("edwinbrito")) {
+                userService.createUser(
+                    "edwinbrito",
+                    "contrasena123",
+                    Arrays.asList(UserRole.VENDEDOR),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: edwinbrito (VENDEDOR, empleado: 40222022001)");
+            }
+        }
+
+        // Ana Garcia - Gerente
+        if (!empleadoRepository.existsById("40222022002")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022002");
+            emp.setNombre("Ana");
+            emp.setApellido("Garcia");
+            emp.setTelefono("809-555-2002");
+            emp.setEmail("ana.garcia@ejemplo.com");
+            emp.setRol(Rol.ADMIN);
+            emp.setSalario(40000f);
+            emp.setComision(null);
+            empleadoRepository.save(emp);
+
+            if (!userService.existsByUsername("anagarcia")) {
+                userService.createUser(
+                    "anagarcia",
+                    "managerpass",
+                    Arrays.asList(UserRole.GERENTE),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: anagarcia (GERENTE, empleado: 40222022002)");
+            }
+        }
+
+        // Juan Pérez - TI
+        if (!empleadoRepository.existsById("40222022003")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022003");
+            emp.setNombre("Juan");
+            emp.setApellido("Pérez");
+            emp.setTelefono("809-555-3003");
+            emp.setEmail("juan.perez@ejemplo.com");
+            emp.setRol(Rol.TI);
+            emp.setSalario(32000f);
+            emp.setComision(null);
+            empleadoRepository.save(emp);
+
+            if (!userService.existsByUsername("juanperez")) {
+                userService.createUser(
+                    "juanperez",
+                    "tipass",
+                    Arrays.asList(UserRole.TI),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: juanperez (TI, empleado: 40222022003)");
+            }
+        }
+
+        // Carla Santos - Cajero
+        if (!empleadoRepository.existsById("40222022004")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022004");
+            emp.setNombre("Carla");
+            emp.setApellido("Santos");
+            emp.setTelefono("809-555-4004");
+            emp.setEmail("carla.santos@ejemplo.com");
+            emp.setRol(Rol.CAJERO);
+            emp.setSalario(18000f);
+            emp.setComision(null);
+            empleadoRepository.save(emp);
+
+            if (!userService.existsByUsername("carlasantos")) {
+                userService.createUser(
+                    "carlasantos",
+                    "cajeropass",
+                    Arrays.asList(UserRole.CONTABILIDAD),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: carlasantos (CONTABILIDAD, empleado: 40222022004)");
+            }
+        }
+    }
+
+    private void seedClientes() {
+        if (!clienteRepository.existsById("001-1234567-1")) {
+            Cliente c = new Cliente();
+            c.setCedula("001-1234567-1");
+            c.setNombre("Pedro");
+            c.setApellido("Martínez");
+            c.setTelefono("829-555-1111");
+            c.setEmail("pedro.martinez@dominio.com");
+            c.setDireccion("Av. Independencia #100, Santo Domingo");
+            clienteRepository.save(c);
+        }
+        if (!clienteRepository.existsById("402-9876543-2")) {
+            Cliente c = new Cliente();
+            c.setCedula("402-9876543-2");
+            c.setNombre("Luisa");
+            c.setApellido("Fernández");
+            c.setTelefono("829-555-2222");
+            c.setEmail("luisa.fernandez@dominio.com");
+            c.setDireccion("Calle Duarte #55, Santiago");
+            clienteRepository.save(c);
+        }
+        if (!clienteRepository.existsById("003-5555555-3")) {
+            Cliente c = new Cliente();
+            c.setCedula("003-5555555-3");
+            c.setNombre("José");
+            c.setApellido("Gómez");
+            c.setTelefono("829-555-3333");
+            c.setEmail("jose.gomez@dominio.com");
+            c.setDireccion("Calle El Sol #10, La Vega");
+            clienteRepository.save(c);
+        }
+    }
+
+    private void seedAdminRoot() {
+        if (!userService.existsByUsername("adminroot")) {
+            userService.createUser(
+                "adminroot",
+                "rootsecure",
+                Arrays.asList(UserRole.GERENTE),
+                null
+            );
+            logger.info("Usuario creado: adminroot (GERENTE, sin empleado)");
+        }
+    }
 }

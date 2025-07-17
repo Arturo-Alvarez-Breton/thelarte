@@ -1,37 +1,78 @@
 package com.thelarte.user.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
-/**
- * Entidad que extiende a Persona para representar Clientes.
- */
 @Entity
-@DiscriminatorValue("CLIENTE")
-public class Cliente extends Persona {
+@Table(name = "clientes")
+public class Cliente {
 
-    @NotBlank(message = "La dirección es obligatoria")
-    @Column(nullable = true)
+    @Id
+    @Column(name = "cedula", nullable = false, unique = true, length = 20)
+    private String cedula;
+
+    @Column(name = "nombre", nullable = false)
+    private String nombre;
+
+    @Column(name = "apellido", nullable = false)
+    private String apellido;
+
+    @Column(name = "telefono", nullable = false)
+    private String telefono;
+
+    @Column(name = "email", nullable = true, unique = true)
+    private String email;
+
+    @Column(name = "direccion", nullable = true)
     private String direccion;
 
-    @Column(name = "FECHA_REGISTRO", nullable = true)
+    @Column(name = "fecha_registro")
     private LocalDate fechaRegistro;
 
-    // Constructores
-    public Cliente() {
-        super();
+    public Cliente() {}
+
+    // Getters y setters
+
+    public String getCedula() {
+        return cedula;
     }
 
-    public Cliente(String cedula, String nombre, String apellido, String telefono,
-                   String email, String direccion, LocalDate fechaRegistro) {
-
-        super(cedula, nombre, apellido, telefono, email);
-        this.direccion = direccion;
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
     }
 
-    // Getters y Setters
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getApellido() {
+        return apellido;
+    }
+
+    public void setApellido(String apellido) {
+        this.apellido = apellido;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getDireccion() {
         return direccion;
     }

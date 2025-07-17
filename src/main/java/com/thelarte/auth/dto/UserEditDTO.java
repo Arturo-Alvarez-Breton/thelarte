@@ -36,4 +36,12 @@ public class UserEditDTO {
     public void setActive(Boolean active) {
         this.active = active;
     }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
 }
