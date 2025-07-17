@@ -1,4 +1,3 @@
-// /js/empleado/index.js
 const tableBody = document.getElementById('empleadosTable');
 const emptyState = document.getElementById('emptyState');
 
@@ -47,9 +46,8 @@ async function loadEmpleados() {
         emptyState.classList.add('hidden');
         tableBody.innerHTML = data.map(emp => `
       <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4 text-sm font-medium text-gray-900">${emp.cedula}</td>
-        <td class="px-6 py-4 text-sm text-gray-900">${emp.nombre}</td>
-        <td class="px-6 py-4 text-sm text-gray-500">${emp.apellido}</td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">${emp.nombre}</td>
+        <td class="px-6 py-4 text-sm text-gray-900">${emp.apellido}</td>
         <td class="px-6 py-4 text-sm text-gray-500">${emp.telefono || 'N/A'}</td>
         <td class="px-6 py-4 text-sm text-gray-500">${emp.rol || 'N/A'}</td>
         <td class="px-6 py-4 text-sm text-gray-500">${emp.salario != null ? emp.salario : 'N/A'}</td>

@@ -1,4 +1,3 @@
-// /js/cliente/index.js
 const tableBody = document.getElementById('clientesTable');
 const emptyState = document.getElementById('emptyState');
 
@@ -15,17 +14,16 @@ async function loadClientes() {
         if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
         const data = await resp.json();
         if (!Array.isArray(data) || data.length === 0) {
-            tableBody.parentElement.style.display = 'none';
+            tableBody.parentElQement.style.display = 'none';
             emptyState.classList.remove('hidden');
             return;
         }
-        tableBody.parentElement.style.display = 'block';
+        tableBody.parentElement.style.display = 'table';
         emptyState.classList.add('hidden');
         tableBody.innerHTML = data.map(c => `
       <tr class="hover:bg-gray-50">
-        <td class="px-6 py-4 text-sm font-medium text-gray-900">${c.cedula}</td>
-        <td class="px-6 py-4 text-sm text-gray-900">${c.nombre}</td>
-        <td class="px-6 py-4 text-sm text-gray-500">${c.apellido}</td>
+        <td class="px-6 py-4 text-sm font-medium text-gray-900">${c.nombre}</td>
+        <td class="px-6 py-4 text-sm text-gray-900">${c.apellido}</td>
         <td class="px-6 py-4 text-sm text-gray-500">${c.telefono || 'N/A'}</td>
         <td class="px-6 py-4 text-sm text-gray-500">${c.email || 'N/A'}</td>
         <td class="px-6 py-4 text-sm text-center">
