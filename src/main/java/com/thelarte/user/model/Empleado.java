@@ -7,14 +7,30 @@ import java.time.LocalDate;
 @DiscriminatorValue("EMPLEADO")
 public class Empleado extends Persona {
 
+    @Id
+    @Column(name = "cedula", nullable = false, unique = true, length = 20)
+    private String cedula;
+
+    @Column(name = "nombre", nullable = false)
+    private String nombre;
+
+    @Column(name = "apellido", nullable = false)
+    private String apellido;
+
+    @Column(name = "telefono", nullable = false)
+    private String telefono;
+
+    @Column(name = "email", nullable = true, unique = true)
+    private String email;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "ROL", nullable = false, length = 20)
+    @Column(name = "rol", nullable = false, length = 20)
     private com.thelarte.user.util.Rol rol;
 
-    @Column(name = "SALARIO", nullable = false)
+    @Column(name = "salario", nullable = false)
     private Float salario;
 
-    @Column(name = "FECHA_CONTRATACION")
+    @Column(name = "fecha_contratacion")
     private LocalDate fechaContratacion;
 
     public Empleado() {

@@ -3,6 +3,8 @@ package com.thelarte.auth.service;
 import com.thelarte.auth.entity.User;
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.repository.UserRepository;
+import com.thelarte.user.model.Empleado;
+import com.thelarte.user.repository.EmpleadoRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,22 +19,30 @@ import java.util.Optional;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final EmpleadoRepository empleadoRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, EmpleadoRepository empleadoRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.empleadoRepository = empleadoRepository;
         this.passwordEncoder = passwordEncoder;
-    }    @Override
+    }
+
+    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con username: " + username));
     }
 
     public User createUser(String username, String password) {
-        return createUser(username, password, Collections.singletonList(UserRole.VENDEDOR));
+        return createUser(username, password, Collections.singletonList(UserRole.VENDEDOR), null);
     }
 
     public User createUser(String username, String password, List<UserRole> roles) {
+        return createUser(username, password, roles, null);
+    }
+
+    public User createUser(String username, String password, List<UserRole> roles, String empleadoCedula) {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("El nombre de usuario ya está registrado");
         }
@@ -42,6 +52,12 @@ public class UserService implements UserDetailsService {
         newUser.setPassword(passwordEncoder.encode(password));
         newUser.setRoles(roles);
         newUser.setActive(true);
+
+        // Relación con empleado si existe la cédula
+        if (empleadoCedula != null) {
+            Optional<Empleado> empleadoOpt = empleadoRepository.findById(empleadoCedula);
+            empleadoOpt.ifPresent(newUser::setEmpleado);
+        }
 
         return userRepository.save(newUser);
     }

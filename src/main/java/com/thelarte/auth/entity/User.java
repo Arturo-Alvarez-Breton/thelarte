@@ -1,5 +1,6 @@
 package com.thelarte.auth.entity;
 
+import com.thelarte.user.model.Empleado;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,30 +12,35 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-      @Column(unique = true, nullable = false)
+
+    @Column(unique = true, nullable = false)
     private String username;
-    
+
     @Column(unique = true, nullable = true)
     private String email;
-    
+
     @Column(nullable = false)
     private String password;
-    
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id")
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id")
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
     private List<UserRole> roles;
-    
+
     @Column(nullable = false)
     private boolean active;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empleado_cedula", referencedColumnName = "cedula", nullable = true)
+    private Empleado empleado;
 
     // Constructors
     public User() {
@@ -97,6 +103,14 @@ public class User implements UserDetails {
     public void setActive(boolean active) {
         this.active = active;
     }
+    public com.thelarte.user.model.Empleado getEmpleado() {
+        return empleado;
+    }
+
+    public void setEmpleado(com.thelarte.user.model.Empleado empleado) {
+        this.empleado = empleado;
+    }
+
 
     // Implementation of UserDetails methods
     @Override
