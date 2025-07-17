@@ -93,6 +93,8 @@ public class UserService implements UserDetailsService {
         User user = userOpt.get();
 
         if (newUsername != null && !newUsername.isBlank() && !newUsername.equals(oldUsername)) {
+            // Validar el nuevo nombre de usuario
+            validateUsername(newUsername);
             // Verificar que el nuevo username no exista
             if (userRepository.existsByUsername(newUsername)) {
                 throw new RuntimeException("El nuevo nombre de usuario ya está registrado");
