@@ -30,6 +30,9 @@ public class Empleado extends Persona {
     @Column(name = "salario", nullable = false)
     private Float salario;
 
+    @Column(name = "comision")
+    private Float comision;
+
     @Column(name = "fecha_contratacion")
     private LocalDate fechaContratacion;
 
@@ -58,6 +61,9 @@ public class Empleado extends Persona {
     public void setSalario(Float salario) {
         this.salario = salario;
     }
+
+    public Float getComision() { return comision; }
+    public void setComision(Float comision) { this.comision = comision; }
 
     public LocalDate getFechaContratacion() {
         return fechaContratacion;

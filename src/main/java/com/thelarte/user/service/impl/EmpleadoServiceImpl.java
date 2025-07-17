@@ -2,6 +2,7 @@ package com.thelarte.user.service.impl;
 
 import com.thelarte.user.service.EmpleadoService;
 import com.thelarte.shared.exception.EntityNotFoundException;
+import com.thelarte.user.util.Rol;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.thelarte.user.model.Empleado;
@@ -22,6 +23,9 @@ public class EmpleadoServiceImpl implements EmpleadoService {
     @Override
     public Empleado crearEmpleado(Empleado empleado) {
         // Validaciones adicionales si se desean (e.g. duplicados)
+        if (empleado.getRol() != Rol.COMERCIAL) {
+            empleado.setComision(null);
+        }
         return empleadoRepository.save(empleado);
     }
 
@@ -48,8 +52,14 @@ public class EmpleadoServiceImpl implements EmpleadoService {
         existente.setTelefono(datosActualizados.getTelefono());
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
-        // Actualiza el email también
         existente.setEmail(datosActualizados.getEmail());
+
+        if (datosActualizados.getRol() == Rol.COMERCIAL) {
+            existente.setComision(datosActualizados.getComision());
+        } else {
+            existente.setComision(null);
+        }
+
         // No modificamos fechaContratacion: se mantiene la original establecida en creación
         return empleadoRepository.save(existente);
     }

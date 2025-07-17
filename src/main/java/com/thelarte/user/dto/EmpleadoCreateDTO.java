@@ -22,6 +22,8 @@ public class EmpleadoCreateDTO {
     @PositiveOrZero(message = "El salario no puede ser negativo")
     private Float salario;
 
+    private Float comision;
+
     @NotBlank(message = "El correo electrónico es obligatorio")
     private String email;
 
@@ -40,4 +42,6 @@ public class EmpleadoCreateDTO {
     public void setSalario(Float salario) { this.salario = salario; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public Float getComision() { return comision; }
+    public void setComision(Float comision) { this.comision = comision; }
 }
