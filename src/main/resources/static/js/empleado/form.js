@@ -167,6 +167,7 @@ form.addEventListener('submit', async e => {
     submitBtn.disabled = true;
     submitBtn.textContent = cedulaParam ? 'Actualizando...' : 'Guardando...';
 
+    // Recoger datos directamente de los elementos del formulario
     const cedula = document.getElementById('cedula').value.trim();
     const nombre = document.getElementById('nombre').value.trim();
     const apellido = document.getElementById('apellido').value.trim();

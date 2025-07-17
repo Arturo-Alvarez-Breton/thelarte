@@ -12,19 +12,20 @@ import java.util.Optional;
  */
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, String> {
-    /**
-     * Verifica si existe un cliente por su cédula.
-     *
-     * @param cedula la cédula del cliente
-     * @return true si existe, false en caso contrario
-     */
-    boolean existsById(String cedula);
 
     /**
-     * Busca un cliente por su cédula.
+     * Busca un cliente por su correo electrónico.
+     *
+     * @param email el correo electrónico del cliente
+     * @return un Optional con el Cliente si existe
+     */
+    Optional<Cliente> findByEmail(String email);
+
+    /**
+     * Verifica si existe un cliente con la cédula dada.
      *
      * @param cedula la cédula del cliente
-     * @return un Optional que contiene el Cliente si se encuentra, o vacío si no
+     * @return true si existe
      */
-    Optional<Cliente> findById(String cedula);
+    boolean existsByCedula(String cedula);
 }

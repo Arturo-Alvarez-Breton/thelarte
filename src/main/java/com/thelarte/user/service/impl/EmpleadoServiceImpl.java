@@ -49,15 +49,17 @@ public class EmpleadoServiceImpl implements EmpleadoService {
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
+        existente.setEmail(datosActualizados.getEmail());
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
-        existente.setEmail(datosActualizados.getEmail());
 
         if (datosActualizados.getRol() == Rol.COMERCIAL) {
             existente.setComision(datosActualizados.getComision());
         } else {
             existente.setComision(null);
         }
+
+        // fechaContratacion se mantiene tal cual fue establecida en la creación
 
         return empleadoRepository.save(existente);
     }

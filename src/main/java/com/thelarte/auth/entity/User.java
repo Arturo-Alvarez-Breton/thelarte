@@ -5,9 +5,9 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Collection;
 import java.util.List;
-
 
 @Entity
 @Table(name = "users")
@@ -20,16 +20,13 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @Column(unique = true, nullable = true)
-    private String email;
-
     @Column(nullable = false)
     private String password;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id")
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id")
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
@@ -39,22 +36,20 @@ public class User implements UserDetails {
     private boolean active;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empleado_cedula", referencedColumnName = "cedula", nullable = true)
+    @JoinColumn(name = "empleado_cedula", referencedColumnName = "cedula")
     private Empleado empleado;
 
-    // Constructors
-    public User() {
-    }
+    public User() {}
 
-    public User(String username, String email, String password, List<UserRole> roles, boolean active) {
+    public User(String username, String password, List<UserRole> roles, boolean active) {
         this.username = username;
-        this.email = email;
         this.password = password;
         this.roles = roles;
         this.active = active;
     }
 
-    // Getters and Setters
+    // Getters & Setters
+
     public Long getId() {
         return id;
     }
@@ -63,20 +58,13 @@ public class User implements UserDetails {
         this.id = id;
     }
 
+    @Override
     public String getUsername() {
         return username;
     }
 
     public void setUsername(String username) {
         this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     @Override
@@ -87,7 +75,7 @@ public class User implements UserDetails {
     public void setPassword(String password) {
         this.password = password;
     }
-    
+
     public List<UserRole> getRoles() {
         return roles;
     }
@@ -95,29 +83,30 @@ public class User implements UserDetails {
     public void setRoles(List<UserRole> roles) {
         this.roles = roles;
     }
-    
+
     public boolean isActive() {
         return active;
     }
-    
+
     public void setActive(boolean active) {
         this.active = active;
     }
-    public com.thelarte.user.model.Empleado getEmpleado() {
+
+    public Empleado getEmpleado() {
         return empleado;
     }
 
-    public void setEmpleado(com.thelarte.user.model.Empleado empleado) {
+    public void setEmpleado(Empleado empleado) {
         this.empleado = empleado;
     }
 
+    // UserDetails
 
-    // Implementation of UserDetails methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
-                .toList();
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+            .toList();
     }
 
     @Override

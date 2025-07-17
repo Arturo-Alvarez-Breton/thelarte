@@ -26,17 +26,22 @@ public class ClienteController {
 
     @PostMapping
     public ResponseEntity<Cliente> crearCliente(@Valid @RequestBody ClienteCreateDTO dto) {
-        Cliente cliente = new Cliente();
-        cliente.setCedula(dto.getCedula());
-        cliente.setNombre(dto.getNombre());
-        cliente.setApellido(dto.getApellido());
-        cliente.setTelefono(dto.getTelefono());
-        cliente.setEmail(dto.getEmail());
-        cliente.setDireccion(dto.getDireccion());
+        try {
+            Cliente cliente = new Cliente();
+            cliente.setCedula(dto.getCedula());
+            cliente.setNombre(dto.getNombre());
+            cliente.setApellido(dto.getApellido());
+            cliente.setTelefono(dto.getTelefono());
+            cliente.setEmail(dto.getEmail());
+            cliente.setDireccion(dto.getDireccion());
+            // fechaRegistro se asigna en @PrePersist
 
-        Cliente creado = clienteService.crearCliente(cliente);
-        URI ubicacion = URI.create("/api/clientes/" + creado.getCedula());
-        return ResponseEntity.created(ubicacion).body(creado);
+            Cliente creado = clienteService.crearCliente(cliente);
+            URI ubicacion = URI.create("/api/clientes/" + creado.getCedula());
+            return ResponseEntity.created(ubicacion).body(creado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping

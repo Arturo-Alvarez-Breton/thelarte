@@ -2,6 +2,7 @@ package com.thelarte.inventory.service;
 
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.dto.ProductoDTO;
+import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,9 +80,9 @@ public class ProductoService implements IProductoService {
         producto.setNombre(productoDTO.getNombre());
         producto.setTipo(productoDTO.getTipo());
         producto.setDescripcion(productoDTO.getDescripcion());
-        producto.setMarca(productoDTO.getMarca());
         producto.setItbis(productoDTO.getItbis());
-        producto.setPrecio(productoDTO.getPrecio());
+        producto.setPrecioCompra(productoDTO.getPrecioCompra());
+        producto.setPrecioVenta(productoDTO.getPrecioVenta());
         producto.setFotoURL(productoDTO.getFotoUrl());
 
         producto = productoRepository.save(producto);
@@ -118,13 +119,19 @@ public class ProductoService implements IProductoService {
     private ProductoDTO toDto(Producto p) {
         return new ProductoDTO(
                 p.getId(),
+                p.getCodigo(),
                 p.getNombre(),
                 p.getTipo(),
                 p.getDescripcion(),
-                p.getMarca(),
                 p.getItbis(),
-                p.getPrecio(),
-                p.getFotoURL()
-        );
+                p.getPrecioCompra(),
+                p.getPrecioVenta(),
+                p.getFotoURL(),
+                (int) p.getUnidades().stream()
+                    .filter(u -> u.getEstado() == com.thelarte.inventory.util.EstadoUnidad.DISPONIBLE)
+                    .count()
+
+        );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
+
     }
 }

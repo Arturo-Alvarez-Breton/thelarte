@@ -249,7 +249,7 @@ form.addEventListener('submit', async e => {
     submitBtn.disabled = true;
     submitBtn.textContent = cedulaParam ? 'Actualizando...' : 'Guardando...';
 
-    // Recoger datos
+    // Recoger datos directamente de los elementos del formulario
     const cedulaInput = document.getElementById('cedula').value.trim();
     const nombre = document.getElementById('nombre').value.trim();
     const apellido = document.getElementById('apellido').value.trim();
@@ -284,7 +284,6 @@ form.addEventListener('submit', async e => {
                 telefono,
                 email,
                 direccion: direccionCombinada
-                // no enviamos fechaRegistro
             };
         } else {
             bodyPayload = {
@@ -294,7 +293,6 @@ form.addEventListener('submit', async e => {
                 telefono,
                 email,
                 direccion: direccionCombinada
-                // no enviamos fechaRegistro
             };
         }
 

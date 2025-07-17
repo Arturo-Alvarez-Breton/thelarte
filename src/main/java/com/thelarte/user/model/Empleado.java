@@ -30,43 +30,97 @@ public class Empleado {
     @Column(name = "salario", nullable = false)
     private Float salario;
 
-    @Column(name = "comision")
+    @Column(name = "comision", nullable = true)
     private Float comision;
 
-    @Column(name = "fecha_contratacion")
+    @Column(name = "fecha_contratacion", nullable = false)
     private LocalDate fechaContratacion;
 
-    public Empleado() {}
+    public Empleado() {
+        // JPA requires a no-arg constructor
+    }
 
-    // Getters y setters
-    public String getCedula() { return cedula; }
-    public void setCedula(String cedula) { this.cedula = cedula; }
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
-    public String getTelefono() { return telefono; }
-    public void setTelefono(String telefono) { this.telefono = telefono; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public com.thelarte.user.util.Rol getRol() { return rol; }
-    public void setRol(com.thelarte.user.util.Rol rol) { this.rol = rol; }
-    public Float getSalario() { return salario; }
-    public void setSalario(Float salario) { this.salario = salario; }
-    public Float getComision() { return comision; }
+    // Getters & setters
+
+    public String getCedula() {
+        return cedula;
+    }
+
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getApellido() {
+        return apellido;
+    }
+
+    public void setApellido(String apellido) {
+        this.apellido = apellido;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public com.thelarte.user.util.Rol getRol() {
+        return rol;
+    }
+
+    public void setRol(com.thelarte.user.util.Rol rol) {
+        this.rol = rol;
+    }
+
+    public Float getSalario() {
+        return salario;
+    }
+
+    public void setSalario(Float salario) {
+        this.salario = salario;
+    }
+
+    public Float getComision() {
+        return comision;
+    }
+
     public void setComision(Float comision) {
         if (comision != null) {
             if (comision < 0 || comision > 100) {
-                throw new IllegalArgumentException("Comision must be between 0 and 100.");
+                throw new IllegalArgumentException("La comisión debe estar entre 0 y 100.");
             }
             if (this.rol != com.thelarte.user.util.Rol.COMERCIAL) {
-                throw new IllegalArgumentException("Comision can only be set for COMERCIAL role.");
+                throw new IllegalArgumentException("La comisión solo aplica al rol COMERCIAL.");
             }
         }
         this.comision = comision;
     }
-    public LocalDate getFechaContratacion() { return fechaContratacion; }
-    public void setFechaContratacion(LocalDate fechaContratacion) { this.fechaContratacion = fechaContratacion; }
+
+    public LocalDate getFechaContratacion() {
+        return fechaContratacion;
+    }
+
+    public void setFechaContratacion(LocalDate fechaContratacion) {
+        this.fechaContratacion = fechaContratacion;
+    }
 
     @PrePersist
     public void prePersist() {
