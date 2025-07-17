@@ -40,21 +40,21 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()  // TEMPORARY: Allow all requests for debugging
-            )
-//            .cors(cors -> cors.configurationSource(corsConfigurationSource()))            .authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/login", "/login.html", "/register", "/h2-console/**", "/", "/static/**", "/frontend/**", "/css/**", "/js/**", "/pages/**").permitAll()
-//                .requestMatchers("*.html", "*.css", "*.js").permitAll()
-//                .requestMatchers("/dashboard", "/dashboard.html").permitAll()  // Allow access, JS will handle auth
-//                .requestMatchers("/suplidor/**").permitAll()  // Make suplidor pages public
-//                .requestMatchers("/api/dashboard/validate").hasAnyRole("VENDEDOR", "GERENTE", "TI", "CONTABILIDAD")  // All roles can access dashboard
-//                .requestMatchers("/api/suplidores/**").permitAll()  // Make suplidor API public
-//                .requestMatchers("/api/productos/**").permitAll()
-//                .requestMatchers("/producto/**").permitAll()
-//                .requestMatchers("/uploads/**").permitAll()
-//                .requestMatchers("/api/unidades/**").permitAll()
-//                .requestMatchers("/unidades/**").permitAll()
-//                .anyRequest().authenticated())
+                .requestMatchers("/login", "/login.html", "/register", "/h2-console/**", "/", "/static/**", "/frontend/**", "/css/**", "/js/**", "/pages/**").permitAll()
+                .requestMatchers("*.html", "*.css", "*.js").permitAll()
+                .requestMatchers("/dashboard", "/dashboard.html").permitAll()  // Allow access, JS will handle auth
+                .requestMatchers("/suplidor/**").permitAll()  // Make suplidor pages public
+                .requestMatchers("/api/dashboard/validate").hasAnyRole("VENDEDOR", "GERENTE", "TI", "CONTABILIDAD", "COMPRAS_SUPLIDOR")  // All roles can access dashboard
+                .requestMatchers("/api/suplidores/**").permitAll()  // Make suplidor API public
+                .requestMatchers("/api/productos/**").permitAll()
+                .requestMatchers("/producto/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/unidades/**").permitAll()
+                .requestMatchers("/unidades/**").permitAll()
+                .requestMatchers("/api/transacciones/compra/**").hasRole("COMPRAS_SUPLIDOR")  // Protect compras routes
+                .requestMatchers("/pages/compras-suplidor/**").hasRole("COMPRAS_SUPLIDOR")  // Protect compras-suplidor pages
+                .requestMatchers("/api/compras/metricas").hasRole("COMPRAS_SUPLIDOR")  // Protect compras metrics
+                .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -68,7 +68,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         

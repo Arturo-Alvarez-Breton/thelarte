@@ -91,6 +91,9 @@ public class Transaccion {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     public Transaccion() {
         this.fechaCreacion = LocalDateTime.now();
         this.fecha = LocalDateTime.now();
@@ -316,6 +319,14 @@ public class Transaccion {
 
     public void setNumeroReferencia(String numeroReferencia) {
         this.numeroReferencia = numeroReferencia;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 
     public enum TipoTransaccion {

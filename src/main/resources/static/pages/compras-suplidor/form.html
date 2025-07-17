@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Compra a Suplidor | Thelarte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            300: '#59391B',
+                            400: '#4a2e16',
+                            500: '#59391B'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background: #59391B;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #4a2e16;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #e8f7f2 0%, #f0f8f4 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .card-header h2 {
+            color: #59391B;
+            font-weight: 600;
+            margin: 0;
+        }
+        .card-title {
+            color: #59391B;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #59391B;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #59391B;
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(89, 57, 27, 0.25);
+        }
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .input-group .form-control {
+            flex: 1;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -0.5rem;
+        }
+        .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+            padding: 0.5rem;
+        }
+        .col-md-4 {
+            flex: 0 0 33.333333%;
+            max-width: 33.333333%;
+            padding: 0.5rem;
+        }
+        .col-12 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            padding: 0.5rem;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #59391B;
+        }
+        .table-sm th,
+        .table-sm td {
+            padding: 0.5rem;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .alert-dismissible {
+            position: relative;
+            padding-right: 4rem;
+        }
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 1rem;
+            color: inherit;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .mt-3 {
+            margin-top: 1rem;
+        }
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+        .d-none {
+            display: none;
+        }
+        .fade {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .fade.show {
+            opacity: 1;
+        }
+        .totales-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .totales-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .totales-row:last-child {
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border-top: 1px solid #dee2e6;
+            padding-top: 0.5rem;
+        }
+        
+        /* Ajustes para el layout con sidebar */
+        .main-content {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .main-content {
+                margin-left: 0; /* El sidebar es overlay en todas las pantallas */
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .col-md-6, .col-md-4 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Main content wrapper -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">Nueva Compra a Suplidor</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500" id="headerUserEmail"></span>
+                        <span class="text-xs text-gray-400">Compras - Suplidor</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Page content -->
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Nueva Compra a Suplidor</h1>
+            <p class="text-gray-600">Registra una nueva compra de productos a un suplidor</p>
+        </div>
+
+        <!-- Contenedor de alertas -->
+        <div id="alertContainer"></div>
+
+        <!-- Información de la compra -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-info-circle"></i> Información de la Compra</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="fecha">Fecha de la Compra</label>
+                            <input type="datetime-local" class="form-control" id="fecha" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="numeroOrdenCompra">Número de Orden de Compra</label>
+                            <input type="text" class="form-control" id="numeroOrdenCompra" placeholder="Opcional">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="fechaEntregaEsperada">Fecha de Entrega Esperada</label>
+                            <input type="datetime-local" class="form-control" id="fechaEntregaEsperada">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="condicionesPago">Condiciones de Pago</label>
+                            <input type="text" class="form-control" id="condicionesPago" placeholder="Ej: 30 días, Contado, etc.">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <textarea class="form-control" id="observaciones" rows="3" placeholder="Observaciones adicionales sobre la compra"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selección de suplidor -->
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-truck"></i> Selección de Suplidor</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="suplidorId">Suplidor</label>
+                            <select class="form-control" id="suplidorId" required>
+                                <option value="">Seleccione un suplidor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary form-control" id="buscarSuplidor">
+                                <i class="fas fa-search"></i> Buscar Suplidor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información del suplidor -->
+                <div id="suplidorInfo"></div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <div class="card" id="productosSection" style="display: none;">
+            <div class="card-header">
+                <h2><i class="fas fa-boxes"></i> Productos</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="productoId">Producto</label>
+                            <select class="form-control" id="productoId">
+                                <option value="">Seleccione un producto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="cantidad">Cantidad</label>
+                            <input type="number" class="form-control" id="cantidad" min="1" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="precio">Precio Unitario</label>
+                            <input type="number" class="form-control" id="precio" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button class="btn btn-success" id="agregarProducto">
+                        <i class="fas fa-plus"></i> Agregar Producto
+                    </button>
+                </div>
+                
+                <!-- Tabla de productos seleccionados -->
+                <div id="tablaProductosContainer" style="display: none;" class="mt-3">
+                    <h5>Productos Seleccionados</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio Unit.</th>
+                                    <th>Subtotal</th>
+                                    <th>Impuesto</th>
+                                    <th>Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productosSeleccionados">
+                                <!-- Los productos se agregarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Totales -->
+        <div class="card" id="totalesSection">
+            <div class="card-header">
+                <h2><i class="fas fa-calculator"></i> Totales</h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="descuento">Descuento Adicional (RD$)</label>
+                            <input type="number" class="form-control" id="descuento" step="0.01" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="totales-card">
+                            <div class="totales-row">
+                                <span>Subtotal:</span>
+                                <span id="subtotalCalculado">RD$ 0,00</span>
+                            </div>
+                            <div class="totales-row">
+                                <span>Impuestos (18%):</span>
+                                <span id="impuestosCalculados">RD$ 0,00</span>
+                            </div>
+                            <div class="totales-row">
+                                <span>Total:</span>
+                                <span id="totalCalculado">RD$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="card">
+            <div class="card-body text-center">
+                <button class="btn btn-success" id="btnGuardar">
+                    <i class="fas fa-save"></i> Guardar Compra
+                </button>
+                <button class="btn btn-secondary" id="btnCancelar">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="py-8">
+                    <div class="text-center text-gray-500">
+                        <p>&copy; 2025 Thelarte. Todos los derechos reservados.</p>
+                        <p class="text-sm mt-2">Sistema de Gestión de Compras - Nueva Compra a Suplidor</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Load sidebar first -->
+    <script src="../js/structure/sidebarloader-compras.js"></script>
+    <!-- Then load page-specific scripts -->
+    <script src="../js/compras-suplidor/form.js"></script>
+    <script>
+        // Update header user email
+        document.addEventListener('DOMContentLoaded', function() {
+            const headerUserEmail = document.getElementById('headerUserEmail');
+            if (headerUserEmail) {
+                headerUserEmail.textContent = localStorage.getItem('userEmail') || 'Usuario';
+            }
+        });
+    </script>
+</body>
+</html>

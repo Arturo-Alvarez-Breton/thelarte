@@ -12,45 +12,47 @@ import java.util.List;
 @Repository
 public interface TransaccionRepository extends JpaRepository<Transaccion, Long> {
 
-    List<Transaccion> findByTipo(Transaccion.TipoTransaccion tipo);
+    List<Transaccion> findByTipoAndDeletedFalse(Transaccion.TipoTransaccion tipo);
 
-    List<Transaccion> findByEstado(Transaccion.EstadoTransaccion estado);
+    List<Transaccion> findByEstadoAndDeletedFalse(Transaccion.EstadoTransaccion estado);
 
-    List<Transaccion> findByTipoAndEstado(Transaccion.TipoTransaccion tipo, Transaccion.EstadoTransaccion estado);
+    List<Transaccion> findByTipoAndEstadoAndDeletedFalse(Transaccion.TipoTransaccion tipo, Transaccion.EstadoTransaccion estado);
 
-    List<Transaccion> findByContraparteIdAndTipoContraparte(Long contraparteId, Transaccion.TipoContraparte tipoContraparte);
+    List<Transaccion> findByContraparteIdAndTipoContraparteAndDeletedFalse(Long contraparteId, Transaccion.TipoContraparte tipoContraparte);
 
-    List<Transaccion> findByFechaBetween(LocalDateTime fechaInicio, LocalDateTime fechaFin);
+    List<Transaccion> findByFechaBetweenAndDeletedFalse(LocalDateTime fechaInicio, LocalDateTime fechaFin);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.tipo = :tipo AND t.fecha BETWEEN :fechaInicio AND :fechaFin")
+    @Query("SELECT t FROM Transaccion t WHERE t.tipo = :tipo AND t.fecha BETWEEN :fechaInicio AND :fechaFin AND t.deleted = false")
     List<Transaccion> findComprasEnPeriodo(@Param("tipo") Transaccion.TipoTransaccion tipo, 
                                           @Param("fechaInicio") LocalDateTime fechaInicio, 
                                           @Param("fechaFin") LocalDateTime fechaFin);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :suplidorId AND t.tipoContraparte = 'SUPLIDOR' AND t.tipo = 'COMPRA'")
+    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :suplidorId AND t.tipoContraparte = 'SUPLIDOR' AND t.tipo = 'COMPRA' AND t.deleted = false")
     List<Transaccion> findComprasPorSuplidor(@Param("suplidorId") Long suplidorId);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :clienteId AND t.tipoContraparte = 'CLIENTE' AND t.tipo = 'VENTA'")
+    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :clienteId AND t.tipoContraparte = 'CLIENTE' AND t.tipo = 'VENTA' AND t.deleted = false")
     List<Transaccion> findVentasPorCliente(@Param("clienteId") Long clienteId);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.vendedorId = :vendedorId AND t.tipo = 'VENTA'")
+    @Query("SELECT t FROM Transaccion t WHERE t.vendedorId = :vendedorId AND t.tipo = 'VENTA' AND t.deleted = false")
     List<Transaccion> findVentasPorVendedor(@Param("vendedorId") Long vendedorId);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :contraparteId AND t.tipo = 'DEVOLUCION'")
+    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :contraparteId AND t.tipo = 'DEVOLUCION' AND t.deleted = false")
     List<Transaccion> findDevolucionesPorContraparte(@Param("contraparteId") Long contraparteId);
 
-    List<Transaccion> findByNumeroFactura(String numeroFactura);
+    List<Transaccion> findByNumeroFacturaAndDeletedFalse(String numeroFactura);
 
-    List<Transaccion> findByNumeroOrdenCompra(String numeroOrdenCompra);
+    List<Transaccion> findByNumeroOrdenCompraAndDeletedFalse(String numeroOrdenCompra);
 
-    @Query("SELECT COUNT(t) FROM Transaccion t WHERE t.tipo = :tipo AND t.estado = :estado")
+    @Query("SELECT COUNT(t) FROM Transaccion t WHERE t.tipo = :tipo AND t.estado = :estado AND t.deleted = false")
     long countByTipoAndEstado(@Param("tipo") Transaccion.TipoTransaccion tipo, 
                              @Param("estado") Transaccion.EstadoTransaccion estado);
 
-    @Query("SELECT SUM(t.total) FROM Transaccion t WHERE t.tipo = :tipo AND t.estado = 'COMPLETADA' AND t.fecha BETWEEN :fechaInicio AND :fechaFin")
+    @Query("SELECT SUM(t.total) FROM Transaccion t WHERE t.tipo = :tipo AND t.estado = 'COMPLETADA' AND t.fecha BETWEEN :fechaInicio AND :fechaFin AND t.deleted = false")
     Double sumTotalPorTipoEnPeriodo(@Param("tipo") Transaccion.TipoTransaccion tipo, 
                                    @Param("fechaInicio") LocalDateTime fechaInicio, 
                                    @Param("fechaFin") LocalDateTime fechaFin);
 
-    List<Transaccion> findByTransaccionOrigenId(Long transaccionOrigenId);
+    List<Transaccion> findByTransaccionOrigenIdAndDeletedFalse(Long transaccionOrigenId);
+
+    List<Transaccion> findAllByDeletedFalse();
 }

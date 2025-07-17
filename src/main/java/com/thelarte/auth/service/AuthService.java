@@ -30,7 +30,7 @@ public class AuthService {
                 user.getUsername(), null, user.getAuthorities());
         
         String token = jwtTokenProvider.createToken(authentication);
-        return new AuthResponse(token, user.getUsername());
+        return new AuthResponse(token, user.getUsername(), user.getRoles());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -43,7 +43,7 @@ public class AuthService {
                     .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
             
             String token = jwtTokenProvider.createToken(authentication);
-            return new AuthResponse(token, user.getUsername());
+            return new AuthResponse(token, user.getUsername(), user.getRoles());
         } else {
             throw new UsernameNotFoundException("Credenciales inválidas");
         }

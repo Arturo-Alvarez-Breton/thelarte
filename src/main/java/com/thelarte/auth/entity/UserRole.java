@@ -4,5 +4,6 @@ public enum UserRole {
     GERENTE,
     TI,
     VENDEDOR,
-    CONTABILIDAD
+    CONTABILIDAD,
+    COMPRAS_SUPLIDOR
 }

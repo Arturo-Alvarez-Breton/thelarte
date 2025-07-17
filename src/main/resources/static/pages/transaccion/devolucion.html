@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Devoluciones | Thelarte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            300: '#59391B',
+                            400: '#4a2e16',
+                            500: '#59391B'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #e8f7f2 0%, #f0f8f4 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .card-header h5 {
+            color: #59391B;
+            font-weight: 600;
+            margin: 0;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background: #59391B;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #4a2e16;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #138496;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #59391B;
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(89, 57, 27, 0.25);
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th,
+        .table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #59391B;
+        }
+        .table-sm th,
+        .table-sm td {
+            padding: 0.5rem;
+        }
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .badge-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #59391B;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #59391B;
+        }
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .input-group .form-control {
+            flex: 1;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .alert-dismissible {
+            position: relative;
+            padding-right: 4rem;
+        }
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 1rem;
+            color: inherit;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -0.5rem;
+        }
+        .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+            padding: 0.5rem;
+        }
+        .col-md-4 {
+            flex: 0 0 33.333333%;
+            max-width: 33.333333%;
+            padding: 0.5rem;
+        }
+        .col-md-8 {
+            flex: 0 0 66.666667%;
+            max-width: 66.666667%;
+            padding: 0.5rem;
+        }
+        .col-12 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            padding: 0.5rem;
+        }
+        .mt-3 {
+            margin-top: 1rem;
+        }
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .d-none {
+            display: none;
+        }
+        .fade {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .fade.show {
+            opacity: 1;
+        }
+        
+        /* Ajustes para el layout con sidebar */
+        .main-content {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .main-content {
+                margin-left: 0; /* El sidebar es overlay en todas las pantallas */
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .col-md-6, .col-md-4, .col-md-8 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Main content wrapper -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">Gestión de Devoluciones</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500" id="headerUserEmail"></span>
+                        <span class="text-xs text-gray-400">Compras - Suplidor</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Page content -->
+        <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Gestión de Devoluciones</h1>
+            <p class="text-gray-600">Crear y gestionar devoluciones de compras a suplidores</p>
+        </div>
+
+        <!-- Contenedor de alertas -->
+        <div id="alertContainer"></div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalDevoluciones">0</div>
+                <div class="stat-label">Total Devoluciones</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="devolucionesPendientes">0</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="devolucionesProcesando">0</div>
+                <div class="stat-label">Procesando</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="devolucionesCompletadas">0</div>
+                <div class="stat-label">Completadas</div>
+            </div>
+        </div>
+
+        <!-- Formulario de nueva devolución -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle"></i> Nueva Devolución</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="transaccionId">ID de Transacción</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="transaccionId" placeholder="Ingrese ID de transacción">
+                                <button class="btn btn-primary" id="buscarTransaccion">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="suplidorId">ID de Suplidor</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="suplidorId" placeholder="Ingrese ID de suplidor">
+                                <button class="btn btn-primary" id="buscarSuplidor">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="suplidorNombre">Nombre del Suplidor</label>
+                            <input type="text" class="form-control" id="suplidorNombre" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="fechaDevolucion">Fecha de Devolución</label>
+                            <input type="datetime-local" class="form-control" id="fechaDevolucion">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="motivoDevolucion">Motivo de la Devolución</label>
+                    <textarea class="form-control" id="motivoDevolucion" rows="3" placeholder="Describa el motivo de la devolución"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <textarea class="form-control" id="observaciones" rows="3" placeholder="Observaciones adicionales"></textarea>
+                </div>
+                
+                <!-- Información de la transacción -->
+                <div id="transaccionInfo"></div>
+                
+                <div class="text-center mt-3">
+                    <button class="btn btn-success" id="btnGuardarDevolucion" disabled>
+                        <i class="fas fa-save"></i> Crear Devolución
+                    </button>
+                    <button class="btn btn-secondary" id="btnCancelar">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de devoluciones -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list"></i> Devoluciones Registradas</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Transacción</th>
+                                <th>Suplidor</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaDevoluciones">
+                            <!-- Las devoluciones se cargarán aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="py-8">
+                    <div class="text-center text-gray-500">
+                        <p>&copy; 2025 Thelarte. Todos los derechos reservados.</p>
+                        <p class="text-sm mt-2">Sistema de Gestión de Compras - Devoluciones</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Load sidebar first -->
+    <script src="../js/structure/sidebarloader-compras.js"></script>
+    <!-- Then load page-specific scripts -->
+    <script src="../js/transaccion/devolucion.js"></script>
+    <script>
+        // Update header user email
+        document.addEventListener('DOMContentLoaded', function() {
+            const headerUserEmail = document.getElementById('headerUserEmail');
+            if (headerUserEmail) {
+                headerUserEmail.textContent = localStorage.getItem('userEmail') || 'Usuario';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -62,6 +62,11 @@ public class DataInitializer implements CommandLineRunner {
             userService.createUser("econtabilidad", "1234", java.util.Collections.singletonList(UserRole.CONTABILIDAD));
             logger.info("Usuario creado: econtabilidad / 1234 (CONTABILIDAD)");
         }
+        
+        if (!userService.existsByUsername("ecompras")) {
+            userService.createUser("ecompras", "1234", java.util.Collections.singletonList(UserRole.COMPRAS_SUPLIDOR));
+            logger.info("Usuario creado: ecompras / 1234 (COMPRAS_SUPLIDOR)");
+        }
     }
     
     private void startH2ServerIfNeeded() {

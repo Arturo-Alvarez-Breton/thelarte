@@ -15,6 +15,10 @@ public class LineaTransaccion {
     @JoinColumn(name = "transaccion_id", nullable = true)
     private Transaccion transaccion;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaccion_devolucion_id", nullable = true)
+    private TransaccionDevolucion transaccionDevolucion;
+
     @Column(name = "producto_id", nullable = false)
     private Long productoId;
 
@@ -103,6 +107,14 @@ public class LineaTransaccion {
 
     public void setTransaccion(Transaccion transaccion) {
         this.transaccion = transaccion;
+    }
+
+    public TransaccionDevolucion getTransaccionDevolucion() {
+        return transaccionDevolucion;
+    }
+
+    public void setTransaccionDevolucion(TransaccionDevolucion transaccionDevolucion) {
+        this.transaccionDevolucion = transaccionDevolucion;
     }
 
     public Long getProductoId() {

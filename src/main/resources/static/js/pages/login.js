@@ -132,12 +132,21 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Store auth data
       localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userEmail', data.email);      // Success feedback
+      localStorage.setItem('userEmail', data.username);
+      localStorage.setItem('userRoles', JSON.stringify(data.roles));
+      
+      // Success feedback
       submitBtn.innerHTML = '¡Acceso concedido!';
-      submitBtn.style.background = '#10B981';      // Redirect after a brief moment
-        setTimeout(() => {
+      submitBtn.style.background = '#10B981';
+      
+      // Redirect based on user role
+      setTimeout(() => {
+        if (data.roles && data.roles.includes('COMPRAS_SUPLIDOR')) {
+          window.location.href = '/pages/compras-suplidor/index.html';
+        } else {
           window.location.href = '/pages/structure/home.html';
-        }, 800);
+        }
+      }, 800);
 
     } catch (err) {
       console.error('Login error:', err);

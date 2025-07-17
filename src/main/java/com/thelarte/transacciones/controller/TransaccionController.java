@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/transacciones")
-@CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS})
+@CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class TransaccionController {
 
     @Autowired
@@ -358,6 +358,21 @@ public class TransaccionController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PatchMapping("/{id}/delete")
+    public ResponseEntity<Map<String, Object>> marcarComoEliminada(@PathVariable Long id) {
+        try {
+            boolean eliminada = transaccionService.marcarComoEliminada(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("eliminada", eliminada);
+            response.put("mensaje", "Transacción marcada como eliminada exitosamente");
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al marcar transacción como eliminada: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
         }
     }
 

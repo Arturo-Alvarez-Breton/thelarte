@@ -77,7 +77,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadDashboardData() {
   console.log('Loading dashboard data...');
   
-  // For demonstration, we'll set some example data
+  // Check user role to determine which metrics to load
+  const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+  
+  // Load compras metrics if user has COMPRAS_SUPLIDOR role
+  if (userRoles.includes('COMPRAS_SUPLIDOR')) {
+    showComprasMetrics();
+    loadComprasMetrics();
+  }
+  
+  // For demonstration, we'll set some example data for general metrics
   setTimeout(() => {
     // Update stats
     const totalSales = document.getElementById('totalSales');
@@ -92,4 +101,81 @@ function loadDashboardData() {
     
     console.log('Dashboard data loaded');
   }, 500);
+}
+
+// Function to load compras metrics
+async function loadComprasMetrics() {
+  console.log('Loading compras metrics...');
+  
+  try {
+    const token = localStorage.getItem('authToken');
+    
+    const response = await fetch('/api/compras/metricas', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al obtener métricas de compras');
+    }
+    
+    const metricas = await response.json();
+    
+    // Update compras metrics in dashboard
+    updateComprasMetrics(metricas);
+    
+    console.log('Compras metrics loaded successfully');
+  } catch (error) {
+    console.error('Error loading compras metrics:', error);
+    // Show mock data if API fails
+    const mockMetrics = {
+      totalOrdenes: 45,
+      ordenesPendientes: 12,
+      ordenesConfirmadas: 8,
+      ordenesRecibidas: 25,
+      totalGastado: 125430.50,
+      periodo: 'Últimos 30 días'
+    };
+    updateComprasMetrics(mockMetrics);
+  }
+}
+
+// Function to update compras metrics in the dashboard
+function updateComprasMetrics(metricas) {
+  const totalOrdenes = document.getElementById('totalOrdenesCompra');
+  const ordenesPendientes = document.getElementById('ordenesPendientes');
+  const ordenesConfirmadas = document.getElementById('ordenesConfirmadas');
+  const totalGastado = document.getElementById('totalGastado');
+  
+  if (totalOrdenes) totalOrdenes.textContent = metricas.totalOrdenes;
+  if (ordenesPendientes) ordenesPendientes.textContent = metricas.ordenesPendientes;
+  if (ordenesConfirmadas) ordenesConfirmadas.textContent = metricas.ordenesConfirmadas;
+  if (totalGastado) totalGastado.textContent = formatearMoneda(metricas.totalGastado);
+  
+  // Update period info
+  const periodoInfo = document.getElementById('periodoCompras');
+  if (periodoInfo) periodoInfo.textContent = metricas.periodo;
+}
+
+// Function to format currency
+function formatearMoneda(cantidad) {
+  if (!cantidad && cantidad !== 0) return 'RD$ 0,00';
+  
+  const numero = Math.abs(cantidad);
+  const partes = numero.toFixed(2).split('.');
+  const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimal = partes[1];
+  
+  return `RD$ ${entero},${decimal}`;
+}
+
+// Function to show compras metrics card
+function showComprasMetrics() {
+  const comprasMetrics = document.getElementById('comprasMetrics');
+  if (comprasMetrics) {
+    comprasMetrics.classList.remove('hidden');
+  }
 }

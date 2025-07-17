@@ -188,37 +188,37 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerTodas() {
-        return transaccionRepository.findAll();
+        return transaccionRepository.findAllByDeletedFalse();
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerPorTipo(Transaccion.TipoTransaccion tipo) {
-        return transaccionRepository.findByTipo(tipo);
+        return transaccionRepository.findByTipoAndDeletedFalse(tipo);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerCompras() {
-        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.COMPRA);
+        return transaccionRepository.findByTipoAndDeletedFalse(Transaccion.TipoTransaccion.COMPRA);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentas() {
-        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.VENTA);
+        return transaccionRepository.findByTipoAndDeletedFalse(Transaccion.TipoTransaccion.VENTA);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerDevolucionesCompra() {
-        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION_COMPRA);
+        return transaccionRepository.findByTipoAndDeletedFalse(Transaccion.TipoTransaccion.DEVOLUCION_COMPRA);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerDevolucionesVenta() {
-        return transaccionRepository.findByTipo(Transaccion.TipoTransaccion.DEVOLUCION_VENTA);
+        return transaccionRepository.findByTipoAndDeletedFalse(Transaccion.TipoTransaccion.DEVOLUCION_VENTA);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerPorEstado(Transaccion.EstadoTransaccion estado) {
-        return transaccionRepository.findByEstado(estado);
+        return transaccionRepository.findByEstadoAndDeletedFalse(estado);
     }
 
     @Transactional(readOnly = true)
@@ -238,7 +238,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerEnPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        return transaccionRepository.findByFechaBetween(fechaInicio, fechaFin);
+        return transaccionRepository.findByFechaBetweenAndDeletedFalse(fechaInicio, fechaFin);
     }
 
     @Transactional(readOnly = true)
@@ -331,7 +331,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerComprasPendientesRecepcion() {
-        return transaccionRepository.findByTipoAndEstado(
+        return transaccionRepository.findByTipoAndEstadoAndDeletedFalse(
                 Transaccion.TipoTransaccion.COMPRA,
                 Transaccion.EstadoTransaccion.CONFIRMADA
         );
@@ -339,7 +339,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerComprasPendientesPago() {
-        return transaccionRepository.findByTipoAndEstado(
+        return transaccionRepository.findByTipoAndEstadoAndDeletedFalse(
                 Transaccion.TipoTransaccion.COMPRA,
                 Transaccion.EstadoTransaccion.RECIBIDA
         );
@@ -347,7 +347,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentasPendientesEntrega() {
-        return transaccionRepository.findByTipoAndEstado(
+        return transaccionRepository.findByTipoAndEstadoAndDeletedFalse(
                 Transaccion.TipoTransaccion.VENTA,
                 Transaccion.EstadoTransaccion.CONFIRMADA
         );
@@ -355,7 +355,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentasPendientesCobro() {
-        return transaccionRepository.findByTipoAndEstado(
+        return transaccionRepository.findByTipoAndEstadoAndDeletedFalse(
                 Transaccion.TipoTransaccion.VENTA,
                 Transaccion.EstadoTransaccion.ENTREGADA
         );
@@ -371,6 +371,18 @@ public class TransaccionService {
             throw new EntityNotFoundException("Transacción no encontrada con ID: " + id);
         }
         transaccionRepository.deleteById(id);
+    }
+
+    public boolean marcarComoEliminada(Long id) {
+        Optional<Transaccion> transaccionOpt = transaccionRepository.findById(id);
+        if (transaccionOpt.isEmpty()) {
+            throw new EntityNotFoundException("Transacción no encontrada con ID: " + id);
+        }
+        
+        Transaccion transaccion = transaccionOpt.get();
+        transaccion.setDeleted(true);
+        transaccionRepository.save(transaccion);
+        return true;
     }
 
     @Transactional(readOnly = true)
@@ -395,7 +407,7 @@ public class TransaccionService {
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerTransaccionesPorOrigen(Long transaccionOrigenId) {
-        return transaccionRepository.findByTransaccionOrigenId(transaccionOrigenId);
+        return transaccionRepository.findByTransaccionOrigenIdAndDeletedFalse(transaccionOrigenId);
     }
 
     @Transactional(readOnly = true)

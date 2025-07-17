@@ -130,6 +130,44 @@
           </div>
         </div>
 
+        <!-- Compras metrics (only visible for users with COMPRAS_SUPLIDOR role) -->
+        <div id="comprasMetrics" class="hidden">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Métricas de Compras</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+            <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-500">
+              <p class="text-xs md:text-sm text-gray-500 mb-1">Total Órdenes</p>
+              <p class="text-xl md:text-2xl font-bold text-gray-800" id="totalOrdenesCompra">0</p>
+              <div class="mt-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-full bg-orange-100 text-orange-800" id="periodoCompras">Últimos 30 días</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-yellow-500">
+              <p class="text-xs md:text-sm text-gray-500 mb-1">Pendientes</p>
+              <p class="text-xl md:text-2xl font-bold text-gray-800" id="ordenesPendientes">0</p>
+              <div class="mt-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">Requiere atención</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+              <p class="text-xs md:text-sm text-gray-500 mb-1">Confirmadas</p>
+              <p class="text-xl md:text-2xl font-bold text-gray-800" id="ordenesConfirmadas">0</p>
+              <div class="mt-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-800">En proceso</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+              <p class="text-xs md:text-sm text-gray-500 mb-1">Total Gastado</p>
+              <p class="text-xl md:text-2xl font-bold text-gray-800" id="totalGastado">RD$0</p>
+              <div class="mt-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">Período actual</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Module access cards -->
         <h2 class="text-xl font-semibold text-gray-800 mb-4">Módulos del sistema</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
