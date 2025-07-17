@@ -196,6 +196,7 @@ form.addEventListener('submit', async e => {
     const method = cedulaParam ? 'PUT' : 'POST';
 
     let bodyPayload;
+    // Si es alta (modo creación), incluir la cédula en el payload
     if (!cedulaParam) {
         bodyPayload = {
             cedula,
