@@ -54,7 +54,17 @@ public class Empleado {
     public Float getSalario() { return salario; }
     public void setSalario(Float salario) { this.salario = salario; }
     public Float getComision() { return comision; }
-    public void setComision(Float comision) { this.comision = comision; }
+    public void setComision(Float comision) {
+        if (comision != null) {
+            if (comision < 0 || comision > 100) {
+                throw new IllegalArgumentException("Comision must be between 0 and 100.");
+            }
+            if (this.rol != com.thelarte.user.util.Rol.COMERCIAL) {
+                throw new IllegalArgumentException("Comision can only be set for COMERCIAL role.");
+            }
+        }
+        this.comision = comision;
+    }
     public LocalDate getFechaContratacion() { return fechaContratacion; }
     public void setFechaContratacion(LocalDate fechaContratacion) { this.fechaContratacion = fechaContratacion; }
 
