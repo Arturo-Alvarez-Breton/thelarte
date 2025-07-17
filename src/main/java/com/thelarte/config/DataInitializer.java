@@ -110,9 +110,9 @@ public class DataInitializer implements CommandLineRunner {
                     "edwinb",
                     "1234",
                     Arrays.asList(UserRole.VENDEDOR),
-                    emp.getCedula()
+                    null
                 );
-                logger.info("Usuario creado: edwinb (VENDEDOR, empleado: 40222022001)");
+                logger.info("Usuario creado: edwinb (VENDEDOR, sin empleado)");
             }
         }
 
@@ -168,9 +168,9 @@ public class DataInitializer implements CommandLineRunner {
                     "jeanp",
                     "1234",
                     Arrays.asList(UserRole.TI),
-                    emp.getCedula()
+                    null
                 );
-                logger.info("Usuario creado: jeanp (TI, empleado: 40222022003)");
+                logger.info("Usuario creado: jeanp (TI, sin empleado)");
             }
         }
 
