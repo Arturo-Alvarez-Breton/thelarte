@@ -21,9 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -63,7 +61,6 @@ public class TransaccionService {
                     Long vendedorId = obtenerUsuarioEnSesion();
                     transaccion.setVendedorId(vendedorId);
                 } catch (IllegalArgumentException e) {
-                    // Si no se puede obtener el usuario de la sesión, lanzar un error más específico
                     throw new IllegalArgumentException("Las ventas requieren un vendedor asignado. " + e.getMessage());
                 }
             }
@@ -76,96 +73,111 @@ public class TransaccionService {
         return transaccionRepository.save(transaccion);
     }
 
-    // ACTUALIZADO: También en actualizarTransaccion, para edición de líneas
     public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
         Transaccion existingTransaction = transaccionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Transacción no encontrada"));
 
-        // Check if the transaction can be edited
         if (!canEditTransaction(existingTransaction)) {
             throw new IllegalStateException("No se puede editar una transacción con estado: " + existingTransaction.getEstado());
         }
 
-        // Preserve the original ID
-        transaccion.setId(id);
+        // Actualiza campos principales
+        existingTransaction.setTipo(transaccion.getTipo());
+        existingTransaction.setFecha(transaccion.getFecha());
+        existingTransaction.setContraparteId(transaccion.getContraparteId());
+        existingTransaction.setTipoContraparte(transaccion.getTipoContraparte());
+        existingTransaction.setContraparteNombre(transaccion.getContraparteNombre());
+        existingTransaction.setNumeroFactura(transaccion.getNumeroFactura());
+        existingTransaction.setObservaciones(transaccion.getObservaciones());
+        existingTransaction.setSubtotal(transaccion.getSubtotal());
+        existingTransaction.setImpuestos(transaccion.getImpuestos());
+        existingTransaction.setTotal(transaccion.getTotal());
+        existingTransaction.setEstado(transaccion.getEstado());
+        existingTransaction.setVendedorId(transaccion.getVendedorId());
+        existingTransaction.setDireccionEntrega(transaccion.getDireccionEntrega());
+        existingTransaction.setCondicionesPago(transaccion.getCondicionesPago());
+        existingTransaction.setMetodoPago(transaccion.getMetodoPago());
+        existingTransaction.setMetadatosPago(transaccion.getMetadatosPago());
+        existingTransaction.setTransaccionOrigenId(transaccion.getTransaccionOrigenId());
+        existingTransaction.setNumeroReferencia(transaccion.getNumeroReferencia());
+        existingTransaction.setNumeroOrdenCompra(transaccion.getNumeroOrdenCompra());
+        existingTransaction.setFechaEntregaEsperada(transaccion.getFechaEntregaEsperada());
+        existingTransaction.setFechaEntregaReal(transaccion.getFechaEntregaReal());
+        existingTransaction.setNumeroTransaccion(transaccion.getNumeroTransaccion());
 
-        // Asignar la transacción a cada línea para que se guarde el transaccion_id
-        if (transaccion.getLineas() != null) {
-            for (LineaTransaccion linea : transaccion.getLineas()) {
-                linea.setTransaccion(transaccion);
-            }
+        // Elimina las líneas viejas
+        if (existingTransaction.getLineas() != null) {
+            existingTransaction.getLineas().clear();
         }
 
-        // Process transaction lines
-        procesarLineasTransaccion(transaccion);
+        // Asocia las nuevas líneas
+        if (transaccion.getLineas() != null) {
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                linea.setTransaccion(existingTransaction);
+            }
+            existingTransaction.getLineas().addAll(transaccion.getLineas());
+        }
 
-        // Recalculate totals
-        calcularTotalesTransaccion(transaccion);
+        validateTransactionBusinessRules(existingTransaction);
+        validatePaymentMetadata(existingTransaction);
+        procesarLineasTransaccion(existingTransaction);
+        calcularTotalesTransaccion(existingTransaction);
 
-        // Save the updated transaction
-        return transaccionRepository.save(transaccion);
+        return transaccionRepository.save(existingTransaction);
     }
 
     public Transaccion crearCompra(Long suplidorId, String suplidorNombre, List<LineaTransaccion> lineas) {
         Transaccion compra = new Transaccion(
-            Transaccion.TipoTransaccion.COMPRA,
-            suplidorId,
-            Transaccion.TipoContraparte.SUPLIDOR,
-            suplidorNombre
+                Transaccion.TipoTransaccion.COMPRA,
+                suplidorId,
+                Transaccion.TipoContraparte.SUPLIDOR,
+                suplidorNombre
         );
-        
         lineas.forEach(linea -> linea.setTransaccion(compra));
         compra.setLineas(lineas);
-        
         return crearTransaccion(compra);
     }
 
     public Transaccion crearVenta(Long clienteId, String clienteNombre, Long vendedorId, List<LineaTransaccion> lineas) {
         Transaccion venta = new Transaccion(
-            Transaccion.TipoTransaccion.VENTA,
-            clienteId,
-            Transaccion.TipoContraparte.CLIENTE,
-            clienteNombre
+                Transaccion.TipoTransaccion.VENTA,
+                clienteId,
+                Transaccion.TipoContraparte.CLIENTE,
+                clienteNombre
         );
-        
         venta.setVendedorId(vendedorId);
         lineas.forEach(linea -> linea.setTransaccion(venta));
         venta.setLineas(lineas);
-        
         return crearTransaccion(venta);
     }
 
-    public Transaccion crearDevolucionCompra(Long suplidorId, String suplidorNombre, 
-                                           List<LineaTransaccion> lineas, Long transaccionOriginalId) {
+    public Transaccion crearDevolucionCompra(Long suplidorId, String suplidorNombre,
+                                             List<LineaTransaccion> lineas, Long transaccionOriginalId) {
         Transaccion devolucion = new Transaccion(
-            Transaccion.TipoTransaccion.DEVOLUCION_COMPRA,
-            suplidorId,
-            Transaccion.TipoContraparte.SUPLIDOR,
-            suplidorNombre
+                Transaccion.TipoTransaccion.DEVOLUCION_COMPRA,
+                suplidorId,
+                Transaccion.TipoContraparte.SUPLIDOR,
+                suplidorNombre
         );
-        
         devolucion.setTransaccionOrigenId(transaccionOriginalId);
         devolucion.setObservaciones("Devolución de compra original ID: " + transaccionOriginalId);
         lineas.forEach(linea -> linea.setTransaccion(devolucion));
         devolucion.setLineas(lineas);
-        
         return crearTransaccion(devolucion);
     }
 
-    public Transaccion crearDevolucionVenta(Long clienteId, String clienteNombre, 
-                                          List<LineaTransaccion> lineas, Long transaccionOriginalId) {
+    public Transaccion crearDevolucionVenta(Long clienteId, String clienteNombre,
+                                            List<LineaTransaccion> lineas, Long transaccionOriginalId) {
         Transaccion devolucion = new Transaccion(
-            Transaccion.TipoTransaccion.DEVOLUCION_VENTA,
-            clienteId,
-            Transaccion.TipoContraparte.CLIENTE,
-            clienteNombre
+                Transaccion.TipoTransaccion.DEVOLUCION_VENTA,
+                clienteId,
+                Transaccion.TipoContraparte.CLIENTE,
+                clienteNombre
         );
-        
         devolucion.setTransaccionOrigenId(transaccionOriginalId);
         devolucion.setObservaciones("Devolución de venta original ID: " + transaccionOriginalId);
         lineas.forEach(linea -> linea.setTransaccion(devolucion));
         devolucion.setLineas(lineas);
-        
         return crearTransaccion(devolucion);
     }
 
@@ -236,14 +248,11 @@ public class TransaccionService {
 
     public Transaccion actualizarEstado(Long id, Transaccion.EstadoTransaccion nuevoEstado) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         transaccion.setEstado(nuevoEstado);
-        
         if (nuevoEstado == Transaccion.EstadoTransaccion.COMPLETADA) {
             transaccion.setFechaEntregaReal(LocalDateTime.now());
         }
-        
         return transaccionRepository.save(transaccion);
     }
 
@@ -261,16 +270,13 @@ public class TransaccionService {
 
     public Transaccion marcarComoRecibida(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.COMPRA) {
             throw new IllegalStateException("Solo las compras pueden marcarse como recibidas");
         }
-        
         transaccion.setEstado(Transaccion.EstadoTransaccion.RECIBIDA);
         transaccion.setFechaEntregaReal(LocalDateTime.now());
-        
-        // Crear unidades para cada producto en la compra
+
         for (LineaTransaccion linea : transaccion.getLineas()) {
             if (linea.getProductoId() != null) {
                 for (int i = 0; i < linea.getCantidad(); i++) {
@@ -278,108 +284,87 @@ public class TransaccionService {
                 }
             }
         }
-        
         return transaccionRepository.save(transaccion);
     }
 
     public Transaccion marcarComoPagada(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.COMPRA) {
             throw new IllegalStateException("Solo las compras pueden marcarse como pagadas");
         }
-        
         transaccion.setEstado(Transaccion.EstadoTransaccion.PAGADA);
-        
         return transaccionRepository.save(transaccion);
     }
 
     public Transaccion marcarComoEntregada(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
             throw new IllegalStateException("Solo las ventas pueden marcarse como entregadas");
         }
-        
         transaccion.setEstado(Transaccion.EstadoTransaccion.ENTREGADA);
         transaccion.setFechaEntregaReal(LocalDateTime.now());
-        
         return transaccionRepository.save(transaccion);
     }
 
     public Transaccion marcarComoCobrada(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
             throw new IllegalStateException("Solo las ventas pueden marcarse como cobradas");
         }
-        
         transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
-        
         return transaccionRepository.save(transaccion);
     }
 
     public Transaccion facturarVenta(Long id, String numeroFactura) {
         Transaccion transaccion = transaccionRepository.findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
             throw new IllegalStateException("Solo las ventas pueden facturarse");
         }
-        
         transaccion.setEstado(Transaccion.EstadoTransaccion.FACTURADA);
         transaccion.setNumeroFactura(numeroFactura);
-        
         return transaccionRepository.save(transaccion);
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerComprasPendientesRecepcion() {
         return transaccionRepository.findByTipoAndEstado(
-            Transaccion.TipoTransaccion.COMPRA, 
-            Transaccion.EstadoTransaccion.CONFIRMADA
+                Transaccion.TipoTransaccion.COMPRA,
+                Transaccion.EstadoTransaccion.CONFIRMADA
         );
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerComprasPendientesPago() {
         return transaccionRepository.findByTipoAndEstado(
-            Transaccion.TipoTransaccion.COMPRA, 
-            Transaccion.EstadoTransaccion.RECIBIDA
+                Transaccion.TipoTransaccion.COMPRA,
+                Transaccion.EstadoTransaccion.RECIBIDA
         );
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentasPendientesEntrega() {
         return transaccionRepository.findByTipoAndEstado(
-            Transaccion.TipoTransaccion.VENTA, 
-            Transaccion.EstadoTransaccion.CONFIRMADA
+                Transaccion.TipoTransaccion.VENTA,
+                Transaccion.EstadoTransaccion.CONFIRMADA
         );
     }
 
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentasPendientesCobro() {
         return transaccionRepository.findByTipoAndEstado(
-            Transaccion.TipoTransaccion.VENTA, 
-            Transaccion.EstadoTransaccion.ENTREGADA
+                Transaccion.TipoTransaccion.VENTA,
+                Transaccion.EstadoTransaccion.ENTREGADA
         );
     }
 
-    /**
-     * Determines if a transaction can be edited based on its current state
-     * Only PENDIENTE and CONFIRMADA transactions can be edited
-     */
     public boolean canEditTransaction(Transaccion transaccion) {
         return transaccion.getEstado() == Transaccion.EstadoTransaccion.PENDIENTE ||
-               transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA;
+                transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA;
     }
-
-    /**
-     * Updates a transaction with validation for editable states
-     */
 
     public void eliminarTransaccion(Long id) {
         if (!transaccionRepository.existsById(id)) {
@@ -427,16 +412,16 @@ public class TransaccionService {
         }
 
         BigDecimal subtotal = transaccion.getLineas().stream()
-            .map(LineaTransaccion::getSubtotal)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(LineaTransaccion::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal impuestos = transaccion.getLineas().stream()
-            .map(linea -> linea.getImpuestoMonto() != null ? linea.getImpuestoMonto() : BigDecimal.ZERO)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(linea -> linea.getImpuestoMonto() != null ? linea.getImpuestoMonto() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal total = transaccion.getLineas().stream()
-            .map(LineaTransaccion::getTotal)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .map(LineaTransaccion::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         transaccion.setSubtotal(subtotal);
         transaccion.setImpuestos(impuestos);
@@ -455,7 +440,7 @@ public class TransaccionService {
                         nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
                         nuevoProducto.setItbis(18.0f);
                         nuevoProducto.setPrecioCompra(linea.getPrecioUnitario());
-                        nuevoProducto.setPrecioVenta(BigDecimal.valueOf(0.0));
+                        nuevoProducto.setPrecioVenta(linea.getPrecioUnitario()); // Usar el precio del frontend
                         nuevoProducto.setFotoURL("");
                         nuevoProducto.setEsNuevo(true);
                         nuevoProducto.setCantidadDisponible(linea.getCantidad());
@@ -466,8 +451,8 @@ public class TransaccionService {
                         }
 
                         linea.setProductoId(nuevoProducto.getId());
+                        linea.setPrecioUnitario(nuevoProducto.getPrecioVenta()); // Asegura que la línea tenga el precio
                     } else if (linea.getProductoId() != null) {
-                        // Producto existente: CREA nuevas unidades para la compra
                         Producto productoExistente = productoRepository.findById(linea.getProductoId())
                                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
@@ -478,7 +463,6 @@ public class TransaccionService {
                         productoRepository.save(productoExistente);
                     }
                 } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA && linea.getProductoId() != null) {
-                    // Lógica de ventas (reservar unidades)
                     Producto producto = productoRepository.findById(linea.getProductoId())
                             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
@@ -498,22 +482,19 @@ public class TransaccionService {
                     }
 
                     producto.actualizarEstadoPorUnidades();
-
                     productoRepository.save(producto);
                 }
             }
         }
     }
+
     private void validateTransactionBusinessRules(Transaccion transaccion) {
         if (transaccion.getTipo() == null) {
             throw new IllegalArgumentException("El tipo de transacción es obligatorio");
         }
-        
         if (transaccion.getTipoContraparte() == null) {
             throw new IllegalArgumentException("El tipo de contraparte es obligatorio");
         }
-        
-        // Validar reglas de negocio específicas por tipo de transacción
         switch (transaccion.getTipo()) {
             case COMPRA:
             case DEVOLUCION_COMPRA:
@@ -535,37 +516,35 @@ public class TransaccionService {
 
     private void validatePaymentMetadata(Transaccion transaccion) {
         if (transaccion.getMetodoPago() != null) {
-            PaymentMetadataValidator.ValidationResult validationResult = 
-                paymentMetadataValidator.validatePaymentMetadata(
-                    transaccion.getMetodoPago(), 
-                    transaccion.getMetadatosPago()
-                );
-            
+            PaymentMetadataValidator.ValidationResult validationResult =
+                    paymentMetadataValidator.validatePaymentMetadata(
+                            transaccion.getMetodoPago(),
+                            transaccion.getMetadatosPago()
+                    );
             if (!validationResult.isValid()) {
-                throw new IllegalArgumentException("Error en metadatos de pago: " + 
-                    String.join(", ", validationResult.getErrors()));
+                throw new IllegalArgumentException("Error en metadatos de pago: " +
+                        String.join(", ", validationResult.getErrors()));
             }
         }
     }
 
     private Long obtenerUsuarioEnSesion() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
         if (authentication != null && authentication.isAuthenticated()) {
             String username = authentication.getName();
             if (username != null && !username.equals("anonymousUser")) {
                 User user = userService.findByUsername(username)
-                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + username));
+                        .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + username));
                 return user.getId();
             }
         }
         throw new IllegalArgumentException("No hay un usuario autenticado en la sesión");
     }
+
     public TransaccionDTO toDTO(Transaccion transaccion) {
         if (transaccion == null) {
             return null;
         }
-
         TransaccionDTO dto = new TransaccionDTO(
                 transaccion.getId(),
                 transaccion.getTipo() != null ? transaccion.getTipo().toString() : null,
@@ -576,8 +555,6 @@ public class TransaccionService {
                 transaccion.getContraparteNombre(),
                 transaccion.getTotal()
         );
-
-        // Mapeo de otras propiedades del DTO
         dto.setSubtotal(transaccion.getSubtotal());
         dto.setImpuestos(transaccion.getImpuestos());
         dto.setNumeroFactura(transaccion.getNumeroFactura());
@@ -596,7 +573,6 @@ public class TransaccionService {
         dto.setFechaCreacion(transaccion.getFechaCreacion());
         dto.setFechaActualizacion(transaccion.getFechaActualizacion());
 
-        // Mapeo de líneas
         if (transaccion.getLineas() != null) {
             List<LineaTransaccionDTO> lineasDto = transaccion.getLineas().stream().map(linea -> {
                 LineaTransaccionDTO lDto = new LineaTransaccionDTO();
@@ -612,7 +588,6 @@ public class TransaccionService {
                 lDto.setDescuentoMonto(linea.getDescuentoMonto());
                 lDto.setObservaciones(linea.getObservaciones());
 
-                // Producto nombre: primero el campo, luego busca en BD si está el id
                 if (linea.getProductoNombre() != null && !linea.getProductoNombre().isEmpty()) {
                     lDto.setProductoNombre(linea.getProductoNombre());
                 } else if (linea.getProductoId() != null) {
@@ -621,13 +596,10 @@ public class TransaccionService {
                 } else {
                     lDto.setProductoNombre(null);
                 }
-
                 return lDto;
             }).collect(Collectors.toList());
             dto.setLineas(lineasDto);
         }
-
         return dto;
     }
 }
-

@@ -34,7 +34,7 @@ public class Transaccion {
     @Column(name = "contraparte_nombre", nullable = false)
     private String contraparteNombre;
 
-    @OneToMany(mappedBy = "transaccion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "transaccion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<LineaTransaccion> lineas;
 
     @Column(name = "subtotal", precision = 12, scale = 2)
