@@ -114,4 +114,16 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
         return Optional.of(user);
     }
+
+    private void validateUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username cannot be null or empty");
+        }
+        if (username.length() < 3 || username.length() > 50) {
+            throw new IllegalArgumentException("Username must be between 3 and 50 characters");
+        }
+        if (!username.matches("^[a-zA-Z0-9_.-]+$")) {
+            throw new IllegalArgumentException("Username can only contain letters, numbers, underscores, dots, and hyphens");
+        }
+    }
 }

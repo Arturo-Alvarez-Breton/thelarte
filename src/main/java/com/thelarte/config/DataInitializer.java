@@ -104,6 +104,16 @@ public class DataInitializer implements CommandLineRunner {
                 );
                 logger.info("Usuario creado: edwinbrito (VENDEDOR, empleado: 40222022001)");
             }
+            
+            if (!userService.existsByUsername("edwinb")) {
+                userService.createUser(
+                    "edwinb",
+                    "1234",
+                    Arrays.asList(UserRole.VENDEDOR),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: edwinb (VENDEDOR, empleado: 40222022001)");
+            }
         }
 
         // Ana Garcia - Gerente
@@ -152,6 +162,16 @@ public class DataInitializer implements CommandLineRunner {
                 );
                 logger.info("Usuario creado: juanperez (TI, empleado: 40222022003)");
             }
+            
+            if (!userService.existsByUsername("jeanp")) {
+                userService.createUser(
+                    "jeanp",
+                    "1234",
+                    Arrays.asList(UserRole.TI),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: jeanp (TI, empleado: 40222022003)");
+            }
         }
 
         // Carla Santos - Cajero
@@ -175,6 +195,30 @@ public class DataInitializer implements CommandLineRunner {
                     emp.getCedula()
                 );
                 logger.info("Usuario creado: carlasantos (CONTABILIDAD, empleado: 40222022004)");
+            }
+        }
+        
+        // Arturo Breton - Empleado adicional
+        if (!empleadoRepository.existsById("40222022005")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022005");
+            emp.setNombre("Arturo");
+            emp.setApellido("Breton");
+            emp.setTelefono("809-555-5005");
+            emp.setEmail("arturo.breton@ejemplo.com");
+            emp.setRol(Rol.COMERCIAL);
+            emp.setSalario(24000f);
+            emp.setComision(8.0f);
+            empleadoRepository.save(emp);
+
+            if (!userService.existsByUsername("arturob")) {
+                userService.createUser(
+                    "arturob",
+                    "1234",
+                    Arrays.asList(UserRole.VENDEDOR),
+                    emp.getCedula()
+                );
+                logger.info("Usuario creado: arturob (VENDEDOR, empleado: 40222022005)");
             }
         }
     }

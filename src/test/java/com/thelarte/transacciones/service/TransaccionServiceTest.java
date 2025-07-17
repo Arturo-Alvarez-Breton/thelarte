@@ -91,7 +91,7 @@ class TransaccionServiceTest {
         assertEquals(EstadoTransaccion.RECIBIDA, result.getEstado());
         assertNotNull(result.getFechaEntregaReal());
         verify(transaccionRepository).save(transaccionCompra);
-        verify(unidadService, times(2)).registrarUnidad(eq(1L), any(), eq(true));
+        verify(unidadService, times(2)).registrarUnidad(eq(1L), any(), eq(true), eq(1L));
     }
 
     @Test

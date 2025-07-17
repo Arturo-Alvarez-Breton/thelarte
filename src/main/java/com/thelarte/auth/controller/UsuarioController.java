@@ -62,12 +62,12 @@ public class UsuarioController {
     // Eliminar usuario
     @DeleteMapping("/{username}")
     public ResponseEntity<Void> eliminarUsuario(@PathVariable String username) {
-        return userService.findByUsername(username)
-                .map(u -> {
-                    userService.deleteByUsername(username);
-                    return ResponseEntity.<Void>noContent().build();
-                })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        if (userService.findByUsername(username).isPresent()) {
+            userService.deleteByUsername(username);
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // Mapper
