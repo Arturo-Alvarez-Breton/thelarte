@@ -259,7 +259,8 @@ form.addEventListener('submit', async e => {
             const userResp = await fetch('/register', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(userPayload)
             });
