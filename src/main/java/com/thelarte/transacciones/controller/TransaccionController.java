@@ -360,6 +360,16 @@ public class TransaccionController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+    
+    @PostMapping("/{id}/restaurar")
+    public ResponseEntity<Void> restaurarTransaccion(@PathVariable Long id) {
+        try {
+            transaccionService.restaurarTransaccion(id);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     @GetMapping("/estadisticas/compras/total")
     public ResponseEntity<Double> obtenerTotalCompras(@RequestParam String fechaInicio, @RequestParam String fechaFin) {
