@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -84,5 +85,31 @@ public class UserService implements UserDetailsService {
     public void deleteByUsername(String username) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         userOpt.ifPresent(userRepository::delete);
+    }
+
+    public Optional<User> updateUser(String oldUsername, String newUsername, String password, List<UserRole> roles, Boolean active) {
+        Optional<User> userOpt = userRepository.findByUsername(oldUsername);
+        if (userOpt.isEmpty()) return Optional.empty();
+        User user = userOpt.get();
+
+        if (newUsername != null && !newUsername.isBlank() && !newUsername.equals(oldUsername)) {
+            // Verificar que el nuevo username no exista
+            if (userRepository.existsByUsername(newUsername)) {
+                throw new RuntimeException("El nuevo nombre de usuario ya está registrado");
+            }
+            user.setUsername(newUsername);
+        }
+        if (password != null && !password.isBlank()) {
+            user.setPassword(passwordEncoder.encode(password));
+        }
+        if (roles != null && !roles.isEmpty()) {
+            // Asegurarse de que la lista sea mutable
+            user.setRoles(new ArrayList<>(roles));
+        }
+        if (active != null) {
+            user.setActive(active);
+        }
+        userRepository.save(user);
+        return Optional.of(user);
     }
 }

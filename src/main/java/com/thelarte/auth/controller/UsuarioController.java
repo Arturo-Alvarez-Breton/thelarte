@@ -44,24 +44,13 @@ public class UsuarioController {
     @PutMapping("/{username}")
     public ResponseEntity<UserResponseDTO> editarUsuario(
             @PathVariable String username, @RequestBody UserEditDTO editDto) {
-        Optional<User> userOpt = userService.findByUsername(username);
+        String newUsername = editDto.getUsername(); // Agrega username al DTO
+        Optional<User> userOpt = userService.updateUser(username, newUsername, editDto.getPassword(),
+                editDto.getRoles() != null ? editDto.getRoles().stream().map(UserRole::valueOf).toList() : null,
+                editDto.getActive()
+        );
         if (userOpt.isEmpty()) return ResponseEntity.notFound().build();
-        User user = userOpt.get();
-
-        if (editDto.getPassword() != null && !editDto.getPassword().isEmpty()) {
-            user.setPassword(userService.encodePassword(editDto.getPassword()));
-        }
-        if (editDto.getRoles() != null && !editDto.getRoles().isEmpty()) {
-            List<UserRole> roles = editDto.getRoles().stream()
-                    .map(UserRole::valueOf)
-                    .collect(Collectors.toList());
-            user.setRoles(roles);
-        }
-        if (editDto.getActive() != null) {
-            user.setActive(editDto.getActive());
-        }
-        userService.save(user);
-        return ResponseEntity.ok(toDto(user));
+        return ResponseEntity.ok(toDto(userOpt.get()));
     }
 
     // Eliminar usuario
