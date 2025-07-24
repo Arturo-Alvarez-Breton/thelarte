@@ -110,17 +110,11 @@ async function loadProducts() {
         </div>
         <div class="flex flex-row md:flex-col gap-2 mt-4 md:mt-0 md:ml-8">
             <a href="form.html?id=${p.id}"
-               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">
-              ✏️ Editar
-            </a>
+               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">Editar</a>
             <button type="button" data-id="${p.id}" 
-                    class="delete text-red-600 hover:text-red-800 px-3 py-1 rounded-md hover:bg-red-50 transition-colors">
-              🗑️ Eliminar
-            </button>
+                class="delete text-red-600 hover:text-red-800 px-3 py-1 rounded-md hover:bg-red-50 transition-colors">Eliminar</button>
             <a href="/pages/unidades/index.html?productoId=${p.id}"
-               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors">
-                📦 Unidades
-            </a>
+               class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors"> Unidades</a>
         </div>
       </div>
     `).join('');
