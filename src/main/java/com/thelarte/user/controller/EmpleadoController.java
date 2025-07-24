@@ -33,10 +33,11 @@ public class EmpleadoController {
             ent.setNombre(dto.getNombre());
             ent.setApellido(dto.getApellido());
             ent.setTelefono(dto.getTelefono());
-            ent.setEmail(dto.getEmail()); // Asignar email desde el DTO
+            ent.setEmail(dto.getEmail());
             ent.setRol(Rol.valueOf(dto.getRol()));
             ent.setSalario(dto.getSalario());
-            // fechaContratacion será null aquí, PrePersist lo asigna a LocalDate.now()
+            ent.setComision(dto.getComision());
+            // fechaContratacion se asigna automáticamente con @PrePersist
 
             Empleado creado = empleadoService.crearEmpleado(ent);
             URI uri = URI.create("/api/empleados/" + creado.getCedula());
@@ -66,11 +67,10 @@ public class EmpleadoController {
         datos.setNombre(dto.getNombre());
         datos.setApellido(dto.getApellido());
         datos.setTelefono(dto.getTelefono());
-        // no setEmail
         datos.setRol(Rol.valueOf(dto.getRol()));
         datos.setSalario(dto.getSalario());
         datos.setEmail(dto.getEmail());
-        // No modificamos fechaContratacion aquí: se conserva la de creación
+        datos.setComision(dto.getComision());
 
         Empleado actualizado = empleadoService.actualizarEmpleado(cedula, datos);
         return ResponseEntity.ok(actualizado);

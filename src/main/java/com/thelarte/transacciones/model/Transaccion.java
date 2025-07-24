@@ -34,7 +34,7 @@ public class Transaccion {
     @Column(name = "contraparte_nombre", nullable = false)
     private String contraparteNombre;
 
-    @OneToMany(mappedBy = "transaccion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "transaccion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<LineaTransaccion> lineas;
 
     @Column(name = "subtotal", precision = 12, scale = 2)
@@ -91,6 +91,9 @@ public class Transaccion {
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
+    @Column(name = "deleted", nullable = false)
+    private Boolean deleted = false;
+
     public Transaccion() {
         this.fechaCreacion = LocalDateTime.now();
         this.fecha = LocalDateTime.now();
@@ -108,6 +111,20 @@ public class Transaccion {
     @PreUpdate
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
+    }
+    
+    @PrePersist
+    public void prePersist() {
+        if (this.numeroFactura == null) {
+            this.numeroFactura = generateNumeroFactura();
+        }
+    }
+    
+    private String generateNumeroFactura() {
+        // Genera un número de factura único basado en el tipo y timestamp
+        String prefix = this.tipo == TipoTransaccion.COMPRA ? "C" : "V";
+        long timestamp = System.currentTimeMillis();
+        return prefix + String.format("%010d", timestamp % 10000000000L);
     }
 
     public Long getId() {
@@ -316,6 +333,18 @@ public class Transaccion {
 
     public void setNumeroReferencia(String numeroReferencia) {
         this.numeroReferencia = numeroReferencia;
+    }
+
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public boolean isDeleted() {
+        return deleted != null && deleted;
     }
 
     public enum TipoTransaccion {

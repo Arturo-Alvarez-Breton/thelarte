@@ -1,26 +1,28 @@
 package com.thelarte.auth.entity;
 
+import com.thelarte.user.model.Empleado;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Collection;
 import java.util.List;
-
 
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(unique = true, nullable = false)
     private String username;
-    
+
     @Column(nullable = false)
     private String password;
-    
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "user_roles",
@@ -29,13 +31,15 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
     private List<UserRole> roles;
-    
+
     @Column(nullable = false)
     private boolean active;
 
-    // Constructors
-    public User() {
-    }
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "empleado_cedula", referencedColumnName = "cedula")
+    private Empleado empleado;
+
+    public User() {}
 
     public User(String username, String password, List<UserRole> roles, boolean active) {
         this.username = username;
@@ -44,7 +48,8 @@ public class User implements UserDetails {
         this.active = active;
     }
 
-    // Getters and Setters
+    // Getters & Setters
+
     public Long getId() {
         return id;
     }
@@ -53,6 +58,7 @@ public class User implements UserDetails {
         this.id = id;
     }
 
+    @Override
     public String getUsername() {
         return username;
     }
@@ -69,7 +75,7 @@ public class User implements UserDetails {
     public void setPassword(String password) {
         this.password = password;
     }
-    
+
     public List<UserRole> getRoles() {
         return roles;
     }
@@ -77,21 +83,30 @@ public class User implements UserDetails {
     public void setRoles(List<UserRole> roles) {
         this.roles = roles;
     }
-    
+
     public boolean isActive() {
         return active;
     }
-    
+
     public void setActive(boolean active) {
         this.active = active;
     }
 
-    // Implementation of UserDetails methods
+    public Empleado getEmpleado() {
+        return empleado;
+    }
+
+    public void setEmpleado(Empleado empleado) {
+        this.empleado = empleado;
+    }
+
+    // UserDetails
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
-                .toList();
+            .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+            .toList();
     }
 
     @Override

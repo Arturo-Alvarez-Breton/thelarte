@@ -6,9 +6,11 @@ import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.repository.UnidadRepository;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.inventory.util.EstadoUnidad;
+import com.thelarte.transacciones.model.Transaccion;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
@@ -24,8 +26,16 @@ public class UnidadService {
     @Autowired
     private ProductoRepository productoRepository;
 
+    @Transactional(readOnly = true)
+    public List<UnidadDTO> obtenerUnidadesPorEstado(Long idProducto, EstadoUnidad estado) {
+        return unidadRepository.findByProducto_IdAndEstado(idProducto, estado)
+                .stream()
+                .map(this::toDto) //
+                .collect(Collectors.toList());
+    }
+
     // Registrar una nueva unidad para un producto (devuelve DTO)
-    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
+    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock, Long transaccionOrigenId) {
         Optional<Producto> productoOpt = productoRepository.findById(idProducto);
         if (productoOpt.isEmpty()) {
             throw new IllegalArgumentException("Producto no encontrado");
@@ -35,9 +45,13 @@ public class UnidadService {
         unidad.setFechaIngreso(new Date());
         unidad.setEstado(estadoUnidad);
         unidad.setStock(stock);
+        unidad.setTransaccionOrigenId(transaccionOrigenId); // <<< NUEVO: asigna el id de la transacción de compra/venta
         productoOpt.get().getUnidades().add(unidad); // Agregar unidad al producto
         Unidad saved = unidadRepository.save(unidad);
         return toDto(saved);
+    }
+    public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock) {
+        return registrarUnidad(idProducto, estadoUnidad, stock, null);
     }
 
     // Cambiar el estado de una unidad (devuelve DTO)

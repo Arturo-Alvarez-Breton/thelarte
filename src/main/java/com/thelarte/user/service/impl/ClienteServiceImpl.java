@@ -21,7 +21,6 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente crearCliente(Cliente cliente) {
-        // Aquí podrías validar duplicados (cedula única, email, etc.)
         return clienteRepository.save(cliente);
     }
 
@@ -43,13 +42,11 @@ public class ClienteServiceImpl implements ClienteService {
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
 
-        // Actualizar solo campos permisibles:
         existente.setNombre(datosActualizados.getNombre());
         existente.setApellido(datosActualizados.getApellido());
         existente.setTelefono(datosActualizados.getTelefono());
         existente.setEmail(datosActualizados.getEmail());
         existente.setDireccion(datosActualizados.getDireccion());
-        // NO modificar fechaRegistro
         return clienteRepository.save(existente);
     }
 

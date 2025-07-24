@@ -1,3 +1,5 @@
+// /js/usuario/index.js
+
 const tableBody = document.getElementById('usuariosTable');
 const emptyState = document.getElementById('emptyState');
 const tableWrapper = document.getElementById('usuariosTableWrapper');

@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function cargarTransacciones() {
     try {
         showLoading();
-        transacciones = await transaccionService.obtenerTransacciones();
+        // Solo transacciones que NO estén canceladas
+        transacciones = (await transaccionService.obtenerTransacciones())
+            .filter(t => t.estado !== 'CANCELADA');
         transaccionesFiltradas = [...transacciones];
         paginaActual = 1;
         mostrarTransacciones();
@@ -75,6 +77,7 @@ function filtrarTransacciones() {
     const buscarTexto = document.getElementById('buscarTexto').value.toLowerCase();
 
     transaccionesFiltradas = transacciones.filter(transaccion => {
+        // Ya no se muestran las CANCELADAS por el filtro global en cargarTransacciones
         const cumpleTipo = !filtroTipo || transaccion.tipo === filtroTipo;
         const cumpleEstado = !filtroEstado || transaccion.estado === filtroEstado;
         const cumpleBusqueda = !buscarTexto ||

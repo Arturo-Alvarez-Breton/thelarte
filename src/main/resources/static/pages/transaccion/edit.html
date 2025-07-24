@@ -316,6 +316,13 @@
             <i class="fas fa-save mr-2"></i>Guardar Cambios
           </button>
         </div>
+
+      </div>
+      <div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p class="text-yellow-800">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          <strong>Importante:</strong> Al guardar los cambios, se actualizará la información de la transacción. Verifique que todos los datos sean correctos.
+        </p>
       </div>
     </div>
   </div>
@@ -326,54 +333,6 @@
   <div class="bg-white rounded-lg p-6 flex items-center">
     <div class="animate-spin h-6 w-6 border-4 border-[#7b5222] border-t-transparent rounded-full mr-3"></div>
     <span class="text-[#59391B] font-medium">Procesando transacción...</span>
-  </div>
-</div>
-
-<footer class="w-full text-center py-4 text-gray-400 text-sm mt-8">
-  &copy; 2025 Thelarte.
-</footer>
-
-<script src="../../js/services/transaccionService.js"></script>
-<script src="../../js/transaccion/edit.js"></script>
-</body>
-</html>
-            <div>
-              <h4 class="font-semibold text-[#59391B] mb-3">Productos</h4>
-              <div id="confirmProductos" class="space-y-2 max-h-40 overflow-y-auto"></div>
-            </div>
-          </div>
-          
-          <div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p class="text-yellow-800">
-              <i class="fas fa-exclamation-triangle mr-2"></i>
-              <strong>Importante:</strong> Al guardar los cambios, se actualizará la información de la transacción. Verifique que todos los datos sean correctos.
-            </p>
-          </div>
-        </div>
-      </form>
-
-      <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-        <button type="button" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition shadow-md text-sm md:text-base font-medium" id="btnAnterior" onclick="anteriorPaso()" style="display: none;">
-          <i class="fas fa-arrow-left mr-2"></i>Anterior
-        </button>
-        <div class="flex gap-3">
-          <button type="button" class="bg-[#59391B] hover:bg-[#7b5222] text-white px-6 py-3 rounded-lg transition shadow-md text-sm md:text-base font-medium" id="btnSiguiente" onclick="siguientePaso()">
-            Siguiente<i class="fas fa-arrow-right ml-2"></i>
-          </button>
-          <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition shadow-md text-sm md:text-base font-medium" id="btnConfirmar" onclick="guardarCambiosTransaccion()" style="display: none;">
-            <i class="fas fa-save mr-2"></i>Guardar Cambios
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-white rounded-lg p-6 flex items-center">
-    <div class="animate-spin h-6 w-6 border-4 border-[#7b5222] border-t-transparent rounded-full mr-3"></div>
-    <span class="text-[#59391B] font-medium">Procesando...</span>
   </div>
 </div>
 
