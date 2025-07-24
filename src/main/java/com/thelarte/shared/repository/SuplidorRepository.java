@@ -40,4 +40,31 @@ public interface SuplidorRepository extends JpaRepository<Suplidor, Long> {
      * @return true si existe, false en caso contrario
      */
     boolean existsByRNC(String rnc);
+    
+    /**
+     * Busca todos los suplidores activos.
+     * @return Lista de suplidores activos
+     */
+    List<Suplidor> findByActivoTrue();
+    
+    /**
+     * Busca suplidor activo por nombre.
+     * @param nombre Nombre del suplidor
+     * @return Optional con el suplidor si existe y está activo
+     */
+    Optional<Suplidor> findByNombreAndActivoTrue(String nombre);
+    
+    /**
+     * Busca suplidor activo por RNC.
+     * @param rnc RNC del suplidor
+     * @return Optional con el suplidor si existe y está activo
+     */
+    Optional<Suplidor> findByRNCAndActivoTrue(String rnc);
+    
+    /**
+     * Busca suplidores activos por ciudad.
+     * @param ciudad Ciudad de los suplidores
+     * @return Lista de suplidores activos de una ciudad específica
+     */
+    List<Suplidor> findByCiudadAndActivoTrue(String ciudad);
 }

@@ -46,7 +46,8 @@ const login = async ({ username, password }) => {
 
     return { 
       token: data.token, 
-      email: data.email || data.username + '@thelarte.com' 
+      email: data.email || data.username + '@thelarte.com',
+      role: data.role // Assuming the backend provides the role
     };
 
   } catch (error) {
@@ -132,12 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Store auth data
       localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userEmail', data.email);      // Success feedback
+      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('userRole', data.role); // Store user role
+
+      // Success feedback
       submitBtn.innerHTML = '¡Acceso concedido!';
-      submitBtn.style.background = '#10B981';      // Redirect after a brief moment
-        setTimeout(() => {
+      submitBtn.style.background = '#10B981';
+
+      // Redirect based on role
+      setTimeout(() => {
+        if (data.role === 'VENTAS' || data.role === 'CONTABILIDAD') {
+          window.location.href = '/pages/contabilidad/index.html';
+        } else {
           window.location.href = '/pages/structure/home.html';
-        }, 800);
+        }
+      }, 800);
 
     } catch (err) {
       console.error('Login error:', err);
@@ -179,9 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
   usernameInput.focus();
   // Check if user is already logged in
   const token = localStorage.getItem('authToken');
+  const role = localStorage.getItem('userRole');
   if (token) {
     console.log('User already has a token');
     // Redirigir al inicio automáticamente si hay un token
-    window.location.href = '/pages/structure/home.html';
+    if (role === 'VENTAS' || role === 'CONTABILIDAD') {
+      window.location.href = '/pages/contabilidad/index.html';
+    } else {
+      window.location.href = '/pages/structure/home.html';
+    }
   }
 });

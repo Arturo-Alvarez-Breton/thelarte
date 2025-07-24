@@ -30,7 +30,7 @@ public class SuplidorService implements ISuplidorService {
     @Override
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarTodos() {
-        return suplidorRepository.findAll().stream()
+        return suplidorRepository.findByActivoTrue().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -54,7 +54,7 @@ public class SuplidorService implements ISuplidorService {
      */    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorNombre(String nombre) {
-        return suplidorRepository.findByNombre(nombre)
+        return suplidorRepository.findByNombreAndActivoTrue(nombre)
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
                         s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()));
     }
@@ -66,7 +66,7 @@ public class SuplidorService implements ISuplidorService {
      */    @Override
     @Transactional(readOnly = true)
     public Optional<SuplidorDTO> buscarPorRNC(String rnc) {
-        return suplidorRepository.findByRNC(rnc)
+        return suplidorRepository.findByRNCAndActivoTrue(rnc)
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
                         s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()));
     }
@@ -128,13 +128,26 @@ public class SuplidorService implements ISuplidorService {
     }
     
     /**
+     * Elimina lógicamente un suplidor por su ID
+     * @param id ID del suplidor a eliminar lógicamente
+     */
+    @Override
+    public void eliminarLogico(Long id) {
+        Suplidor suplidor = suplidorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el suplidor con ID: " + id));
+        
+        suplidor.setActivo(false);
+        suplidorRepository.save(suplidor);
+    }
+    
+    /**
      * Busca suplidores por ciudad
      * @param ciudad Ciudad para filtrar
      * @return Lista de suplidores de la ciudad especificada
      */    @Override
     @Transactional(readOnly = true)
     public List<SuplidorDTO> listarPorCiudad(String ciudad) {
-        return suplidorRepository.findByCiudad(ciudad).stream()
+        return suplidorRepository.findByCiudadAndActivoTrue(ciudad).stream()
                 .map(s -> new SuplidorDTO(s.getId(), s.getNombre(), s.getCiudad(), s.getDireccion(), 
                         s.getEmail(), s.getRNC(), s.getNCF(), s.getTelefonos(), s.getLongitud(), s.getLatitud()))
                 .collect(Collectors.toList());

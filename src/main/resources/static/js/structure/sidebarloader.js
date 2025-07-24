@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const sidebarLogoutBtn = document.getElementById('sidebarLogoutBtn');
         if (sidebarLogoutBtn) {
             sidebarLogoutBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to log out?')) {
+                if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userEmail');
                     window.location.href = '/pages/login.html';

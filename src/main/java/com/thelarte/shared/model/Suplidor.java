@@ -20,6 +20,10 @@ public class Suplidor {
     // Campos de geolocalización
     private Double longitud;
     private Double latitud;
+    
+    // Campo para borrado lógico
+    @Column(name = "activo", nullable = false)
+    private Boolean activo = true;
 
     @ElementCollection
     private List<String> telefonos;
@@ -116,5 +120,13 @@ public class Suplidor {
 
     public void setLatitud(Double latitud) {
         this.latitud = latitud;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
 }

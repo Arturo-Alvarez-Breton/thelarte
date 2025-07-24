@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contabilidad - Inicio</title>
+    <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex h-screen bg-gray-100">
+    <aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+        <div class="text-2xl font-bold text-center">Thelarte</div>
+        <nav class="flex-1">
+            <ul>
+                <!-- Dashboard eliminado -->
+                <li>
+                    <a href="/pages/contabilidad/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                        <i class="fas fa-home flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Inicio Contabilidad</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Transacciones</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-box-open flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Productos</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-users flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Clientes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Suplidores</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Reportes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-cog flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Configuración</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="mt-auto">
+            <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                <span class="ml-3">Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col">
+        <header class="bg-white shadow p-4 flex justify-between items-center">
+            <div>
+                <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Inicio Contabilidad</h1>
+                <p id="cont-header-subtitle" class="text-sm text-gray-600">Bienvenido al módulo de contabilidad</p>
+            </div>
+            <div id="cont-quick-actions" class="flex space-x-2">
+                <!-- Botones de acción rápida específicos de la página -->
+                <button data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-plus mr-2"></i>Nueva Venta
+                </button>
+            </div>
+        </header>
+
+        <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
+            <section class="p-4 bg-white rounded-lg shadow">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Resumen General</h2>
+                <p class="text-gray-600 mb-6">Dashboard con las principales métricas de ventas, compras y balance general del negocio.</p>
+                <!-- Statistics Cards -->
+                <div id="statisticsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Statistics will be loaded dynamically by main.js -->
+                    <div class="flex items-center justify-center py-12">
+                        <div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Acciones Rápidas</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">
+                            <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-sm font-medium text-green-800">Nueva Compra</span>
+                        </button>
+                        
+                        <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">
+                            <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>
+                        </button>
+                        
+                        <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">
+                            <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-sm font-medium text-red-800">Devolución</span>
+                        </button>
+                        
+                        <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">
+                            <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-sm font-medium text-blue-800">Reportes</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+    <!-- Transaction Creation Wizard Modal -->
+    <div id="transactionWizard" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
+                <!-- Wizard Header -->
+                <div class="bg-brand-brown text-white p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold">Crear Nueva Transacción</h3>
+                            <p class="text-brand-cream opacity-90" id="wizardSubtitle">Selecciona el tipo de transacción</p>
+                        </div>
+                        <button onclick="closeTransactionWizard()" class="text-white hover:text-gray-300">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Progress Steps -->
+                    <div class="flex items-center mt-6 space-x-4">
+                        <div class="wizard-step active flex items-center">
+                            <div class="w-8 h-8 bg-white text-brand-brown rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                            <span class="ml-2 text-sm">Tipo</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                            <span class="ml-2 text-sm">Detalles</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                            <span class="ml-2 text-sm">Productos</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                            <span class="ml-2 text-sm">Confirmación</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Wizard Content -->
+                <div class="p-6 custom-scrollbar overflow-y-auto" style="max-height: 60vh;" id="wizardContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                
+                <!-- Wizard Footer -->
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                    <button id="wizardPrevBtn" onclick="wizardPrevStep()" class="px-4 py-2 text-gray-600 hover:text-gray-800 hidden">
+                        <i class="fas fa-arrow-left mr-1"></i>
+                        Anterior
+                    </button>
+                    <div class="flex space-x-3">
+                        <button onclick="closeTransactionWizard()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                            Cancelar
+                        </button>
+                        <button id="wizardNextBtn" onclick="wizardNextStep()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-brown-light">
+                            Siguiente
+                            <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <script src="/js/components/sidebar.js" type="module"></script>
+    <script src="/js/components/header.js" type="module"></script>
+    <script src="/js/contabilidad/main.js" type="module"></script>
+    <script src="/js/components/notifications.js"></script>
+    <script src="/js/components/transactionWizard.js" type="module"></script>
+    <script src="/js/services/transaccionService.js" type="module"></script>
+</body>
+</html>
