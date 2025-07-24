@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function cargarTransacciones() {
     try {
         showLoading();
-        transacciones = await transaccionService.obtenerTransacciones();
+        const todas = await transaccionService.obtenerTransacciones();
+        // Solo muestra las que NO estén eliminadas
+        transacciones = todas.filter(t => !t.deleted);
         transaccionesFiltradas = [...transacciones];
         paginaActual = 1;
         mostrarTransacciones();
