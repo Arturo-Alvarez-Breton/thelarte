@@ -8,6 +8,8 @@ import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.user.model.Cliente;
+import com.thelarte.shared.model.Suplidor;
+import com.thelarte.shared.repository.SuplidorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +32,9 @@ public class CajeroServiceSimplificado {
     
     @Autowired
     private ClienteRepository clienteRepository;
+    
+    @Autowired
+    private SuplidorRepository suplidorRepository;
     
     private CajaDTO cajaActual;
     private Map<String, Object> configuracionCaja = new HashMap<>();
@@ -152,68 +157,59 @@ public class CajeroServiceSimplificado {
         }
         
         return transacciones.stream()
-            .map(this::convertToCajeroTransaccionDTO)
+            .map(this::convertToTransaccionDTO)
             .collect(Collectors.toList());
     }
 
     public CajeroTransaccionDTO getTransaccionById(Long id) {
-        Optional<Transaccion> transaccionOpt = transaccionRepository.findById(id);
-        if (transaccionOpt.isPresent()) {
-            return convertToCajeroTransaccionDTO(transaccionOpt.get());
+        try {
+            System.out.println("=== DEBUG: Buscando transacción con ID: " + id + " ===");
+            Optional<Transaccion> transaccionOpt = transaccionRepository.findById(id);
+            if (transaccionOpt.isPresent()) {
+                System.out.println("=== DEBUG: Transacción encontrada, convirtiendo a DTO ===");
+                return convertToTransaccionDTO(transaccionOpt.get());
+            }
+            System.out.println("=== DEBUG: Transacción no encontrada ===");
+            throw new RuntimeException("Transacción no encontrada");
+        } catch (Exception e) {
+            System.err.println("=== ERROR: En getTransaccionById ===");
+            e.printStackTrace();
+            throw new RuntimeException("Error al obtener transacción: " + e.getMessage(), e);
         }
-        throw new RuntimeException("Transacción no encontrada");
     }
 
-    private CajeroTransaccionDTO convertToCajeroTransaccionDTO(Transaccion transaccion) {
-        CajeroTransaccionDTO dto = new CajeroTransaccionDTO();
-        dto.setId(transaccion.getId());
-        dto.setNumeroFactura(transaccion.getNumeroFactura());
-        dto.setTipoTransaccion(transaccion.getTipo().toString());
-        dto.setFecha(transaccion.getFecha());
-        dto.setEstado(transaccion.getEstado().toString());
-        
-        if (transaccion.getTipoContraparte() == Transaccion.TipoContraparte.CLIENTE) {
-            Optional<Cliente> clienteOpt = clienteRepository.findById(transaccion.getContraparteId().toString());
-            if (clienteOpt.isPresent()) {
-                Cliente cliente = clienteOpt.get();
-                CajeroTransaccionDTO.ClienteInfoDTO clienteInfo = new CajeroTransaccionDTO.ClienteInfoDTO();
-                clienteInfo.setCedula(cliente.getCedula());
-                clienteInfo.setNombre(cliente.getNombre());
-                clienteInfo.setApellido(cliente.getApellido());
-                clienteInfo.setTelefono(cliente.getTelefono());
-                clienteInfo.setEmail(cliente.getEmail());
-                clienteInfo.setDireccion(cliente.getDireccion());
-                dto.setCliente(clienteInfo);
-            }
-        }
-        
-        if (transaccion.getLineas() != null) {
-            List<CajeroTransaccionDTO.LineaTransaccionDTO> lineas = transaccion.getLineas().stream()
-                .map(this::convertToLineaTransaccionDTO)
-                .collect(Collectors.toList());
-            dto.setLineas(lineas);
-        }
-        
-        dto.setSubtotal(transaccion.getSubtotal());
-        dto.setImpuestos(transaccion.getImpuestos());
-        dto.setTotal(transaccion.getTotal());
-        dto.setMetodoPago(transaccion.getMetodoPago());
-        dto.setNumeroTransaccionPago(transaccion.getNumeroTransaccion());
-        dto.setObservaciones(transaccion.getObservaciones());
-        
-        return dto;
-    }
+    // Método convertToCajeroTransaccionDTO eliminado - usando convertToTransaccionDTO que incluye proveedores
 
     private CajeroTransaccionDTO.LineaTransaccionDTO convertToLineaTransaccionDTO(LineaTransaccion linea) {
         CajeroTransaccionDTO.LineaTransaccionDTO dto = new CajeroTransaccionDTO.LineaTransaccionDTO();
         
-        Optional<Producto> productoOpt = productoRepository.findById(linea.getProductoId());
-        if (productoOpt.isPresent()) {
-            Producto producto = productoOpt.get();
-            dto.setProductoId(producto.getId());
-            dto.setNombreProducto(producto.getNombre());
-            dto.setCodigoProducto(producto.getCodigo());
-            dto.setCategoria(producto.getTipo());
+        // Si el producto ID es -1 (temporal) o no existe, usar la información guardada en la línea
+        if (linea.getProductoId() != null && linea.getProductoId() != -1L) {
+            try {
+                Optional<Producto> productoOpt = productoRepository.findById(linea.getProductoId());
+                if (productoOpt.isPresent()) {
+                    Producto producto = productoOpt.get();
+                    dto.setProductoId(producto.getId());
+                    dto.setNombreProducto(producto.getNombre());
+                    dto.setCodigoProducto(producto.getCodigo());
+                    dto.setCategoria(producto.getTipo());
+                } else {
+                    // Producto no encontrado, usar datos de la línea
+                    dto.setProductoId(linea.getProductoId());
+                    dto.setNombreProducto(linea.getProductoNombre());
+                    dto.setCodigoProducto("N/A");
+                }
+            } catch (Exception e) {
+                // En caso de error, usar datos de la línea
+                dto.setProductoId(linea.getProductoId());
+                dto.setNombreProducto(linea.getProductoNombre());
+                dto.setCodigoProducto("N/A");
+            }
+        } else {
+            // Producto temporal o sin ID, usar datos de la línea
+            dto.setProductoId(linea.getProductoId());
+            dto.setNombreProducto(linea.getProductoNombre());
+            dto.setCodigoProducto("TEMP");
         }
         
         dto.setCantidad(linea.getCantidad());
@@ -296,7 +292,10 @@ public class CajeroServiceSimplificado {
     }
 
     public List<SuplidorDTO> getSuplidores() {
-        return Collections.emptyList();
+        List<Suplidor> suplidores = suplidorRepository.findByActivoTrue();
+        return suplidores.stream().map(suplidor -> 
+            new SuplidorDTO(suplidor.getId(), suplidor.getNombre(), suplidor.getRNC())
+        ).collect(Collectors.toList());
     }
 
     public ClienteCajeroDTO registrarClienteRapido(ClienteCajeroDTO clienteDTO) {
@@ -494,8 +493,16 @@ public class CajeroServiceSimplificado {
     }
 
     public CajeroTransaccionDTO crearTransaccion(CajeroTransaccionDTO transaccionDTO) {
-        // Crear nueva transacción basada en el DTO
-        Transaccion transaccion = new Transaccion();
+        try {
+            System.out.println("=== DEBUG: Creando transacci\u00f3n ===");
+            System.out.println("Tipo: " + transaccionDTO.getTipoTransaccion());
+            System.out.println("Cliente: " + transaccionDTO.getCliente());  
+            System.out.println("Proveedor: " + transaccionDTO.getProveedor());
+            System.out.println("Total: " + transaccionDTO.getTotal());
+            System.out.println("L\u00edneas: " + (transaccionDTO.getLineas() != null ? transaccionDTO.getLineas().size() : "null"));
+            
+            // Crear nueva transacción basada en el DTO
+            Transaccion transaccion = new Transaccion();
         transaccion.setTipo(Transaccion.TipoTransaccion.valueOf(transaccionDTO.getTipoTransaccion()));
         transaccion.setFecha(LocalDateTime.now());
         transaccion.setEstado(Transaccion.EstadoTransaccion.PENDIENTE);
@@ -511,13 +518,84 @@ public class CajeroServiceSimplificado {
                 transaccion.setTipoContraparte(Transaccion.TipoContraparte.CLIENTE);
                 transaccion.setContraparteNombre(transaccionDTO.getCliente().getNombreCompleto());
             }
+        } else if (transaccionDTO.getProveedor() != null) {
+            // Si el proveedor no tiene ID, crearlo primero
+            Long suplidorId = transaccionDTO.getProveedor().getId();
+            
+            if (suplidorId == null) {
+                System.out.println("=== DEBUG: Creando nuevo suplidor ===");
+                Suplidor nuevoSuplidor = new Suplidor();
+                nuevoSuplidor.setNombre(transaccionDTO.getProveedor().getNombre());
+                nuevoSuplidor.setRNC(transaccionDTO.getProveedor().getRnc() != null ? transaccionDTO.getProveedor().getRnc() : "");
+                nuevoSuplidor.setEmail(transaccionDTO.getProveedor().getEmail());
+                nuevoSuplidor.setDireccion(transaccionDTO.getProveedor().getDireccion());
+                nuevoSuplidor.setCiudad(transaccionDTO.getProveedor().getCiudad());
+                
+                if (transaccionDTO.getProveedor().getTelefono() != null && !transaccionDTO.getProveedor().getTelefono().isEmpty()) {
+                    nuevoSuplidor.setTelefonos(Arrays.asList(transaccionDTO.getProveedor().getTelefono()));
+                }
+                
+                Suplidor suplidorGuardado = suplidorRepository.save(nuevoSuplidor);
+                suplidorId = suplidorGuardado.getId();
+                System.out.println("=== DEBUG: Suplidor creado con ID: " + suplidorId + " ===");
+            }
+            
+            transaccion.setContraparteId(suplidorId);
+            transaccion.setTipoContraparte(Transaccion.TipoContraparte.SUPLIDOR);
+            transaccion.setContraparteNombre(transaccionDTO.getProveedor().getNombre());
         }
         
         transaccion.setMetodoPago(transaccionDTO.getMetodoPago());
         transaccion.setObservaciones(transaccionDTO.getObservaciones());
+        transaccion.setSubtotal(transaccionDTO.getSubtotal());
+        transaccion.setImpuestos(transaccionDTO.getImpuestos());
+        transaccion.setTotal(transaccionDTO.getTotal());
         
-        Transaccion nuevaTransaccion = transaccionRepository.save(transaccion);
-        return convertToTransaccionDTO(nuevaTransaccion);
+            // Primero guardamos la transacción
+            Transaccion nuevaTransaccion = transaccionRepository.save(transaccion);
+            
+            // Luego procesamos las líneas de transacción
+            if (transaccionDTO.getLineas() != null && !transaccionDTO.getLineas().isEmpty()) {
+                System.out.println("=== DEBUG: Procesando " + transaccionDTO.getLineas().size() + " líneas ===");
+                List<LineaTransaccion> lineas = new ArrayList<>();
+                
+                for (CajeroTransaccionDTO.LineaTransaccionDTO lineaDTO : transaccionDTO.getLineas()) {
+                    System.out.println("=== DEBUG: Procesando línea: " + lineaDTO.getNombreProducto() + " ===");
+                    
+                    // Si el producto no existe, crearlo
+                    Long productoId = lineaDTO.getProductoId();
+                    if (productoId == null) {
+                        System.out.println("=== DEBUG: Creando nuevo producto: " + lineaDTO.getNombreProducto() + " ===");
+                        // Aquí necesitarías crear el producto en el inventario
+                        // Por ahora usaremos un ID temporal
+                        productoId = -1L; // Marca que es un producto temporal
+                    }
+                    
+                    LineaTransaccion linea = new LineaTransaccion();
+                    linea.setTransaccion(nuevaTransaccion);
+                    linea.setProductoId(productoId);
+                    linea.setProductoNombre(lineaDTO.getNombreProducto());
+                    linea.setCantidad(lineaDTO.getCantidad());
+                    linea.setPrecioUnitario(lineaDTO.getPrecioUnitario());
+                    linea.setSubtotal(lineaDTO.getSubtotalLinea());
+                    
+                    // Calcular totales
+                    linea.calcularTotales();
+                    lineas.add(linea);
+                }
+                
+                // Asignar las líneas a la transacción
+                nuevaTransaccion.setLineas(lineas);
+                nuevaTransaccion = transaccionRepository.save(nuevaTransaccion);
+                System.out.println("=== DEBUG: Transacción guardada con " + lineas.size() + " líneas ===");
+            }
+            System.out.println("=== DEBUG: Transacci\u00f3n guardada con ID: " + nuevaTransaccion.getId() + " ===");
+            return convertToTransaccionDTO(nuevaTransaccion);
+        } catch (Exception e) {
+            System.err.println("=== ERROR: Creando transacci\u00f3n ===");
+            e.printStackTrace();
+            throw new RuntimeException("Error al crear transacci\u00f3n: " + e.getMessage(), e);
+        }
     }
 
     public CajeroTransaccionDTO actualizarTransaccion(Long id, CajeroTransaccionDTO transaccionDTO) {
@@ -614,6 +692,33 @@ public class CajeroServiceSimplificado {
             }
             
             dto.setCliente(clienteInfo);
+        } else if (transaccion.getContraparteId() != null && transaccion.getTipoContraparte() == Transaccion.TipoContraparte.SUPLIDOR) {
+            CajeroTransaccionDTO.SuplidorInfoDTO suplidorInfo = new CajeroTransaccionDTO.SuplidorInfoDTO();
+            suplidorInfo.setId(transaccion.getContraparteId());
+            
+            // Intentar cargar datos del suplidor desde la base de datos
+            try {
+                Optional<Suplidor> suplidorOpt = suplidorRepository.findById(transaccion.getContraparteId());
+                if (suplidorOpt.isPresent()) {
+                    Suplidor suplidor = suplidorOpt.get();
+                    suplidorInfo.setNombre(suplidor.getNombre());
+                    suplidorInfo.setRnc(suplidor.getRNC());
+                    if (suplidor.getTelefonos() != null && !suplidor.getTelefonos().isEmpty()) {
+                        suplidorInfo.setTelefono(suplidor.getTelefonos().get(0));
+                    }
+                    suplidorInfo.setEmail(suplidor.getEmail());
+                    suplidorInfo.setDireccion(suplidor.getDireccion());
+                    suplidorInfo.setCiudad(suplidor.getCiudad());
+                } else {
+                    // Usar el nombre de la transacción si no se encuentra el suplidor
+                    suplidorInfo.setNombre(transaccion.getContraparteNombre());
+                }
+            } catch (Exception e) {
+                // En caso de error, usar datos básicos
+                suplidorInfo.setNombre(transaccion.getContraparteNombre());
+            }
+            
+            dto.setProveedor(suplidorInfo);
         }
         
         dto.setTotal(transaccion.getTotal());
@@ -623,6 +728,22 @@ public class CajeroServiceSimplificado {
         dto.setObservaciones(transaccion.getObservaciones());
         dto.setNumeroFactura(transaccion.getNumeroFactura());
         dto.setImpresa(false); // Por defecto no impresa
+        
+        // Convertir líneas de transacción
+        if (transaccion.getLineas() != null && !transaccion.getLineas().isEmpty()) {
+            List<CajeroTransaccionDTO.LineaTransaccionDTO> lineasDTO = new ArrayList<>();
+            for (LineaTransaccion linea : transaccion.getLineas()) {
+                CajeroTransaccionDTO.LineaTransaccionDTO lineaDTO = new CajeroTransaccionDTO.LineaTransaccionDTO();
+                lineaDTO.setProductoId(linea.getProductoId());
+                lineaDTO.setNombreProducto(linea.getProductoNombre());
+                lineaDTO.setCantidad(linea.getCantidad());
+                lineaDTO.setPrecioUnitario(linea.getPrecioUnitario());
+                lineaDTO.setSubtotalLinea(linea.getSubtotal());
+                lineaDTO.setDescuento(linea.getDescuento());
+                lineasDTO.add(lineaDTO);
+            }
+            dto.setLineas(lineasDTO);
+        }
         
         return dto;
     }

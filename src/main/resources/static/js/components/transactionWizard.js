@@ -877,10 +877,7 @@ export class TransactionWizard {
                 </div>
                 <div class="flex items-center space-x-2">
                     <span class="font-bold">${this.formatCurrency(linea.subtotalLinea)}</span>
-                    <button onclick="window.transactionWizard.removeVentaProduct(${index})" 
-                            class="text-red-500 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <!-- Botón eliminar removido -->
                 </div>
             </div>
         `).join('');
@@ -1119,7 +1116,10 @@ export class TransactionWizard {
             };
         }
 
-        console.log('Proveedor data saved:', this.transactionData.proveedor);
+        console.log('=== DEBUG: Proveedor data saved ===');
+        console.log('Proveedor completo:', this.transactionData.proveedor);
+        console.log('Nombre:', this.transactionData.proveedor?.nombre);
+        console.log('ID:', this.transactionData.proveedor?.id);
         return true;
     }
 
@@ -1236,9 +1236,7 @@ export class TransactionWizard {
                 </div>
                 <div class="font-bold text-right">${this.formatCurrency(linea.subtotalLinea)}</div>
                 <div>
-                    <button onclick="removeCompraProduct(${index})" class="text-red-500 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <!-- Botón eliminar removido -->
                 </div>
             </div>
         `).join('');
@@ -1317,6 +1315,10 @@ export class TransactionWizard {
 
     loadCompraStep3Data() {
         // Data already loaded, just display
+        console.log('=== DEBUG: Datos en el paso 3 ===');
+        console.log('Proveedor:', this.transactionData.proveedor);
+        console.log('Líneas:', this.transactionData.lineas);
+        console.log('Total:', this.transactionData.total);
     }
 
     async finalizeCompra() {

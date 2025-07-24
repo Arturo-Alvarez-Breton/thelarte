@@ -63,7 +63,7 @@ class SuplidoresManager {
                 <div class="mt-4 flex space-x-2">
                     <button onclick="suplidoresManager.verSuplidor(${suplidor.id})" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Ver</button>
                     <button onclick="suplidoresManager.editSuplidor(${suplidor.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Editar</button>
-                    <button onclick="suplidoresManager.deleteSuplidor(${suplidor.id})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
+                    <!-- Botón eliminar removido -->
                 </div>
             </div>
         `).join('');
@@ -143,18 +143,7 @@ class SuplidoresManager {
         document.getElementById('modalSuplidor').classList.remove('hidden');
     }
 
-    async deleteSuplidor(id) {
-        if (confirm('¿Estás seguro de que deseas eliminar este suplidor?')) {
-            try {
-                await this.transaccionService.deleteSuplidor(id);
-                window.showToast('Suplidor eliminado exitosamente.', 'success');
-                this.loadSuplidores();
-            } catch (error) {
-                console.error('Error deleting supplier:', error);
-                window.showToast('Error al eliminar el suplidor.', 'error');
-            }
-        }
-    }
+    // Método deleteSuplidor eliminado - no se permite eliminar suplidores
 
     async handleSubmitSuplidor(e) {
         e.preventDefault();

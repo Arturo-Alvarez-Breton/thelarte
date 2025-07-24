@@ -360,39 +360,98 @@ class TransaccionesManager {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
 
-        const clientInfo = transaction.cliente ? 
-            `<p><strong>Cliente:</strong> ${transaction.cliente.nombre} ${transaction.cliente.apellido} (${transaction.cliente.cedula})</p>` :
-            `<p><strong>Cliente:</strong> Consumidor Final</p>`;
+        // Información del cliente o proveedor según el tipo de transacción
+        let contraparteInfo = '';
+        if (transaction.tipoTransaccion === 'COMPRA' && transaction.proveedor) {
+            contraparteInfo = `
+                <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
+                <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
+                <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
+                <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
+            `;
+        } else if (transaction.cliente) {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre} ${transaction.cliente.apellido} (${transaction.cliente.cedula})</p>`;
+        } else {
+            contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
+        }
 
+        // Lista de productos (muebles)
         const productsList = transaction.lineas && transaction.lineas.length > 0 ?
             transaction.lineas.map(line => `
-                <div class="flex justify-between items-center border-b pb-1 mb-1">
-                    <span>${line.nombreProducto} (x${line.cantidad})</span>
-                    <span>${this.formatCurrency(line.subtotalLinea)}</span>
+                <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
+                    <div>
+                        <p class="font-medium">${line.nombreProducto}</p>
+                        <p class="text-sm text-gray-600">Cantidad: ${line.cantidad} | Precio: ${this.formatCurrency(line.precioUnitario)}</p>
+                        <p class="text-sm text-gray-600">Código: ${line.codigoProducto || 'N/A'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold">${this.formatCurrency(line.subtotalLinea)}</p>
+                        ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
+                    </div>
                 </div>
             `).join('') :
-            '<p>No hay productos en esta transacción.</p>';
+            '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+
+        // Estado editable
+        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA'];
+        const estadoSelect = `
+            <div class="flex items-center space-x-2">
+                <label class="font-bold">Estado:</label>
+                <select id="estadoTransaccion" class="border rounded px-2 py-1" onchange="transaccionesManager.cambiarEstadoTransaccion(${transaction.id}, this.value)">
+                    ${estadoOptions.map(estado => 
+                        `<option value="${estado}" ${transaction.estado === estado ? 'selected' : ''}>${estado}</option>`
+                    ).join('')}
+                </select>
+            </div>
+        `;
 
         detailsContainer.innerHTML = `
-            <div class="space-y-3">
-                <p><strong>Factura #:</strong> ${transaction.numeroFactura || 'N/A'}</p>
-                <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipoTransaccion)}</p>
-                <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
-                <p><strong>Estado:</strong> ${transaction.estado}</p>
-                ${clientInfo}
-                <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
-                <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
+            <div class="space-y-4">
+                <div class="bg-blue-50 p-3 rounded-lg">
+                    <p><strong>Factura #:</strong> ${transaction.numeroFactura || 'N/A'}</p>
+                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipoTransaccion)}</p>
+                    <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
+                    ${estadoSelect}
+                </div>
                 
-                <h4 class="font-bold mt-4">Productos:</h4>
-                <div class="border rounded p-2">${productsList}</div>
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <h4 class="font-bold mb-2">Información de Contraparte:</h4>
+                    ${contraparteInfo}
+                </div>
 
-                <div class="text-right mt-4">
-                    <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal)}</p>
-                    <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos)}</p>
-                    <p class="text-xl font-bold">Total: ${this.formatCurrency(transaction.total)}</p>
+                <div>
+                    <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
+                    <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold mb-2">Muebles/Productos Registrados:</h4>
+                    <div class="border rounded p-3 max-h-64 overflow-y-auto">${productsList}</div>
+                </div>
+
+                <div class="bg-green-50 p-3 rounded-lg text-right">
+                    <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
+                    <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
+                    <p class="text-xl font-bold text-green-700">Total: ${this.formatCurrency(transaction.total)}</p>
                 </div>
             </div>
         `;
+    }
+
+    async cambiarEstadoTransaccion(id, nuevoEstado) {
+        try {
+            // Aquí se podría implementar la llamada al backend para cambiar el estado
+            // Por ahora solo actualizamos localmente
+            const transaction = this.transactions.find(t => t.id === id);
+            if (transaction) {
+                transaction.estado = nuevoEstado;
+                this.renderTransactions(); // Actualizar la vista de la lista
+                window.showToast(`Estado cambiado a: ${nuevoEstado}`, 'success');
+            }
+        } catch (error) {
+            console.error('Error changing transaction state:', error);
+            window.showToast('Error al cambiar el estado de la transacción.', 'error');
+        }
     }
 
     cerrarModalVerTransaccion() {
@@ -409,24 +468,7 @@ class TransaccionesManager {
         // Implement edit logic, possibly opening the wizard in edit mode
     }
 
-    async deleteTransaction(id) {
-        if (confirm('¿Estás seguro de que deseas eliminar esta transacción de la vista actual? (No se eliminará permanentemente de la base de datos)')) {
-            try {
-                // Remove from local arrays (app-level deletion)
-                this.transactions = this.transactions.filter(t => t.id !== id);
-                this.filteredTransactions = this.filteredTransactions.filter(t => t.id !== id);
-                
-                // Re-render the list
-                this.renderTransactions();
-                this.updateTransactionCount();
-                
-                window.showToast('Transacción removida de la vista actual.', 'success');
-            } catch (error) {
-                console.error('Error removing transaction from view:', error);
-                window.showToast('Error al remover la transacción de la vista.', 'error');
-            }
-        }
-    }
+    // Método deleteTransaction eliminado - no se permite eliminar transacciones
 }
 
 // Global instance

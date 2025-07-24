@@ -12,6 +12,7 @@ public class CajeroTransaccionDTO {
     private LocalDateTime fecha;
     private String estado;
     private ClienteInfoDTO cliente;
+    private SuplidorInfoDTO proveedor;
     private List<LineaTransaccionDTO> lineas;
     private BigDecimal subtotal;
     private BigDecimal impuestos;
@@ -54,6 +55,39 @@ public class CajeroTransaccionDTO {
         public String getNombreCompleto() {
             return (nombre != null ? nombre : "") + " " + (apellido != null ? apellido : "");
         }
+    }
+    
+    public static class SuplidorInfoDTO {
+        private Long id;
+        private String nombre;
+        private String rnc;
+        private String telefono;
+        private String email;
+        private String direccion;
+        private String ciudad;
+        
+        public SuplidorInfoDTO() {}
+        
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        
+        public String getNombre() { return nombre; }
+        public void setNombre(String nombre) { this.nombre = nombre; }
+        
+        public String getRnc() { return rnc; }
+        public void setRnc(String rnc) { this.rnc = rnc; }
+        
+        public String getTelefono() { return telefono; }
+        public void setTelefono(String telefono) { this.telefono = telefono; }
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        
+        public String getDireccion() { return direccion; }
+        public void setDireccion(String direccion) { this.direccion = direccion; }
+        
+        public String getCiudad() { return ciudad; }
+        public void setCiudad(String ciudad) { this.ciudad = ciudad; }
     }
     
     public static class LineaTransaccionDTO {
@@ -112,6 +146,9 @@ public class CajeroTransaccionDTO {
     
     public ClienteInfoDTO getCliente() { return cliente; }
     public void setCliente(ClienteInfoDTO cliente) { this.cliente = cliente; }
+    
+    public SuplidorInfoDTO getProveedor() { return proveedor; }
+    public void setProveedor(SuplidorInfoDTO proveedor) { this.proveedor = proveedor; }
     
     public List<LineaTransaccionDTO> getLineas() { return lineas; }
     public void setLineas(List<LineaTransaccionDTO> lineas) { this.lineas = lineas; }

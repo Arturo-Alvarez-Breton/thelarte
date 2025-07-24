@@ -187,23 +187,7 @@ class ClientesManager {
         }
     }
 
-    async deleteCliente(cedula) {
-        if (confirm('¿Estás seguro de que deseas eliminar este cliente de la vista actual? (No se eliminará permanentemente de la base de datos)')) {
-            try {
-                // Remove from local arrays (app-level deletion)
-                this.clientes = this.clientes.filter(c => c.cedula !== cedula);
-                this.filteredClientes = this.filteredClientes.filter(c => c.cedula !== cedula);
-                
-                // Re-render the list
-                this.renderClientes();
-                
-                window.showToast('Cliente removido de la vista actual.', 'success');
-            } catch (error) {
-                console.error('Error removing client from view:', error);
-                window.showToast('Error al remover el cliente de la vista.', 'error');
-            }
-        }
-    }
+    // Método deleteCliente eliminado - no se permite eliminar clientes
 
     async handleSubmitCliente(e) {
         e.preventDefault();

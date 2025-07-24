@@ -112,8 +112,13 @@ class ContabilidadManager {
         const container = document.getElementById('statisticsContainer');
         if (!container) return;
         
+        // Calcular balance del mes (ventas - compras)
+        const balanceMonth = stats.totalSalesMonth - stats.totalPurchasesMonth;
+        const balanceColor = balanceMonth >= 0 ? '#10b981' : '#ef4444';
+        const balanceIcon = balanceMonth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+        
         container.innerHTML = `
-            <div class="stats-card text-white p-6 rounded-xl shadow-lg" style="--color-1: #10b981; --color-2: #059669;">
+            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold mb-2">Ventas del Mes</h3>
@@ -124,7 +129,7 @@ class ContabilidadManager {
                 </div>
             </div>
             
-            <div class="stats-card text-white p-6 rounded-xl shadow-lg" style="--color-1: #3b82f6; --color-2: #2563eb;">
+            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold mb-2">Compras del Mes</h3>
@@ -135,25 +140,50 @@ class ContabilidadManager {
                 </div>
             </div>
             
-            <div class="stats-card text-white p-6 rounded-xl shadow-lg" style="--color-1: #8b5cf6; --color-2: #7c3aed;">
+            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-semibold mb-2">Ventas del Año</h3>
-                        <p class="text-3xl font-bold">${this.formatCurrency(stats.totalSalesYear)}</p>
-                        <p class="text-sm opacity-90">Acumulado 2025</p>
+                        <h3 class="text-lg font-semibold mb-2">Balance del Mes</h3>
+                        <p class="text-3xl font-bold">${this.formatCurrency(balanceMonth)}</p>
+                        <p class="text-sm opacity-90">
+                            <i class="fas ${balanceIcon} mr-1"></i>
+                            ${balanceMonth >= 0 ? 'Ganancia' : 'Pérdida'}
+                        </p>
                     </div>
-                    <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
+                    <i class="fas fa-balance-scale text-4xl opacity-80"></i>
                 </div>
             </div>
             
-            <div class="stats-card text-white p-6 rounded-xl shadow-lg" style="--color-1: #f59e0b; --color-2: #d97706;">
+            <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-semibold mb-2">Pendientes</h3>
+                        <h3 class="text-lg font-semibold mb-2">Transacciones Pendientes</h3>
                         <p class="text-3xl font-bold">${stats.pendingCount}</p>
                         <p class="text-sm opacity-90">Requieren atención</p>
                     </div>
                     <i class="fas fa-clock text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Completadas</h3>
+                        <p class="text-3xl font-bold">${stats.completedCount}</p>
+                        <p class="text-sm opacity-90">Transacciones finalizadas</p>
+                    </div>
+                    <i class="fas fa-check-circle text-4xl opacity-80"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">Total del Año</h3>
+                        <p class="text-3xl font-bold">${this.formatCurrency(stats.totalSalesYear)}</p>
+                        <p class="text-sm opacity-90">Ventas acumuladas 2025</p>
+                    </div>
+                    <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
                 </div>
             </div>
         `;
