@@ -2,6 +2,19 @@ const tableBody   = document.getElementById('clientesTable');
 const emptyState  = document.getElementById('emptyState');
 const mobileView  = document.getElementById('mobileView');
 const desktopView = document.getElementById('desktopView');
+const viewToggle  = document.getElementById('viewToggle');
+
+function updateView() {
+    const mode = localStorage.getItem('clientesView') || viewToggle.value;
+    if (viewToggle) viewToggle.value = mode;
+    if (mode === 'card') {
+        mobileView.style.display = 'block';
+        desktopView.style.display = 'none';
+    } else {
+        desktopView.style.display = 'block';
+        mobileView.style.display = 'none';
+    }
+}
 
 async function loadClientes() {
     try {
@@ -16,7 +29,6 @@ async function loadClientes() {
         if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
         const data = await resp.json();
 
-        // Si no hay datos, ocultar vistas y mostrar estado vacío
         if (!Array.isArray(data) || data.length === 0) {
             desktopView.style.display = 'none';
             mobileView.style.display  = 'none';
@@ -24,7 +36,6 @@ async function loadClientes() {
             return;
         }
 
-        // Hay datos: mostrar vistas y ocultar estado vacío
         desktopView.style.display = 'block';
         mobileView.style.display  = 'block';
         emptyState.classList.add('hidden');
@@ -99,6 +110,8 @@ async function loadClientes() {
             </div>
         `).join('');
 
+        updateView();
+
     } catch (error) {
         console.error('Error loading clientes:', error);
         alert('Error al cargar los clientes. Por favor, intenta de nuevo.');
@@ -130,43 +143,19 @@ async function deleteCliente(cedula) {
     }
 }
 
-async function verifyToken(token) {
-    try {
-        const resp = await fetch('/api/dashboard/validate', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (!resp.ok) {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userEmail');
-            window.location.href = '/pages/login.html';
-            return false;
-        }
-        const data = await resp.json();
-        return data.authorized;
-    } catch (error) {
-        console.error('Error validating token:', error);
-        return false;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('authToken');
     if (!token) {
         window.location.href = '/pages/login.html';
         return;
     }
-    verifyToken(token);
 
-    // Mensaje de bienvenida y rol
     const welcomeMessage = document.getElementById('welcomeMessage');
     const userEmail      = localStorage.getItem('userEmail') || 'Usuario';
     if (welcomeMessage) welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
     const roleInfo = document.getElementById('roleInfo');
     if (roleInfo) roleInfo.textContent = 'Usuario';
 
-    // Logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -178,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Delegación de eventos para eliminar
     tableBody.addEventListener('click', e => {
         if (e.target.classList.contains('delete-btn')) {
             deleteCliente(e.target.dataset.cedula);
@@ -190,6 +178,13 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteCliente(btn.dataset.cedula);
         }
     });
+
+    if (viewToggle) {
+        viewToggle.addEventListener('change', () => {
+            localStorage.setItem('clientesView', viewToggle.value);
+            updateView();
+        });
+    }
 
     loadClientes();
 });

@@ -2,6 +2,19 @@ const tableBody   = document.getElementById('empleadosTable');
 const emptyState  = document.getElementById('emptyState');
 const mobileView  = document.getElementById('mobileView');
 const desktopView = document.getElementById('desktopView');
+const viewToggle  = document.getElementById('viewToggle');
+
+function updateView() {
+    const mode = localStorage.getItem('empleadosView') || viewToggle.value;
+    if (viewToggle) viewToggle.value = mode;
+    if (mode === 'card') {
+        mobileView.style.display = 'block';
+        desktopView.style.display = 'none';
+    } else {
+        desktopView.style.display = 'block';
+        mobileView.style.display = 'none';
+    }
+}
 
 async function verifyToken(token) {
     try {
@@ -133,6 +146,8 @@ async function loadEmpleados() {
             </div>
         `).join('');
 
+        updateView();
+
     } catch (error) {
         console.error('Error loading empleados:', error);
         alert('Error al cargar los empleados. Por favor, intenta de nuevo.');
@@ -170,14 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Mensaje de bienvenida y rol
     const welcomeMessage = document.getElementById('welcomeMessage');
     const userEmail      = localStorage.getItem('userEmail') || 'Usuario';
     if (welcomeMessage) welcomeMessage.textContent = `Bienvenido, ${userEmail}`;
     const roleInfo = document.getElementById('roleInfo');
     if (roleInfo) roleInfo.textContent = 'Usuario';
 
-    // Logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -189,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Delegación de eventos para eliminar
     tableBody.addEventListener('click', e => {
         if (e.target.classList.contains('delete-btn')) {
             deleteEmpleado(e.target.dataset.cedula);
@@ -202,11 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Botón para crear nuevo empleado
-    const btnNuevo = document.getElementById('btnNuevoEmpleado');
-    if (btnNuevo) {
-        btnNuevo.addEventListener('click', () => {
-            window.location.href = 'form.html';
+    if (viewToggle) {
+        viewToggle.addEventListener('change', () => {
+            localStorage.setItem('empleadosView', viewToggle.value);
+            updateView();
         });
     }
 
