@@ -208,3 +208,16 @@ function editTransaction() {
 }
 
 document.addEventListener('DOMContentLoaded', loadDetalle);
+
+function deleteTransaction() {
+  if (!confirm('¿Estás seguro de que deseas eliminar esta transacción? Esta acción no se puede deshacer.')) return;
+  service.eliminarTransaccion(transactionId)
+      .then(() => {
+        alert('Transacción eliminada exitosamente');
+        window.location.href = 'index.html';
+      })
+      .catch(error => {
+        console.error('Error al eliminar la transacción:', error);
+        alert('No se pudo eliminar la transacción. Por favor, intenta de nuevo.');
+      });
+}
