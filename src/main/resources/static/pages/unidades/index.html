@@ -21,6 +21,14 @@
         <a href="form.html" id="addUnidadBtn" class="bg-[#59391B] hover:bg-[#7b5222] text-white font-bold px-4 py-2 rounded-lg font-serif transition hidden">Añadir unidad</a>
         <a href="/pages/producto/index.html" class="text-[#7b5222] underline">Volver a productos</a>
       </div>
+      <select id="estadoFilter" ...>
+        <option value="">Estado</option>
+        <option value="VENDIDO">Vendido</option>
+        <option value="DISPONIBLE">Disponible</option>
+        <option value="DAÑADO">Dañado</option>
+        <option value="DEVUELTO_COMPRA">Devuelto Compra</option>
+        <option value="DEVUELTO_VENTA">Devuelto Venta</option>
+      </select>
       <div id="emptyState" class="text-center text-gray-400 py-16 font-serif text-lg hidden">No hay unidades registradas.</div>
       <div id="unidadList" class="overflow-x-auto"></div>
     </section>

@@ -6,9 +6,11 @@ import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.repository.UnidadRepository;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.inventory.util.EstadoUnidad;
+import com.thelarte.transacciones.model.Transaccion;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
@@ -23,6 +25,14 @@ public class UnidadService {
 
     @Autowired
     private ProductoRepository productoRepository;
+
+    @Transactional(readOnly = true)
+    public List<UnidadDTO> obtenerUnidadesPorEstado(Long idProducto, EstadoUnidad estado) {
+        return unidadRepository.findByProducto_IdAndEstado(idProducto, estado)
+                .stream()
+                .map(this::toDto) //
+                .collect(Collectors.toList());
+    }
 
     // Registrar una nueva unidad para un producto (devuelve DTO)
     public UnidadDTO registrarUnidad(Long idProducto, EstadoUnidad estadoUnidad, boolean stock, Long transaccionOrigenId) {

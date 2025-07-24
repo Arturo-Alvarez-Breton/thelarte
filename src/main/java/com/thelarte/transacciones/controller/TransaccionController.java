@@ -1,8 +1,10 @@
 package com.thelarte.transacciones.controller;
 
+import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.service.TransaccionService;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -440,6 +442,15 @@ public class TransaccionController {
         }
     }
 
+    @GetMapping("/compras/pendientes")
+    public ResponseEntity<List<TransaccionDTO>> obtenerComprasPendientes() {
+        List<TransaccionDTO> compras = transaccionService.obtenerComprasPendientes()
+                .stream()
+                .map(transaccionService::toDTO)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(compras, HttpStatus.OK);
+    }
+
     @GetMapping("/compras/pendientes-recepcion")
     public ResponseEntity<List<TransaccionDTO>> obtenerComprasPendientesRecepcion() {
         List<TransaccionDTO> compras = transaccionService.obtenerComprasPendientesRecepcion()
@@ -474,5 +485,19 @@ public class TransaccionController {
                 .map(transaccionService::toDTO)
                 .collect(Collectors.toList());
         return new ResponseEntity<>(ventas, HttpStatus.OK);
+    }
+
+    @PostMapping("/{id}/lineas")
+    public ResponseEntity<?> agregarLineaATransaccion(@PathVariable Long id, @RequestBody LineaTransaccionDTO lineaDto) {
+        try {
+            Transaccion transaccion = transaccionService.obtenerPorId(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+
+            // Lógica para agregar la línea a la transacción
+            Transaccion updated = transaccionService.agregarLineaATransaccion(transaccion, lineaDto);
+            return ResponseEntity.ok(transaccionService.toDTO(updated));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
     }
 }

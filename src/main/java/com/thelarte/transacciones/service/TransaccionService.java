@@ -391,6 +391,14 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
+    public List<Transaccion> obtenerComprasPendientes() {
+        return transaccionRepository.findByTipoAndEstado(
+                Transaccion.TipoTransaccion.COMPRA,
+                Transaccion.EstadoTransaccion.PENDIENTE
+        );
+    }
+
+    @Transactional(readOnly = true)
     public List<Transaccion> obtenerComprasPendientesPago() {
         return transaccionRepository.findByTipoAndEstado(
                 Transaccion.TipoTransaccion.COMPRA,
@@ -673,5 +681,62 @@ public class TransaccionService {
             dto.setLineas(lineasDto);
         }
         return dto;
+    }
+
+    public Transaccion agregarLineaATransaccion(Transaccion transaccion, LineaTransaccionDTO lineaDto) {
+        if (!canEditTransaction(transaccion)) {
+            throw new IllegalStateException("No se puede editar una transacción con estado: " + transaccion.getEstado());
+        }
+
+        // Buscar si ya existe una línea para ese producto y precio
+        LineaTransaccion existente = null;
+        for (LineaTransaccion l : transaccion.getLineas()) {
+            if (l.getProductoId().equals(lineaDto.getProductoId()) &&
+                    l.getPrecioUnitario().compareTo(lineaDto.getPrecioUnitario()) == 0) {
+                existente = l;
+                break;
+            }
+        }
+
+        // Obtener el producto para el ITBIS por si es necesario
+        Producto producto = productoRepository.findById(lineaDto.getProductoId())
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + lineaDto.getProductoId()));
+        BigDecimal itbis = BigDecimal.valueOf(producto.getItbis());
+
+        if (existente != null) {
+            // Agrupar la cantidad y recalcular totales e impuestos
+            existente.setCantidad(existente.getCantidad() + lineaDto.getCantidad());
+            // Si el impuesto no está, poner el del producto
+            if (existente.getImpuestoPorcentaje() == null || existente.getImpuestoPorcentaje().compareTo(BigDecimal.ZERO) == 0) {
+                existente.setImpuestoPorcentaje(itbis);
+            }
+            existente.calcularTotales();
+        } else {
+            // Crear nueva línea
+            LineaTransaccion linea = new LineaTransaccion();
+            linea.setTransaccion(transaccion);
+            linea.setProductoId(lineaDto.getProductoId());
+            linea.setProductoNombre(lineaDto.getProductoNombre());
+            linea.setCantidad(lineaDto.getCantidad());
+            linea.setPrecioUnitario(lineaDto.getPrecioUnitario());
+
+            // Asignar impuesto del producto si el DTO no lo tiene
+            if (lineaDto.getImpuestoPorcentaje() == null || lineaDto.getImpuestoPorcentaje().compareTo(BigDecimal.ZERO) == 0) {
+                linea.setImpuestoPorcentaje(itbis);
+            } else {
+                linea.setImpuestoPorcentaje(lineaDto.getImpuestoPorcentaje());
+            }
+
+            linea.setDescuentoPorcentaje(lineaDto.getDescuentoPorcentaje());
+            linea.setObservaciones(lineaDto.getObservaciones());
+            linea.calcularTotales();
+
+            transaccion.getLineas().add(linea);
+        }
+
+        // Recalcular totales de la transacción
+        calcularTotalesTransaccion(transaccion);
+
+        return transaccionRepository.save(transaccion);
     }
 }

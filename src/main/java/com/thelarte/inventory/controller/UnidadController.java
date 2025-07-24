@@ -96,4 +96,13 @@ public class UnidadController {
         List<UnidadDTO> lista = unidadService.unidadesDisponiblesPorProducto(idProducto);
         return ResponseEntity.ok(lista);
     }
+    @GetMapping("/producto/{idProducto}/estado/{estado}")
+    public ResponseEntity<List<UnidadDTO>> unidadesPorEstadoPorProducto(
+            @PathVariable Long idProducto,
+            @PathVariable EstadoUnidad estado
+    ) {
+        List<UnidadDTO> lista = unidadService.obtenerUnidadesPorEstado(idProducto, estado);
+        return ResponseEntity.ok(lista);
+    }
+
 }

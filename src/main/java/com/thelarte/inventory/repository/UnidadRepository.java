@@ -13,7 +13,9 @@ public interface UnidadRepository extends JpaRepository<Unidad, Long> {
     List<Unidad> findByProducto_Id(Long idProducto);
     List<Unidad> findByEstado(EstadoUnidad estado);
     List<Unidad> findByStock(boolean stock);
+    List<Unidad> findByProducto_IdAndEstado(Long idProducto, EstadoUnidad estado);
 
     @Query("SELECT u FROM Unidad u WHERE u.transaccionOrigenId = :transaccionOrigenId AND u.producto.id = :productoId")
     List<Unidad> findByTransaccionOrigenIdAndProductoId(Long transaccionOrigenId, Long productoId);
+
 }
