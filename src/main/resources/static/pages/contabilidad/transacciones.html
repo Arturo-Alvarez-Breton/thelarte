@@ -131,8 +131,42 @@
         </div>
     </div>
 
+    <!-- Modal Ver Transacción -->
+    <div id="modalVerTransaccion" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
+                <div class="bg-brand-brown text-white p-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold">Detalles de Transacción</h3>
+                        <button onclick="cerrarModalVerTransaccion()" class="text-white hover:text-gray-300">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6 max-h-96 overflow-y-auto" id="detallesTransaccion">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                    <button onclick="imprimirFactura()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i>
+                        Imprimir
+                    </button>
+                    <button onclick="cerrarModalVerTransaccion()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/components/sidebar.js" type="module"></script>
     <script src="/js/components/header.js" type="module"></script>
     <script src="/js/contabilidad/main.js" type="module"></script>
+    <script src="/js/components/notifications.js" type="module"></script>
+    <script src="/js/components/transactionWizard.js" type="module"></script>
+    <script src="/js/services/transaccionService.js" type="module"></script>
+    <script src="/js/contabilidad/transacciones.js" type="module"></script>
 </body>
 </html>

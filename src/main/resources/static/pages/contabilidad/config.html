@@ -93,7 +93,7 @@
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
                 <!-- Botones de acción rápida específicos de la página -->
-                <button class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                <button id="saveConfigBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-save mr-2"></i>Guardar Cambios
                 </button>
             </div>
@@ -103,15 +103,8 @@
             <!-- El contenido específico de cada página se inyectará aquí -->
             <section class="p-4 bg-white rounded-lg shadow">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Opciones de Configuración</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Configuración General</h3>
-                        <p class="text-gray-600">Ajustes de moneda, impuestos, etc.</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Integraciones</h3>
-                        <p class="text-gray-600">Conexión con otros sistemas.</p>
-                    </div>
+                <div id="configuracionForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Configuración se cargará aquí -->
                 </div>
             </section>
         </main>
@@ -126,5 +119,9 @@
     <script src="/js/components/sidebar.js" type="module"></script>
     <script src="/js/components/header.js" type="module"></script>
     <script src="/js/contabilidad/main.js" type="module"></script>
+    <script src="/js/components/notifications.js" type="module"></script>
+    <script src="/js/components/transactionWizard.js" type="module"></script>
+    <script src="/js/services/transaccionService.js" type="module"></script>
+    <script src="/js/contabilidad/config.js" type="module"></script>
 </body>
 </html>

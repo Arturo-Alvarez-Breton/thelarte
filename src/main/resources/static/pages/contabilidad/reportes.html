@@ -93,7 +93,7 @@
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
                 <!-- Botones de acción rápida específicos de la página -->
-                <button class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                <button id="exportReportBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-file-export mr-2"></i>Exportar Reporte
                 </button>
             </div>
@@ -102,17 +102,28 @@
         <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
             <!-- El contenido específico de cada página se inyectará aquí -->
             <section class="p-4 bg-white rounded-lg shadow">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Opciones de Reportes</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Ejemplo de tarjeta de reporte -->
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Reporte de Ventas Diarias</h3>
-                        <p class="text-gray-600">Resumen de ventas por día.</p>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Reporte de Ventas Diarias</h2>
+                <div class="mb-4">
+                    <label for="dailyReportDate" class="block text-sm font-medium text-gray-700 mb-2">Fecha:</label>
+                    <input type="date" id="dailyReportDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                </div>
+                <div id="dailySalesReportContainer" class="p-4 border rounded bg-gray-50">
+                    <!-- Reporte diario se cargará aquí -->
+                </div>
+
+                <h2 class="text-xl font-semibold text-gray-700 mt-8 mb-4">Productos Más Vendidos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="topSellingDateFrom" class="block text-sm font-medium text-gray-700 mb-2">Desde:</label>
+                        <input type="date" id="topSellingDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Reporte de Gastos Mensuales</h3>
-                        <p class="text-gray-600">Análisis de gastos por mes.</p>
+                    <div>
+                        <label for="topSellingDateTo" class="block text-sm font-medium text-gray-700 mb-2">Hasta:</label>
+                        <input type="date" id="topSellingDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
+                </div>
+                <div id="topSellingProductsContainer" class="p-4 border rounded bg-gray-50">
+                    <!-- Productos más vendidos se cargarán aquí -->
                 </div>
             </section>
         </main>
@@ -127,5 +138,9 @@
     <script src="/js/components/sidebar.js" type="module"></script>
     <script src="/js/components/header.js" type="module"></script>
     <script src="/js/contabilidad/main.js" type="module"></script>
+    <script src="/js/components/notifications.js" type="module"></script>
+    <script src="/js/components/transactionWizard.js" type="module"></script>
+    <script src="/js/services/transaccionService.js" type="module"></script>
+    <script src="/js/contabilidad/reportes.js" type="module"></script>
 </body>
 </html>

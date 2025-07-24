@@ -93,7 +93,7 @@
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
                 <!-- Botones de acción rápida específicos de la página -->
-                <button class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                <button id="nuevoProductoBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-plus mr-2"></i>Nuevo Producto
                 </button>
             </div>
@@ -103,20 +103,11 @@
             <!-- El contenido específico de cada página se inyectará aquí -->
             <section class="p-4 bg-white rounded-lg shadow">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Listado de Productos</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Ejemplo de tarjeta de producto -->
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Producto A</h3>
-                        <p class="text-gray-600">Categoría: Electrónica</p>
-                        <p class="text-gray-600">Precio: $120.00</p>
-                        <p class="text-gray-600">Stock: 50 unidades</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Producto B</h3>
-                        <p class="text-gray-600">Categoría: Hogar</p>
-                        <p class="text-gray-600">Precio: $35.00</p>
-                        <p class="text-gray-600">Stock: 120 unidades</p>
-                    </div>
+                <div class="mb-4">
+                    <input type="text" id="productSearchInput" placeholder="Buscar productos..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                </div>
+                <div id="productosListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Productos se cargarán aquí -->
                 </div>
             </section>
         </main>
@@ -131,5 +122,9 @@
     <script src="/js/components/sidebar.js" type="module"></script>
     <script src="/js/components/header.js" type="module"></script>
     <script src="/js/contabilidad/main.js" type="module"></script>
+    <script src="/js/components/notifications.js" type="module"></script>
+    <script src="/js/components/transactionWizard.js" type="module"></script>
+    <script src="/js/services/transaccionService.js" type="module"></script>
+    <script src="/js/contabilidad/productos.js" type="module"></script>
 </body>
 </html>
