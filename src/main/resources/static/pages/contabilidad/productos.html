@@ -58,12 +58,6 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Suplidores</span>
-                    </a>
-                </li>
-                <li>
                     <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
                         <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
                         <span class="ml-3">Reportes</span>
@@ -89,13 +83,13 @@
         <header class="bg-white shadow p-4 flex justify-between items-center">
             <div>
                 <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Productos</h1>
-                <p id="cont-header-subtitle" class="text-sm text-gray-600">Gestión de inventario y productos.</p>
+                <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta de inventario y productos.</p>
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
-                <!-- Botones de acción rápida específicos de la página -->
-                <button id="nuevoProductoBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-plus mr-2"></i>Nuevo Producto
-                </button>
+                <!-- Solo consulta en modo contabilidad -->
+                <div class="text-gray-600 text-sm">
+                    <i class="fas fa-eye mr-2"></i>Modo Consulta - Solo visualización
+                </div>
             </div>
         </header>
 
@@ -116,6 +110,33 @@
     <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
             <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+
+    <!-- Modal Ver Producto -->
+    <div id="modalVerProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full">
+                <div class="bg-brand-brown text-white p-6">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold">Detalles del Producto</h3>
+                        <button onclick="cerrarModalVerProducto()" class="text-white hover:text-gray-300">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6" id="detallesProducto">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                    <button onclick="cerrarModalVerProducto()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

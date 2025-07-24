@@ -19,7 +19,6 @@ class ProductosManager {
     }
 
     setupEventListeners() {
-        document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => this.newProduct());
         document.getElementById('productSearchInput')?.addEventListener('keyup', () => this.filterProducts());
     }
 
@@ -36,7 +35,10 @@ class ProductosManager {
             this.renderProductos();
         } catch (error) {
             console.error('Error loading products:', error);
-            window.showToast('Error al cargar los productos.', 'error');
+            // Show empty state instead of error for no data scenarios
+            this.productos = [];
+            this.filteredProductos = [];
+            this.renderProductos();
         } finally {
             this.hideLoading();
         }
@@ -47,7 +49,27 @@ class ProductosManager {
         if (!container) return;
 
         if (this.filteredProductos.length === 0) {
-            container.innerHTML = '<p class="text-gray-600">No hay productos disponibles.</p>';
+            const searchTerm = document.getElementById('productSearchInput')?.value;
+            const emptyMessage = searchTerm ? 
+                `No se encontraron productos que coincidan con "${searchTerm}".` : 
+                'No hay productos disponibles en el inventario.';
+            
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-box-open text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin productos</h3>
+                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    ${searchTerm ? `
+                        <button onclick="document.getElementById('productSearchInput').value = ''; productosManager.filterProducts();" class="text-brand-brown hover:text-brand-light-brown">
+                            <i class="fas fa-times mr-2"></i>Limpiar búsqueda
+                        </button>
+                    ` : `
+                        <p class="text-sm text-gray-500">Los productos son gestionados por el administrador del sistema.</p>
+                    `}
+                </div>
+            `;
             return;
         }
 
@@ -59,8 +81,7 @@ class ProductosManager {
                 <p class="text-gray-600">Precio: ${this.formatCurrency(product.precioVenta)}</p>
                 <p class="text-gray-600">Stock: ${product.cantidadDisponible}</p>
                 <div class="mt-4 flex space-x-2">
-                    <button onclick="productosManager.editProduct(${product.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Editar</button>
-                    <button onclick="productosManager.deleteProduct(${product.id})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
+                    <button onclick="productosManager.verProducto(${product.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
                 </div>
             </div>
         `).join('');
@@ -71,34 +92,99 @@ class ProductosManager {
         this.loadProductos();
     }
 
-    newProduct() {
-        window.showToast('Funcionalidad para añadir nuevo producto en desarrollo.', 'info');
-    }
 
-    editProduct(id) {
-        window.showToast(`Funcionalidad para editar producto ${id} en desarrollo.`, 'info');
-    }
-
-    async deleteProduct(id) {
-        if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-            try {
-                // Assuming a deleteProduct method exists in TransaccionService or a new ProductoService
-                // await this.transaccionService.deleteProduct(id);
-                window.showToast('Producto eliminado exitosamente (simulado).', 'success');
-                this.loadProductos();
-            } catch (error) {
-                console.error('Error deleting product:', error);
-                window.showToast('Error al eliminar el producto.', 'error');
+    async verProducto(id) {
+        try {
+            const producto = this.productos.find(p => p.id === id);
+            if (!producto) {
+                window.showToast('Producto no encontrado.', 'error');
+                return;
             }
+
+            document.getElementById('detallesProducto').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.nombre}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Código</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.codigo}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.categoria || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Unidad</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.unidad?.nombre || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Precio Compra</label>
+                        <p class="mt-1 text-sm text-gray-900">${this.formatCurrency(producto.precioCompra)}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Precio Venta</label>
+                        <p class="mt-1 text-sm text-gray-900">${this.formatCurrency(producto.precioVenta)}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Stock Disponible</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.cantidadDisponible}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Descripción</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.descripcion || 'N/A'}</p>
+                    </div>
+                </div>
+            `;
+            
+            this.currentProducto = producto;
+            document.getElementById('modalVerProducto').classList.remove('hidden');
+        } catch (error) {
+            console.error('Error viewing product:', error);
+            window.showToast('Error al mostrar los detalles del producto.', 'error');
         }
     }
 
+
+    cerrarModalVerProducto() {
+        document.getElementById('modalVerProducto').classList.add('hidden');
+        this.currentProducto = null;
+    }
+
     showLoading() {
-        document.getElementById('productosListContainer').innerHTML = '<div class="flex items-center justify-center py-12"><div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div></div>';
+        const container = document.getElementById('productosListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-600 font-medium">Consultando inventario de productos...</p>
+                    <p class="text-gray-500 text-sm mt-2">Un momento, por favor</p>
+                </div>
+            `;
+        }
     }
 
     hideLoading() {
-        // No specific hide loading for now, as content replaces spinner
+        // Content will replace the loading spinner, no need for explicit hiding
+    }
+
+    showError(message) {
+        const container = document.getElementById('productosListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button onclick="productosManager.loadProductos()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-refresh mr-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+        }
     }
 
     formatCurrency(amount) {
@@ -115,3 +201,6 @@ class ProductosManager {
 
 const productosManager = new ProductosManager();
 window.productosManager = productosManager;
+
+// Funciones globales para los event handlers de los modales
+window.cerrarModalVerProducto = () => productosManager.cerrarModalVerProducto();

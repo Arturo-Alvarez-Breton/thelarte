@@ -26,15 +26,16 @@ public class CajeroController {
 
     @GetMapping("/transacciones")
     public ResponseEntity<List<CajeroTransaccionDTO>> getTransacciones(
-            @RequestParam(required = false) String tipo,
-            @RequestParam(required = false) String estado,
-            @RequestParam(required = false) LocalDate fechaDesde,
-            @RequestParam(required = false) LocalDate fechaHasta,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "tipo", required = false) String tipo,
+            @RequestParam(name = "estado", required = false) String estado,
+            @RequestParam(name = "busqueda", required = false) String busqueda,
+            @RequestParam(name = "fechaDesde", required = false) LocalDate fechaDesde,
+            @RequestParam(name = "fechaHasta", required = false) LocalDate fechaHasta,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         
         List<CajeroTransaccionDTO> transacciones = cajeroService.getTransaccionesFiltered(
-            tipo, estado, fechaDesde, fechaHasta, page, size);
+            tipo, estado, busqueda, fechaDesde, fechaHasta, page, size);
         return ResponseEntity.ok(transacciones);
     }
 
@@ -109,6 +110,12 @@ public class CajeroController {
     public ResponseEntity<ClienteCajeroDTO> getCliente(@PathVariable String cedula) {
         ClienteCajeroDTO cliente = cajeroService.getClienteByCedula(cedula);
         return ResponseEntity.ok(cliente);
+    }
+
+    @GetMapping("/suplidores")
+    public ResponseEntity<List<SuplidorDTO>> getSuplidores() {
+        List<SuplidorDTO> suplidores = cajeroService.getSuplidores();
+        return ResponseEntity.ok(suplidores);
     }
 
     @PostMapping("/clientes")

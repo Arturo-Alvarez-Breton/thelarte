@@ -58,12 +58,6 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Suplidores</span>
-                    </a>
-                </li>
-                <li>
                     <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
                         <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
                         <span class="ml-3">Reportes</span>
@@ -89,7 +83,7 @@
         <header class="bg-white shadow p-4 flex justify-between items-center">
             <div>
                 <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Transacciones</h1>
-                <p id="cont-header-subtitle" class="text-sm text-gray-600">Registro y seguimiento de movimientos</p>
+                <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta de transacciones y registro de operaciones de caja</p>
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
                 <!-- Botones de acción rápida específicos de la página -->
@@ -106,20 +100,23 @@
             <!-- El contenido específico de cada página se inyectará aquí -->
             <section class="p-4 bg-white rounded-lg shadow">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Lista de Transacciones</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Ejemplo de tarjeta de transacción -->
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Venta #12345</h3>
-                        <p class="text-gray-600">Cliente: Juan Pérez</p>
-                        <p class="text-gray-600">Total: $150.00</p>
-                        <p class="text-gray-600">Estado: Completada</p>
-                    </div>
-                    <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
-                        <h3 class="font-bold text-lg">Compra #67890</h3>
-                        <p class="text-gray-600">Suplidor: Distribuidora XYZ</p>
-                        <p class="text-gray-600">Total: $500.00</p>
-                        <p class="text-gray-600">Estado: Pendiente</p>
-                    </div>
+                <div class="mb-4 flex flex-wrap gap-4">
+                    <input type="text" id="transaccionSearchInput" placeholder="Buscar transacciones..." 
+                           class="flex-1 min-w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <select id="transaccionTipoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <option value="">Todos los tipos</option>
+                        <option value="VENTA">Ventas</option>
+                        <option value="COMPRA">Compras</option>
+                    </select>
+                    <select id="transaccionEstadoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <option value="">Todos los estados</option>
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="COMPLETADA">Completada</option>
+                        <option value="CANCELADA">Cancelada</option>
+                    </select>
+                </div>
+                <div id="transaccionesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Las transacciones se cargarán aquí -->
                 </div>
             </section>
         </main>
@@ -156,6 +153,68 @@
                     <button onclick="cerrarModalVerTransaccion()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
                         Cerrar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Creation Wizard Modal -->
+    <div id="transactionWizard" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
+                <!-- Wizard Header -->
+                <div class="bg-brand-brown text-white p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold">Crear Nueva Transacción</h3>
+                            <p class="text-brand-beige opacity-90" id="wizardSubtitle">Selecciona el tipo de transacción</p>
+                        </div>
+                        <button onclick="closeTransactionWizard()" class="text-white hover:text-gray-300">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Progress Steps -->
+                    <div class="flex items-center mt-6 space-x-4">
+                        <div class="wizard-step active flex items-center">
+                            <div class="w-8 h-8 bg-white text-brand-brown rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                            <span class="ml-2 text-sm">Tipo</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                            <span class="ml-2 text-sm">Detalles</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                            <span class="ml-2 text-sm">Productos</span>
+                        </div>
+                        <div class="wizard-step flex items-center">
+                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                            <span class="ml-2 text-sm">Confirmación</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Wizard Content -->
+                <div class="p-6 custom-scrollbar overflow-y-auto" style="max-height: 60vh;" id="wizardContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                
+                <!-- Wizard Footer -->
+                <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                    <button id="wizardPrevBtn" onclick="wizardPrevStep()" class="px-4 py-2 text-gray-600 hover:text-gray-800 hidden">
+                        <i class="fas fa-arrow-left mr-1"></i>
+                        Anterior
+                    </button>
+                    <div class="flex space-x-3">
+                        <button onclick="closeTransactionWizard()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                            Cancelar
+                        </button>
+                        <button id="wizardNextBtn" onclick="wizardNextStep()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown">
+                            Siguiente
+                            <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

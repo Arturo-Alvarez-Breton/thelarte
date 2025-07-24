@@ -206,4 +206,290 @@ export class TransaccionService {
             throw error;
         }
     }
+
+    // Cliente Methods
+    async getClientes(busqueda = null, page = 0, size = 10) {
+        console.log('Fetching clients with search:', busqueda);
+        try {
+            // Use the direct cliente endpoint instead of cajero
+            const response = await fetch(`/api/clientes`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const allClientes = await response.json();
+            
+            // Apply search filter on frontend if needed
+            let filteredClientes = allClientes;
+            if (busqueda) {
+                const searchTerm = busqueda.toLowerCase();
+                filteredClientes = allClientes.filter(cliente => 
+                    cliente.nombre.toLowerCase().includes(searchTerm) ||
+                    cliente.apellido.toLowerCase().includes(searchTerm) ||
+                    cliente.cedula.toLowerCase().includes(searchTerm) ||
+                    (cliente.email && cliente.email.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            return filteredClientes;
+        } catch (error) {
+            console.error('Error fetching clients:', error);
+            throw error;
+        }
+    }
+
+    async getClienteByCedula(cedula) {
+        console.log('Fetching client by cedula:', cedula);
+        try {
+            const response = await fetch(`/api/clientes/${cedula}`);
+            if (!response.ok) {
+                if (response.status === 404) return null;
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching client by cedula:', error);
+            throw error;
+        }
+    }
+
+    async createCliente(clienteData) {
+        console.log('Creating client:', clienteData);
+        try {
+            const response = await fetch(`/api/clientes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clienteData)
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating client:', error);
+            throw error;
+        }
+    }
+
+    async updateCliente(cedula, clienteData) {
+        console.log('Updating client:', cedula, clienteData);
+        try {
+            const response = await fetch(`/api/clientes/${cedula}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clienteData)
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating client:', error);
+            throw error;
+        }
+    }
+
+    async deleteCliente(cedula) {
+        console.log('Deleting client:', cedula);
+        try {
+            const response = await fetch(`/api/clientes/${cedula}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting client:', error);
+            throw error;
+        }
+    }
+
+    // Producto Methods
+    async createProducto(productoData) {
+        console.log('Creating product:', productoData);
+        try {
+            const response = await fetch(`${this.baseUrl}/productos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productoData)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating product:', error);
+            throw error;
+        }
+    }
+
+    async updateProducto(id, productoData) {
+        console.log('Updating product:', id, productoData);
+        try {
+            const response = await fetch(`${this.baseUrl}/productos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productoData)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating product:', error);
+            throw error;
+        }
+    }
+
+    async deleteProducto(id) {
+        console.log('Deleting product:', id);
+        try {
+            const response = await fetch(`${this.baseUrl}/productos/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            throw error;
+        }
+    }
+
+    async getUnidades() {
+        console.log('Fetching units');
+        try {
+            const response = await fetch(`${this.baseUrl}/unidades`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching units:', error);
+            throw error;
+        }
+    }
+
+    async getProductosParaVenta(busqueda = null, categoria = null, page = 0, size = 100) {
+        console.log('Fetching products for sale with search:', busqueda);
+        try {
+            const queryParams = new URLSearchParams();
+            if (busqueda) queryParams.append('busqueda', busqueda);
+            if (categoria) queryParams.append('categoria', categoria);
+            queryParams.append('page', page);
+            queryParams.append('size', size);
+
+            const response = await fetch(`${this.baseUrl}/productos?${queryParams.toString()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching products for sale:', error);
+            throw error;
+        }
+    }
+
+    // Suplidor Methods
+    async getSuplidores(busqueda = null) {
+        console.log('Fetching suppliers with search:', busqueda);
+        try {
+            const response = await fetch('/api/suplidores');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const allSuplidores = await response.json();
+            
+            // Apply search filter on frontend if needed
+            let filteredSuplidores = allSuplidores;
+            if (busqueda) {
+                const searchTerm = busqueda.toLowerCase();
+                filteredSuplidores = allSuplidores.filter(suplidor => 
+                    suplidor.nombre.toLowerCase().includes(searchTerm) ||
+                    (suplidor.rnc && suplidor.rnc.toLowerCase().includes(searchTerm)) ||
+                    (suplidor.ciudad && suplidor.ciudad.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            return filteredSuplidores;
+        } catch (error) {
+            console.error('Error fetching suppliers:', error);
+            throw error;
+        }
+    }
+
+    async getSuplidorById(id) {
+        console.log('Fetching supplier by ID:', id);
+        try {
+            const response = await fetch(`/api/suplidores/${id}`);
+            if (!response.ok) {
+                if (response.status === 404) return null;
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching supplier by ID:', error);
+            throw error;
+        }
+    }
+
+    async createSuplidor(suplidorData) {
+        console.log('Creating supplier:', suplidorData);
+        try {
+            const response = await fetch('/api/suplidores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(suplidorData)
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating supplier:', error);
+            throw error;
+        }
+    }
+
+    async updateSuplidor(id, suplidorData) {
+        console.log('Updating supplier:', id, suplidorData);
+        try {
+            const response = await fetch(`/api/suplidores/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(suplidorData)
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating supplier:', error);
+            throw error;
+        }
+    }
+
+    async deleteSuplidor(id, logico = true) {
+        console.log('Deleting supplier:', id, 'logical:', logico);
+        try {
+            const response = await fetch(`/api/suplidores/${id}?logico=${logico}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting supplier:', error);
+            throw error;
+        }
+    }
+
 }

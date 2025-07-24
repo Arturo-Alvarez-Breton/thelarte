@@ -126,9 +126,13 @@ public class SuplidorController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarSuplidor(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarSuplidor(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean logico) {
         if (suplidorService.buscarPorId(id).isPresent()) {
-            suplidorService.eliminar(id);
+            if (logico) {
+                suplidorService.eliminarLogico(id);
+            } else {
+                suplidorService.eliminar(id);
+            }
             return ResponseEntity.ok().build();
         }
         

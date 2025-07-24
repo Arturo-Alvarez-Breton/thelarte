@@ -46,6 +46,12 @@ public interface ISuplidorService {
     void eliminar(Long id);
 
     /**
+     * Elimina lógicamente un suplidor por su ID
+     * @param id ID del suplidor a eliminar lógicamente
+     */
+    void eliminarLogico(Long id);
+
+    /**
      * Busca suplidores por ciudad
      * @param ciudad Ciudad para filtrar
      * @return Lista de suplidores de la ciudad especificada

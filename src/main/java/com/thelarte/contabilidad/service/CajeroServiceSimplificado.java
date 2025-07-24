@@ -136,7 +136,7 @@ public class CajeroServiceSimplificado {
         return new ArrayList<>();
     }
 
-    public List<CajeroTransaccionDTO> getTransaccionesFiltered(String tipo, String estado, 
+    public List<CajeroTransaccionDTO> getTransaccionesFiltered(String tipo, String estado, String busqueda, 
             LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) {
         
         Pageable pageable = PageRequest.of(page, size);
@@ -293,6 +293,10 @@ public class CajeroServiceSimplificado {
             return convertToClienteCajeroDTO(clienteOpt.get());
         }
         throw new RuntimeException("Cliente no encontrado");
+    }
+
+    public List<SuplidorDTO> getSuplidores() {
+        return Collections.emptyList();
     }
 
     public ClienteCajeroDTO registrarClienteRapido(ClienteCajeroDTO clienteDTO) {
