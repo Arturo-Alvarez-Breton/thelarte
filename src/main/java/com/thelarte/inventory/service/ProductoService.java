@@ -134,4 +134,44 @@ public class ProductoService implements IProductoService {
         );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
 
     }
+
+    @Transactional(readOnly = true)
+    public Producto getProductoById(Long id) {
+        return productoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public Producto getProductoByCodigo(String codigo) {
+        return productoRepository.findByCodigo(codigo)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con código: " + codigo));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Producto> getProductosDisponibles(String busqueda, String categoria, int page, int size) {
+        List<Producto> productos = productoRepository.findAll();
+        
+        if (busqueda != null && !busqueda.isEmpty()) {
+            productos = productos.stream()
+                    .filter(p -> p.getNombre().toLowerCase().contains(busqueda.toLowerCase()) ||
+                               (p.getCodigo() != null && p.getCodigo().toLowerCase().contains(busqueda.toLowerCase())))
+                    .collect(Collectors.toList());
+        }
+        
+        if (categoria != null && !categoria.isEmpty()) {
+            productos = productos.stream()
+                    .filter(p -> p.getTipo().equalsIgnoreCase(categoria))
+                    .collect(Collectors.toList());
+        }
+        
+        // Aplicar paginación manual
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, productos.size());
+        
+        if (fromIndex > productos.size()) {
+            return List.of();
+        }
+        
+        return productos.subList(fromIndex, toIndex);
+    }
 }

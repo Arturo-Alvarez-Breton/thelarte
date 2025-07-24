@@ -739,4 +739,92 @@ public class TransaccionService {
 
         return transaccionRepository.save(transaccion);
     }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> getTransaccionesByFecha(java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin) {
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(23, 59, 59);
+        return transaccionRepository.findByFechaBetween(inicio, fin);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> getTransaccionesFiltered(String tipoFilter, String estadoFilter, 
+                                                     java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin, 
+                                                     int page, int size) {
+        LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
+        LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59) : null;
+        
+        List<Transaccion> transacciones = transaccionRepository.findByDeletedFalse();
+        
+        if (tipoFilter != null && !tipoFilter.isEmpty()) {
+            try {
+                Transaccion.TipoTransaccion tipo = Transaccion.TipoTransaccion.valueOf(tipoFilter);
+                transacciones = transacciones.stream()
+                        .filter(t -> t.getTipo() == tipo)
+                        .collect(Collectors.toList());
+            } catch (IllegalArgumentException e) {
+                // Ignorar filtro inválido
+            }
+        }
+        
+        if (estadoFilter != null && !estadoFilter.isEmpty()) {
+            try {
+                Transaccion.EstadoTransaccion estado = Transaccion.EstadoTransaccion.valueOf(estadoFilter);
+                transacciones = transacciones.stream()
+                        .filter(t -> t.getEstado() == estado)
+                        .collect(Collectors.toList());
+            } catch (IllegalArgumentException e) {
+                // Ignorar filtro inválido
+            }
+        }
+        
+        if (inicio != null && fin != null) {
+            transacciones = transacciones.stream()
+                    .filter(t -> t.getFecha().isAfter(inicio) && t.getFecha().isBefore(fin))
+                    .collect(Collectors.toList());
+        }
+        
+        // Aplicar paginación manual
+        int fromIndex = page * size;
+        int toIndex = Math.min(fromIndex + size, transacciones.size());
+        
+        if (fromIndex > transacciones.size()) {
+            return List.of();
+        }
+        
+        return transacciones.subList(fromIndex, toIndex);
+    }
+
+    @Transactional(readOnly = true)
+    public Transaccion getTransaccionById(Long id) {
+        return transaccionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+    }
+
+    public Transaccion confirmarTransaccion(Long id) {
+        return actualizarEstado(id, Transaccion.EstadoTransaccion.CONFIRMADA);
+    }
+
+    public Transaccion cancelarTransaccion(Long id, String motivo) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+        
+        transaccion.setEstado(Transaccion.EstadoTransaccion.CANCELADA);
+        if (motivo != null && !motivo.isEmpty()) {
+            String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
+            transaccion.setObservaciones(observacionesActuales + " - Cancelada: " + motivo);
+        }
+        
+        return transaccionRepository.save(transaccion);
+    }
+
+    public void marcarComoImpresa(Long transaccionId) {
+        Transaccion transaccion = transaccionRepository.findById(transaccionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
+        
+        String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
+        transaccion.setObservaciones(observacionesActuales + " - Factura impresa en " + LocalDateTime.now());
+        
+        transaccionRepository.save(transaccion);
+    }
 }

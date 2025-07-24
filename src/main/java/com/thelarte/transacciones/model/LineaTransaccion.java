@@ -197,4 +197,8 @@ public class LineaTransaccion {
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
     }
+
+    public BigDecimal getDescuento() {
+        return descuentoMonto != null ? descuentoMonto : BigDecimal.ZERO;
+    }
 }

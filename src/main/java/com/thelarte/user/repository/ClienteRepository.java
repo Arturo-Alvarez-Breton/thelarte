@@ -1,5 +1,7 @@
 package com.thelarte.user.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import com.thelarte.user.model.Cliente;
@@ -28,4 +30,14 @@ public interface ClienteRepository extends JpaRepository<Cliente, String> {
      * @return true si existe
      */
     boolean existsByCedula(String cedula);
+
+    /**
+     * Busca clientes por nombre o apellido con paginación.
+     *
+     * @param nombre el nombre a buscar
+     * @param apellido el apellido a buscar
+     * @param pageable información de paginación
+     * @return página de clientes que contienen el nombre o apellido
+     */
+    Page<Cliente> findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCase(String nombre, String apellido, Pageable pageable);
 }

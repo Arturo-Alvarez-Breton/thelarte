@@ -1,6 +1,8 @@
 package com.thelarte.transacciones.repository;
 
 import com.thelarte.transacciones.model.Transaccion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -72,4 +74,13 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     List<Transaccion> findByTransaccionOrigenId(Long transaccionOrigenId);
 
     List<Transaccion> findByTransaccionOrigenIdAndDeletedFalse(Long transaccionOrigenId);
+
+    /**
+     * Busca transacciones por fecha con paginación ordenadas por fecha descendente.
+     * @param fechaInicio Fecha de inicio
+     * @param fechaFin Fecha de fin
+     * @param pageable Información de paginación
+     * @return Página de transacciones ordenadas por fecha descendente
+     */
+    Page<Transaccion> findByFechaBetweenOrderByFechaDesc(LocalDateTime fechaInicio, LocalDateTime fechaFin, Pageable pageable);
 }

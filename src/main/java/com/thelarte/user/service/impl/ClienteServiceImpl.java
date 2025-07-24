@@ -3,6 +3,9 @@ package com.thelarte.user.service.impl;
 import com.thelarte.user.service.ClienteService;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.thelarte.user.model.Cliente;
 import com.thelarte.user.repository.ClienteRepository;
@@ -56,5 +59,23 @@ public class ClienteServiceImpl implements ClienteService {
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
         clienteRepository.delete(existente);
+    }
+
+    public Cliente getClienteByCedula(String cedula) {
+        return clienteRepository.findById(cedula)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
+    }
+
+    public List<Cliente> getClientesFiltered(String busqueda, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        
+        if (busqueda != null && !busqueda.isEmpty()) {
+            Page<Cliente> pageResult = clienteRepository.findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCase(
+                    busqueda, busqueda, pageable);
+            return pageResult.getContent();
+        } else {
+            Page<Cliente> pageResult = clienteRepository.findAll(pageable);
+            return pageResult.getContent();
+        }
     }
 }

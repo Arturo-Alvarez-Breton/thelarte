@@ -1,6 +1,8 @@
 package com.thelarte.inventory.repository;
 
 import com.thelarte.inventory.model.Producto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -33,4 +35,19 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
      * @return true si existe, false en caso contrario
      */
     boolean existsByNombre(String nombre);
+
+    /**
+     * Busca producto por código.
+     * @param codigo Código del producto
+     * @return Optional con el producto si existe
+     */
+    Optional<Producto> findByCodigo(String codigo);
+
+    /**
+     * Busca productos por nombre con paginación.
+     * @param nombre Nombre del producto (búsqueda parcial)
+     * @param pageable Información de paginación
+     * @return Página de productos que contienen el nombre
+     */
+    Page<Producto> findByNombreContainingIgnoreCase(String nombre, Pageable pageable);
 }

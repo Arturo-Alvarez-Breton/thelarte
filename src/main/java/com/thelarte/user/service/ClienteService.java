@@ -9,4 +9,6 @@ public interface ClienteService {
     List<Cliente> listarClientes();
     Cliente actualizarCliente(String cedula, Cliente datosActualizados);
     void eliminarCliente(String cedula);
+    Cliente getClienteByCedula(String cedula);
+    List<Cliente> getClientesFiltered(String busqueda, int page, int size);
 }
