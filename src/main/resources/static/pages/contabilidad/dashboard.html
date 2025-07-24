@@ -3,209 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Cajero | Thelarte</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Contabilidad - Dashboard</title>
+    <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'brand-brown': '#59391B',
-                        'brand-brown-light': '#7b5222',
-                        'brand-cream': '#f6fcfa'
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 sidebar-transition transform -translate-x-full lg:translate-x-0">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center">
-                <div class="flex items-end">
-                    <h1 class="font-serif text-lg font-bold bg-brand-brown text-white tracking-wider mr-1 px-2 py-1 rounded text-sm">Thel</h1>
-                    <h1 class="font-bold text-xl italic text-brand-brown-light font-cursive" style="font-family: cursive;">Arte</h1>
-                </div>
-            </div>
-        </div>
-        
-        <nav class="mt-4 px-4 space-y-2">
-            <a href="/pages/contabilidad/dashboard.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-brand-brown text-white">
-                <i class="fas fa-tachometer-alt mr-3"></i>
-                Dashboard
-            </a>
-            
-            <a href="/pages/contabilidad/transacciones.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                <i class="fas fa-receipt mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                Transacciones
-            </a>
-            
-            <a href="/pages/contabilidad/productos.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                <i class="fas fa-box mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                Productos
-            </a>
-            
-            <a href="/pages/contabilidad/clientes.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                <i class="fas fa-users mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                Clientes
-            </a>
-            
-            <a href="/pages/contabilidad/suplidores.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                <i class="fas fa-truck mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                Suplidores
-            </a>
-            
-            <div class="pt-4 mt-4 border-t border-gray-200">
-                <a href="/pages/contabilidad/reportes.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-chart-bar mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                    Reportes
-                </a>
-                
-                <a href="/pages/contabilidad/config.html" class="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-cog mr-3 text-gray-400 group-hover:text-gray-600"></i>
-                    Configuración
-                </a>
-            </div>
+<body class="flex h-screen bg-gray-100">
+    <aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+        <div class="text-2xl font-bold text-center">Thelarte</div>
+        <nav class="flex-1">
+            <ul>
+                <li>
+                    <a href="/pages/contabilidad/dashboard.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                        <i class="fas fa-tachometer-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-home flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Inicio Contabilidad</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Transacciones</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-box-open flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Productos</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-users flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Clientes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Suplidores</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Reportes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/pages/contabilidad/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-cog flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                        <span class="ml-3">Configuración</span>
+                    </a>
+                </li>
+            </ul>
         </nav>
-        
-        <div class="p-4 border-t border-gray-200 absolute bottom-0 w-full">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-700">Cajero</p>
-                    <p class="text-xs text-gray-500">Sistema de Caja</p>
-                </div>
-                <button id="logoutBtn" class="text-red-500 hover:text-red-700 transition-colors">
-                    <i class="fas fa-sign-out-alt text-lg"></i>
-                </button>
-            </div>
+        <div class="mt-auto">
+            <a href="#" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                <span class="ml-3">Cerrar Sesión</span>
+            </a>
         </div>
     </aside>
 
-    <!-- Main content -->
-    <main class="lg:ml-64 min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="flex items-center justify-between px-4 lg:px-8 py-4">
-                <div class="flex items-center">
-                    <button id="menuBtn" class="lg:hidden text-gray-500 hover:text-gray-700 mr-4">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                    <div>
-                        <h1 class="text-2xl font-bold text-brand-brown">Dashboard Cajero</h1>
-                        <p class="text-sm text-gray-600">Panel de control y resumen de actividades</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center space-x-4">
-                    <button id="abrirCajaBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                        <i class="fas fa-cash-register mr-2"></i>
-                        Abrir Caja
-                    </button>
-                    <button id="cerrarCajaBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                        <i class="fas fa-lock mr-2"></i>
-                        Cerrar Caja
-                    </button>
-                </div>
+    <div class="flex-1 flex flex-col">
+        <header class="bg-white shadow p-4 flex justify-between items-center">
+            <div>
+                <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <p id="cont-header-subtitle" class="text-sm text-gray-600">Resumen general de la contabilidad</p>
+            </div>
+            <div id="cont-quick-actions" class="flex space-x-2">
+                <!-- Botones de acción rápida específicos de la página -->
+                <button class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-sync-alt mr-2"></i>Actualizar Datos
+                </button>
             </div>
         </header>
 
-        <!-- Dashboard Content -->
-        <section class="p-4 lg:p-8">
-            <!-- Estado de Caja -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <h3 class="text-lg font-semibold text-brand-brown mb-4">Estado de Caja</h3>
+        <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
+            <!-- El contenido específico de cada página se inyectará aquí -->
+            <section class="p-4 bg-white rounded-lg shadow">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Estado de Caja</h2>
                 <div id="estadoCaja" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <!-- Se llenará dinámicamente -->
                 </div>
-            </div>
+            </section>
+        </main>
+    </div>
 
-            <!-- Resumen del Día -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <h3 class="text-lg font-semibold text-brand-brown mb-4">Resumen del Día</h3>
-                <div id="resumenDelDia" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-            </div>
-
-            <!-- Grid de dos columnas -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Transacciones Recientes -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Transacciones Recientes</h3>
-                    <div id="transaccionesRecientes" class="space-y-3">
-                        <!-- Se llenará dinámicamente -->
-                    </div>
-                </div>
-
-                <!-- Productos Más Vendidos -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Productos Más Vendidos</h3>
-                    <div id="productosMasVendidos" class="space-y-3">
-                        <!-- Se llenará dinámicamente -->
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal Abrir Caja -->
-    <div id="modalAbrirCaja" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-brand-brown mb-4">Abrir Caja</h3>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Monto inicial en efectivo</label>
-                        <input type="number" id="montoInicialInput" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" placeholder="0.00">
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button onclick="cerrarModalAbrirCaja()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                            Cancelar
-                        </button>
-                        <button onclick="confirmarAbrirCaja()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-brown-light">
-                            Abrir Caja
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+            <span class="visually-hidden">Cargando...</span>
         </div>
     </div>
 
-    <!-- Modal Cerrar Caja -->
-    <div id="modalCerrarCaja" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
-                <div class="p-6">
-                    <h3 class="text-xl font-bold text-brand-brown mb-4">Cerrar Caja</h3>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Efectivo contado</label>
-                        <input type="number" id="efectivoContadoInput" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" placeholder="0.00">
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones (opcional)</label>
-                        <textarea id="observacionesInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" rows="3" placeholder="Notas adicionales..."></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button onclick="cerrarModalCerrarCaja()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                            Cancelar
-                        </button>
-                        <button onclick="confirmarCerrarCaja()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-brown-light">
-                            Cerrar Caja
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="../../js/components/sidebar.js"></script>
-    <script src="../../js/cajero/dashboard.js"></script>
+    <script src="/js/components/sidebar.js" type="module"></script>
+    <script src="/js/components/header.js" type="module"></script>
+    <script src="/js/contabilidad/main.js" type="module"></script>
 </body>
 </html>

@@ -1,247 +1,132 @@
-class TransaccionService {
+// src/main/resources/static/js/services/transaccionService.js
+
+export class TransaccionService {
     constructor() {
-        this.baseUrl = '/api/transacciones';
+        this.baseUrl = '/api/cajero'; // Base URL for the API
     }
 
-    // Helper method to get auth headers
-    getAuthHeaders() {
-        const token = localStorage.getItem('authToken');
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        return headers;
-    }
+    async obtenerTransacciones(filters = {}) {
+        console.log('Fetching transactions with filters:', filters);
+        // const response = await fetch(`${this.baseUrl}/transacciones?${new URLSearchParams(filters)}`);
+        // const data = await response.json();
+        // return data;
 
-    async obtenerTransacciones() {
-        try {
-            const response = await fetch(this.baseUrl, {
-                headers: this.getAuthHeaders()
-            });
-            if (!response.ok) {
-                throw new Error('Error al obtener transacciones');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
+        return [
+            {
+                id: 1,
+                numeroFactura: 'F001',
+                tipo: 'VENTA',
+                fecha: '2025-07-24T10:00:00',
+                estado: 'COMPLETADA',
+                contraparteNombre: 'Cliente A',
+                total: 150.00,
+                metodoPago: 'EFECTIVO',
+                lineas: [{ productoId: 1, nombreProducto: 'Producto X', cantidad: 1, precioUnitario: 150.00 }]
+            },
+            {
+                id: 2,
+                numeroFactura: 'F002',
+                tipo: 'COMPRA',
+                fecha: '2025-07-23T14:30:00',
+                estado: 'PENDIENTE',
+                contraparteNombre: 'Suplidor B',
+                total: 500.00,
+                metodoPago: 'TRANSFERENCIA',
+                lineas: [{ productoId: 2, nombreProducto: 'Materia Prima Y', cantidad: 10, precioUnitario: 50.00 }]
+            },
+            {
+                id: 3,
+                numeroFactura: 'F003',
+                tipo: 'VENTA',
+                fecha: '2025-07-22T11:15:00',
+                estado: 'CANCELADA',
+                contraparteNombre: 'Cliente C',
+                total: 75.00,
+                metodoPago: 'TARJETA',
+                lineas: [{ productoId: 3, nombreProducto: 'Servicio Z', cantidad: 1, precioUnitario: 75.00 }]
+            },
+        ];
     }
 
     async obtenerTransaccionPorId(id) {
-        try {
-            const response = await fetch(`${this.baseUrl}/${id}`, {
-                headers: this.getAuthHeaders()
-            });
-            if (!response.ok) {
-                throw new Error('Error al obtener transacción');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
+        console.log('Fetching transaction by ID:', id);
+        // const response = await fetch(`${this.baseUrl}/transacciones/${id}`);
+        // const data = await response.json();
+        // return data;
+
+        const transactions = await this.obtenerTransacciones();
+        return transactions.find(t => t.id === id);
     }
 
-    async crearTransaccion(transaccion) {
-        try {
-            const response = await fetch(this.baseUrl, {
-                method: 'POST',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify(transaccion)
-            });
-            if (!response.ok) {
-                throw new Error('Error al crear transacción');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
+    async crearTransaccion(transactionData) {
+        console.log('Creating transaction:', transactionData);
+        // const response = await fetch(`${this.baseUrl}/transacciones`, {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(transactionData)
+        // });
+        // const data = await response.json();
+        // return data;
+
+        return { ...transactionData, id: Math.floor(Math.random() * 1000) + 100 };
     }
 
-    async actualizarTransaccion(id, transaccion) {
-        try {
-            const response = await fetch(`${this.baseUrl}/${id}`, {
-                method: 'PUT',
-                headers: this.getAuthHeaders(),
-                body: JSON.stringify(transaccion)
-            });
-            if (!response.ok) {
-                throw new Error('Error al actualizar transacción');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
+    async actualizarTransaccion(id, transactionData) {
+        console.log('Updating transaction:', id, transactionData);
+        // const response = await fetch(`${this.baseUrl}/transacciones/${id}`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(transactionData)
+        // });
+        // const data = await response.json();
+        // return data;
+
+        return { ...transactionData, id: id };
     }
 
     async eliminarTransaccion(id) {
-        try {
-            const response = await fetch(`${this.baseUrl}/${id}`, {
-                method: 'DELETE',
-                headers: this.getAuthHeaders()
-            });
-            if (!response.ok) {
-                throw new Error('Error al eliminar transacción');
-            }
-            return true;
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
+        console.log('Deleting transaction:', id);
+        // const response = await fetch(`${this.baseUrl}/transacciones/${id}`, {
+        //     method: 'DELETE'
+        // });
+        // if (!response.ok) throw new Error('Failed to delete');
+        return { success: true };
     }
 
-    async obtenerProductos() {
-        try {
-            const response = await fetch('/api/productos');
-            if (!response.ok) {
-                throw new Error('Error al obtener productos');
-            }
-            const productos = await response.json();
-            console.log("Productos obtenidos del API:", productos); // Debug log
-            return productos;
-        } catch (error) {
-            console.error('Error al obtener productos:', error);
-            // Return test data in case of error for development
-            console.log("Retornando datos de prueba para desarrollo");
-            return [
-                {id: 1, nombre: "Mesa de Roble", precio: 12500, cantidadDisponible: 5},
-                {id: 2, nombre: "Silla Clásica", precio: 4500, cantidadDisponible: 12},
-                {id: 3, nombre: "Sofá de Cuero", precio: 35000, cantidadDisponible: 2},
-                {id: 4, nombre: "Lámpara de Pie", precio: 2800, cantidadDisponible: 8},
-                {id: 5, nombre: "Cuadro Abstracto", precio: 3500, cantidadDisponible: 0}
-            ];
-        }
+    async getClienteByCedula(cedula) {
+        console.log('Fetching client by cedula:', cedula);
+        // const response = await fetch(`${this.baseUrl}/clientes/${cedula}`);
+        // if (!response.ok) {
+        //     if (response.status === 404) return null; // Client not found
+        //     throw new Error(`HTTP error! status: ${response.status}`);
+        // }
+        // const data = await response.json();
+        // return data;
+
+        // Mock data
+        const mockClients = [
+            { cedula: '123456789', nombre: 'Juan', apellido: 'Perez', telefono: '809-111-2222', email: 'juan@example.com', direccion: 'Calle A #1' },
+            { cedula: '987654321', nombre: 'Maria', apellido: 'Gomez', telefono: '809-333-4444', email: 'maria@example.com', direccion: 'Calle B #2' },
+        ];
+        return mockClients.find(client => client.cedula === cedula) || null;
     }
 
-    async obtenerSuplidores() {
-        try {
-            const response = await fetch('/api/suplidores');
-            if (!response.ok) {
-                throw new Error('Error al obtener suplidores');
-            }
-            const suplidores = await response.json();
-            console.log("Suplidores obtenidos del API:", suplidores);
-            
-            // Log the structure of the first supplier if available
-            if (suplidores.length > 0) {
-                console.log("Estructura del primer suplidor:", Object.keys(suplidores[0]));
-                console.log("Primer suplidor completo:", suplidores[0]);
-            }
-            
-            return suplidores;
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    }
+    async getProductoByCodigo(codigo) {
+        console.log('Fetching product by code:', codigo);
+        // const response = await fetch(`${this.baseUrl}/productos/codigo/${codigo}`);
+        // if (!response.ok) {
+        //     if (response.status === 404) return null; // Product not found
+        //     throw new Error(`HTTP error! status: ${response.status}`);
+        // }
+        // const data = await response.json();
+        // return data;
 
-    async obtenerClientes() {
-        try {
-            const response = await fetch('/api/clientes');
-            if (!response.ok) {
-                throw new Error('Error al obtener clientes');
-            }
-            const clientes = await response.json();
-            console.log("Clientes obtenidos del API:", clientes);
-            
-            // Log the structure of the first client if available
-            if (clientes.length > 0) {
-                console.log("Estructura del primer cliente:", Object.keys(clientes[0]));
-                console.log("Primer cliente completo:", clientes[0]);
-            }
-            
-            return clientes;
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    }
-
-    async obtenerEmpleados() {
-        try {
-            const response = await fetch('/api/empleados');
-            if (!response.ok) {
-                throw new Error('Error al obtener empleados');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    }
-
-    async canEditTransaction(id) {
-        try {
-            const response = await fetch(`${this.baseUrl}/${id}/can-edit`, {
-                headers: this.getAuthHeaders()
-            });
-            if (!response.ok) {
-                throw new Error('Error al verificar si la transacción puede ser editada');
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
-        }
-    }
-
-    obtenerEstadosEditables() {
-        return ['PENDIENTE', 'CONFIRMADA'];
-    }
-
-    formatearFecha(fecha) {
-        return new Date(fecha).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    formatearMoneda(monto) {
-        if (!monto && monto !== 0) return 'RD$ 0,00';
-        
-        // Usar formateo manual para asegurar el formato dominicano correcto
-        const numero = Math.abs(monto);
-        const partes = numero.toFixed(2).split('.');
-        const entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        const decimal = partes[1];
-        
-        return `RD$ ${entero},${decimal}`;
-    }
-
-    obtenerEstadoColor(estado) {
-        const colores = {
-            'PENDIENTE': 'warning',
-            'CONFIRMADA': 'info',
-            'COMPLETADA': 'success',
-            'CANCELADA': 'danger',
-            'FACTURADA': 'primary',
-            'RECIBIDA': 'success',
-            'PAGADA': 'success',
-            'ENTREGADA': 'success',
-            'COBRADA': 'success'
-        };
-        return colores[estado] || 'secondary';
-    }
-
-    obtenerTipoIcon(tipo) {
-        const iconos = {
-            'COMPRA': 'fas fa-shopping-cart',
-            'VENTA': 'fas fa-cash-register',
-            'DEVOLUCION_COMPRA': 'fas fa-undo',
-            'DEVOLUCION_VENTA': 'fas fa-undo-alt'
-        };
-        return iconos[tipo] || 'fas fa-file';
+        // Mock data
+        const mockProducts = [
+            { id: 1, codigo: 'PROD001', nombre: 'Laptop XYZ', descripcion: 'Potente laptop para trabajo', categoria: 'Electronica', precioVenta: 1200.00, cantidadDisponible: 10, disponible: true, fotoURL: '', itbis: 0.18, esNuevo: false },
+            { id: 2, codigo: 'PROD002', nombre: 'Mouse Inalambrico', descripcion: 'Mouse ergonomico', categoria: 'Electronica', precioVenta: 25.00, cantidadDisponible: 50, disponible: true, fotoURL: '', itbis: 0.18, esNuevo: false },
+            { id: 3, codigo: 'SERV001', nombre: 'Servicio de Consultoria', descripcion: 'Consultoria IT', categoria: 'Servicios', precioVenta: 100.00, cantidadDisponible: 999, disponible: true, fotoURL: '', itbis: 0.00, esNuevo: false },
+        ];
+        return mockProducts.find(product => product.codigo === codigo) || null;
     }
 }
-
-window.TransaccionService = TransaccionService;

@@ -1,769 +1,577 @@
-// Transaction Creation Wizard Component
-class TransactionWizard {
-    constructor(transaccionService) {
-        this.transaccionService = transaccionService;
-        this.currentStep = 1;
-        this.totalSteps = 4;
-        this.wizardData = {};
-        this.isOpen = false;
-        
-        this.stepTitles = {
-            1: 'Tipo de Transacción',
-            2: 'Información General',
-            3: 'Productos',
-            4: 'Confirmación'
+// src/main/resources/static/js/components/transactionWizard.js
+
+import { TransaccionService } from '../services/transaccionService.js';
+
+export class TransactionWizard {
+    constructor() {
+        this.transaccionService = new TransaccionService();
+        this.wizardModal = document.getElementById('transactionWizard');
+        this.wizardContent = document.getElementById('wizardContent');
+        this.wizardSubtitle = document.getElementById('wizardSubtitle');
+        this.wizardPrevBtn = document.getElementById('wizardPrevBtn');
+        this.wizardNextBtn = document.getElementById('wizardNextBtn');
+        this.currentStep = 0;
+        this.transactionData = {
+            tipoTransaccion: '',
+            cliente: null,
+            metodoPago: '',
+            observaciones: '',
+            lineas: [],
+            subtotal: 0,
+            impuestos: 0,
+            total: 0
         };
-        
-        this.init();
-    }
-    
-    init() {
+        this.steps = [];
+
+        this.initSteps();
         this.setupEventListeners();
     }
-    
+
+    initSteps() {
+        this.steps = [
+            {
+                title: 'Selecciona el tipo de transacción',
+                content: this.getStep1Content(),
+                onNext: () => this.validateStep1()
+            },
+            {
+                title: 'Detalles de la Transacción',
+                content: this.getStep2Content(),
+                onNext: () => this.validateStep2(),
+                onLoad: () => this.loadStep2Data()
+            },
+            {
+                title: 'Añadir Productos',
+                content: this.getStep3Content(),
+                onNext: () => this.validateStep3(),
+                onLoad: () => this.loadStep3Data()
+            },
+            {
+                title: 'Confirmación',
+                content: this.getStep4Content(),
+                onNext: () => this.finalizeTransaction(),
+                onLoad: () => this.loadStep4Data()
+            }
+        ];
+    }
+
     setupEventListeners() {
-        // Close wizard on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isOpen) {
-                this.close();
-            }
-        });
+        if (this.wizardPrevBtn) {
+            this.wizardPrevBtn.onclick = () => this.prevStep();
+        }
+        if (this.wizardNextBtn) {
+            this.wizardNextBtn.onclick = () => this.nextStep();
+        }
+        // Close button on the wizard header
+        const closeButton = this.wizardModal.querySelector('button[onclick*="closeTransactionWizard"]');
+        if (closeButton) {
+            closeButton.onclick = () => this.close();
+        }
     }
-    
-    open(transactionType = null) {
-        const wizard = document.getElementById('transactionWizard');
-        if (!wizard) return;
-        
-        this.isOpen = true;
-        this.currentStep = 1;
-        this.wizardData = transactionType ? { type: transactionType } : {};
-        
-        wizard.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Prevent background scroll
-        
-        this.updateStepIndicators();
-        this.renderCurrentStep();
+
+    open(type = null) {
+        this.transactionData = {
+            tipoTransaccion: type || '',
+            cliente: null,
+            metodoPago: '',
+            observaciones: '',
+            lineas: [],
+            subtotal: 0,
+            impuestos: 0,
+            total: 0
+        };
+        this.currentStep = 0;
+        this.updateWizardUI();
+        this.wizardModal.classList.remove('hidden');
     }
-    
+
     close() {
-        const wizard = document.getElementById('transactionWizard');
-        if (!wizard) return;
-        
-        this.isOpen = false;
-        wizard.classList.add('hidden');
-        document.body.style.overflow = ''; // Restore scroll
-        
-        // Reset wizard state
-        this.currentStep = 1;
-        this.wizardData = {};
+        this.wizardModal.classList.add('hidden');
     }
-    
-    nextStep() {
-        if (this.validateCurrentStep()) {
-            if (this.currentStep < this.totalSteps) {
-                this.currentStep++;
-                this.updateStepIndicators();
-                this.renderCurrentStep();
-            } else {
-                this.createTransaction();
+
+    async nextStep() {
+        const currentStepHandler = this.steps[this.currentStep];
+        if (currentStepHandler.onNext) {
+            const isValid = await currentStepHandler.onNext();
+            if (!isValid) {
+                return; // Stop if validation fails
             }
         }
-    }
-    
-    prevStep() {
-        if (this.currentStep > 1) {
-            this.currentStep--;
-            this.updateStepIndicators();
-            this.renderCurrentStep();
+
+        if (this.currentStep < this.steps.length - 1) {
+            this.currentStep++;
+            this.updateWizardUI();
         }
     }
-    
-    updateStepIndicators() {
-        const steps = document.querySelectorAll('.wizard-step');
-        steps.forEach((step, index) => {
-            const stepNumber = index + 1;
-            if (stepNumber <= this.currentStep) {
+
+    prevStep() {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            this.updateWizardUI();
+        }
+    }
+
+    async updateWizardUI() {
+        const currentStepData = this.steps[this.currentStep];
+        if (this.wizardSubtitle) {
+            this.wizardSubtitle.textContent = currentStepData.title;
+        }
+        if (this.wizardContent) {
+            this.wizardContent.innerHTML = currentStepData.content;
+            if (currentStepData.onLoad) {
+                await currentStepData.onLoad();
+            }
+        }
+
+        // Update step indicators
+        document.querySelectorAll('.wizard-step').forEach((step, index) => {
+            if (index === this.currentStep) {
                 step.classList.add('active');
             } else {
                 step.classList.remove('active');
             }
         });
-        
+
         // Update navigation buttons
-        const prevBtn = document.getElementById('wizardPrevBtn');
-        const nextBtn = document.getElementById('wizardNextBtn');
-        const subtitle = document.getElementById('wizardSubtitle');
-        
-        if (prevBtn) {
-            prevBtn.classList.toggle('hidden', this.currentStep === 1);
+        if (this.wizardPrevBtn) {
+            this.wizardPrevBtn.classList.toggle('hidden', this.currentStep === 0);
         }
-        
-        if (nextBtn) {
-            if (this.currentStep === this.totalSteps) {
-                nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Crear Transacción';
+        if (this.wizardNextBtn) {
+            this.wizardNextBtn.classList.toggle('hidden', this.currentStep === this.steps.length - 1);
+            if (this.currentStep === this.steps.length - 1) {
+                this.wizardNextBtn.textContent = 'Finalizar';
             } else {
-                nextBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right ml-1"></i>';
+                this.wizardNextBtn.textContent = 'Siguiente';
             }
         }
-        
-        if (subtitle) {
-            subtitle.textContent = this.stepTitles[this.currentStep] || 'Paso';
-        }
     }
-    
-    renderCurrentStep() {
-        const container = document.getElementById('wizardContent');
-        if (!container) return;
-        
-        switch (this.currentStep) {
-            case 1:
-                this.renderTypeSelection(container);
-                break;
-            case 2:
-                this.renderDetailsForm(container);
-                break;
-            case 3:
-                this.renderProductsForm(container);
-                break;
-            case 4:
-                this.renderConfirmation(container);
-                break;
-        }
-    }
-    
-    renderTypeSelection(container) {
-        const types = [
-            {
-                id: 'COMPRA',
-                name: 'Compra',
-                description: 'Registrar una nueva compra a proveedor',
-                icon: 'fas fa-shopping-cart',
-                color: 'green'
-            },
-            {
-                id: 'VENTA',
-                name: 'Venta',
-                description: 'Registrar una nueva venta a cliente',
-                icon: 'fas fa-cash-register',
-                color: 'yellow'
-            },
-            {
-                id: 'DEVOLUCION_COMPRA',
-                name: 'Devolución de Compra',
-                description: 'Devolver productos a proveedor',
-                icon: 'fas fa-undo',
-                color: 'red'
-            },
-            {
-                id: 'DEVOLUCION_VENTA',
-                name: 'Devolución de Venta',
-                description: 'Recibir productos devueltos por cliente',
-                icon: 'fas fa-undo',
-                color: 'red'
-            }
-        ];
-        
-        container.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                ${types.map(type => `
-                    <div class="transaction-type-option border-2 rounded-lg p-6 cursor-pointer transition-all duration-300 hover:shadow-lg ${this.wizardData.type === type.id ? `border-${type.color}-500 bg-${type.color}-50` : 'border-gray-200 hover:border-gray-300'}" 
-                         onclick="transactionWizard.selectType('${type.id}')">
-                        <div class="flex items-center mb-4">
-                            <div class="p-3 rounded-lg bg-${type.color}-100 mr-4">
-                                <i class="${type.icon} text-2xl text-${type.color}-600"></i>
-                            </div>
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-800">${type.name}</h4>
-                                ${this.wizardData.type === type.id ? '<i class="fas fa-check-circle text-' + type.color + '-600 ml-2"></i>' : ''}
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-600">${type.description}</p>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-    
-    selectType(type) {
-        this.wizardData.type = type;
-        
-        // Update visual selection
-        const options = document.querySelectorAll('.transaction-type-option');
-        options.forEach(option => {
-            option.classList.remove('border-green-500', 'bg-green-50', 'border-yellow-500', 'bg-yellow-50', 'border-red-500', 'bg-red-50');
-            option.classList.add('border-gray-200');
-        });
-        
-        const selectedOption = document.querySelector(`[onclick="transactionWizard.selectType('${type}')"]`);
-        if (selectedOption) {
-            const colorMap = {
-                'COMPRA': 'green',
-                'VENTA': 'yellow',
-                'DEVOLUCION_COMPRA': 'red',
-                'DEVOLUCION_VENTA': 'red'
-            };
-            const color = colorMap[type];
-            selectedOption.classList.remove('border-gray-200');
-            selectedOption.classList.add(`border-${color}-500`, `bg-${color}-50`);
-        }
-    }
-    
-    renderDetailsForm(container) {
-        const isReturn = this.wizardData.type?.includes('DEVOLUCION');
-        const isClientTransaction = this.wizardData.type?.includes('VENTA');
-        
-        container.innerHTML = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            ${isClientTransaction ? 'Cliente' : 'Proveedor'} *
-                        </label>
-                        <select id="contraparteSelect" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Seleccionar ${isClientTransaction ? 'cliente' : 'proveedor'}</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
-                        <input type="date" id="fechaTransaccion" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                </div>
-                
-                ${isReturn ? `
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Transacción Original *</label>
-                        <select id="transaccionOrigenSelect" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Seleccionar transacción original</option>
-                        </select>
-                    </div>
-                ` : ''}
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Condiciones de Pago</label>
-                        <input type="text" id="condicionesPago" placeholder="Ej: Contado, 30 días" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
-                        <select id="metodoPago" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Seleccionar método</option>
-                            <option value="EFECTIVO">Efectivo</option>
-                            <option value="TARJETA">Tarjeta</option>
-                            <option value="TRANSFERENCIA">Transferencia</option>
-                            <option value="CHEQUE">Cheque</option>
-                            <option value="CREDITO">Crédito</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                    <textarea id="observaciones" rows="3" placeholder="Observaciones adicionales..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown"></textarea>
-                </div>
-            </div>
-        `;
-        
-        this.loadCounterparts(isClientTransaction);
-        if (isReturn) {
-            this.loadOriginalTransactions();
-        }
-    }
-    
-    async loadCounterparts(isClient) {
-        try {
-            const select = document.getElementById('contraparteSelect');
-            if (!select) return;
-            
-            // Simulate loading counterparts - replace with actual API calls
-            const counterparts = isClient ? [
-                { id: 1, nombre: 'Juan Pérez' },
-                { id: 2, nombre: 'María García' },
-                { id: 3, nombre: 'Pedro López' }
-            ] : [
-                { id: 1, nombre: 'Muebles SA' },
-                { id: 2, nombre: 'Decoraciones El Arte' },
-                { id: 3, nombre: 'Madera Premium' }
-            ];
-            
-            select.innerHTML = `
-                <option value="">Seleccionar ${isClient ? 'cliente' : 'proveedor'}</option>
-                ${counterparts.map(cp => `<option value="${cp.id}">${cp.nombre}</option>`).join('')}
-            `;
-        } catch (error) {
-            console.error('Error loading counterparts:', error);
-            this.showToast('Error al cargar ' + (isClient ? 'clientes' : 'proveedores'), 'error');
-        }
-    }
-    
-    async loadOriginalTransactions() {
-        try {
-            const select = document.getElementById('transaccionOrigenSelect');
-            if (!select) return;
-            
-            // Load original transactions based on type
-            const transactions = await this.transaccionService.obtenerTransacciones();
-            const relevantTransactions = transactions.filter(t => {
-                if (this.wizardData.type === 'DEVOLUCION_COMPRA') {
-                    return t.tipo === 'COMPRA' && ['CONFIRMADA', 'RECIBIDA', 'PAGADA'].includes(t.estado);
-                } else if (this.wizardData.type === 'DEVOLUCION_VENTA') {
-                    return t.tipo === 'VENTA' && ['CONFIRMADA', 'FACTURADA', 'ENTREGADA', 'COBRADA'].includes(t.estado);
-                }
-                return false;
-            });
-            
-            select.innerHTML = `
-                <option value="">Seleccionar transacción original</option>
-                ${relevantTransactions.map(t => `
-                    <option value="${t.id}">
-                        #${t.id} - ${t.contraparteNombre} - ${this.formatCurrency(t.total)}
-                    </option>
-                `).join('')}
-            `;
-        } catch (error) {
-            console.error('Error loading original transactions:', error);
-            this.showToast('Error al cargar transacciones originales', 'error');
-        }
-    }
-    
-    renderProductsForm(container) {
-        if (!this.wizardData.lineas) {
-            this.wizardData.lineas = [];
-        }
-        
-        container.innerHTML = `
-            <div class="space-y-6">
-                <div class="flex items-center justify-between">
-                    <h4 class="text-lg font-semibold text-gray-800">Productos</h4>
-                    <button type="button" onclick="transactionWizard.addProductLine()" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-brown-light text-sm transition-colors">
-                        <i class="fas fa-plus mr-1"></i>Agregar Producto
-                    </button>
-                </div>
-                
-                <div id="productLines" class="space-y-4">
-                    <!-- Product lines will be rendered here -->
-                </div>
-                
-                <div class="bg-gray-50 p-4 rounded-lg border">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Subtotal:</span>
-                            <span id="wizardSubtotal" class="font-medium">RD$ 0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">ITBIS (18%):</span>
-                            <span id="wizardTax" class="font-medium">RD$ 0.00</span>
-                        </div>
-                        <div class="flex justify-between border-l border-gray-300 pl-4">
-                            <span class="text-lg font-semibold text-gray-800">Total:</span>
-                            <span id="wizardTotal" class="text-lg font-bold text-brand-brown-light">RD$ 0.00</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        this.renderProductLines();
-        
-        // Add first line if none exist
-        if (this.wizardData.lineas.length === 0) {
-            this.addProductLine();
-        }
-    }
-    
-    renderProductLines() {
-        const container = document.getElementById('productLines');
-        if (!container) return;
-        
-        const linesHtml = this.wizardData.lineas.map((linea, index) => `
-            <div class="border border-gray-200 rounded-lg p-4 bg-white product-line" data-index="${index}">
-                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Producto *</label>
-                        <select onchange="transactionWizard.updateProductLine(${index}, 'producto', this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Seleccionar producto</option>
-                            <option value="1" ${linea.productoId === '1' ? 'selected' : ''}>Mesa de Comedor - RD$ 15,000.00</option>
-                            <option value="2" ${linea.productoId === '2' ? 'selected' : ''}>Silla Ejecutiva - RD$ 5,500.00</option>
-                            <option value="3" ${linea.productoId === '3' ? 'selected' : ''}>Sofá 3 Plazas - RD$ 25,000.00</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad *</label>
-                        <input type="number" min="1" value="${linea.cantidad || 1}" 
-                               onchange="transactionWizard.updateProductLine(${index}, 'cantidad', this.value)"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Precio Unit. *</label>
-                        <input type="number" step="0.01" min="0" value="${linea.precioUnitario || ''}" 
-                               onchange="transactionWizard.updateProductLine(${index}, 'precio', this.value)"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Descuento %</label>
-                        <input type="number" step="0.01" min="0" max="100" value="${linea.descuentoPorcentaje || ''}" 
-                               onchange="transactionWizard.updateProductLine(${index}, 'descuento', this.value)"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Subtotal</label>
-                        <input type="text" value="${this.formatCurrency(linea.subtotal || 0)}" readonly 
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                    </div>
-                    
-                    <div>
-                        <button type="button" onclick="transactionWizard.removeProductLine(${index})" 
-                                class="w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition-colors">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-        
-        container.innerHTML = linesHtml;
-        this.updateTotals();
-    }
-    
-    addProductLine() {
-        if (!this.wizardData.lineas) {
-            this.wizardData.lineas = [];
-        }
-        
-        this.wizardData.lineas.push({
-            productoId: '',
-            cantidad: 1,
-            precioUnitario: 0,
-            descuentoPorcentaje: 0,
-            subtotal: 0
-        });
-        
-        this.renderProductLines();
-    }
-    
-    removeProductLine(index) {
-        if (this.wizardData.lineas.length > 1) {
-            this.wizardData.lineas.splice(index, 1);
-            this.renderProductLines();
-        } else {
-            this.showToast('Debe tener al menos un producto', 'warning');
-        }
-    }
-    
-    updateProductLine(index, field, value) {
-        if (!this.wizardData.lineas[index]) return;
-        
-        const linea = this.wizardData.lineas[index];
-        
-        switch (field) {
-            case 'producto':
-                linea.productoId = value;
-                // Set default price based on product
-                const productPrices = { '1': 15000, '2': 5500, '3': 25000 };
-                if (productPrices[value]) {
-                    linea.precioUnitario = productPrices[value];
-                }
-                break;
-            case 'cantidad':
-                linea.cantidad = parseInt(value) || 1;
-                break;
-            case 'precio':
-                linea.precioUnitario = parseFloat(value) || 0;
-                break;
-            case 'descuento':
-                linea.descuentoPorcentaje = parseFloat(value) || 0;
-                break;
-        }
-        
-        // Recalculate subtotal
-        const precio = linea.precioUnitario || 0;
-        const cantidad = linea.cantidad || 1;
-        const descuento = linea.descuentoPorcentaje || 0;
-        
-        linea.subtotal = precio * cantidad * (1 - descuento / 100);
-        
-        this.renderProductLines();
-    }
-    
-    updateTotals() {
-        if (!this.wizardData.lineas) return;
-        
-        const subtotal = this.wizardData.lineas.reduce((sum, linea) => sum + (linea.subtotal || 0), 0);
-        const tax = subtotal * 0.18; // 18% ITBIS
-        const total = subtotal + tax;
-        
-        const subtotalElement = document.getElementById('wizardSubtotal');
-        const taxElement = document.getElementById('wizardTax');
-        const totalElement = document.getElementById('wizardTotal');
-        
-        if (subtotalElement) subtotalElement.textContent = this.formatCurrency(subtotal);
-        if (taxElement) taxElement.textContent = this.formatCurrency(tax);
-        if (totalElement) totalElement.textContent = this.formatCurrency(total);
-        
-        // Store totals in wizard data
-        this.wizardData.subtotal = subtotal;
-        this.wizardData.impuestos = tax;
-        this.wizardData.total = total;
-    }
-    
-    renderConfirmation(container) {
-        const typeNames = {
-            'COMPRA': 'Compra',
-            'VENTA': 'Venta',
-            'DEVOLUCION_COMPRA': 'Devolución de Compra',
-            'DEVOLUCION_VENTA': 'Devolución de Venta'
-        };
-        
-        container.innerHTML = `
-            <div class="space-y-6">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 class="text-lg font-semibold text-blue-800 mb-2">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Confirmar Transacción
-                    </h4>
-                    <p class="text-sm text-blue-600">Revisa todos los datos antes de crear la transacción</p>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4">
-                        <h5 class="font-semibold text-gray-800 border-b pb-2">Información General</h5>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Tipo:</span>
-                                <span class="font-medium">${typeNames[this.wizardData.type] || this.wizardData.type}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Fecha:</span>
-                                <span class="font-medium">${this.formatDate(document.getElementById('fechaTransaccion')?.value)}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Método de Pago:</span>
-                                <span class="font-medium">${document.getElementById('metodoPago')?.selectedOptions[0]?.text || 'No especificado'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <h5 class="font-semibold text-gray-800 border-b pb-2">Resumen Financiero</h5>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Subtotal:</span>
-                                <span class="font-medium">${this.formatCurrency(this.wizardData.subtotal || 0)}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">ITBIS (18%):</span>
-                                <span class="font-medium">${this.formatCurrency(this.wizardData.impuestos || 0)}</span>
-                            </div>
-                            <div class="flex justify-between border-t pt-2 text-base">
-                                <span class="font-bold text-gray-800">Total:</span>
-                                <span class="font-bold text-brand-brown-light">${this.formatCurrency(this.wizardData.total || 0)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="space-y-4">
-                    <h5 class="font-semibold text-gray-800 border-b pb-2">Productos (${this.wizardData.lineas?.length || 0})</h5>
-                    <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                        ${this.wizardData.lineas?.map((linea, index) => `
-                            <div class="flex justify-between items-center py-2 ${index > 0 ? 'border-t border-gray-200' : ''}">
-                                <div class="flex-1">
-                                    <span class="font-medium">Producto ${index + 1}</span>
-                                    <div class="text-sm text-gray-600">
-                                        Cantidad: ${linea.cantidad} × ${this.formatCurrency(linea.precioUnitario || 0)}
-                                        ${linea.descuentoPorcentaje ? ` (${linea.descuentoPorcentaje}% desc.)` : ''}
-                                    </div>
-                                </div>
-                                <div class="font-medium">${this.formatCurrency(linea.subtotal || 0)}</div>
-                            </div>
-                        `).join('') || '<p class="text-gray-500 text-center py-4">No hay productos agregados</p>'}
-                    </div>
-                </div>
-                
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div class="flex items-start">
-                        <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
-                        <div>
-                            <h6 class="font-medium text-yellow-800">Importante</h6>
-                            <p class="text-sm text-yellow-700 mt-1">
-                                Una vez creada, la transacción podrá ser editada solo mientras esté en estado PENDIENTE o CONFIRMADA.
-                            </p>
-                        </div>
-                    </div>
+
+    // --- Step 1: Select Transaction Type ---
+    getStep1Content() {
+        return `
+            <div class="space-y-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Tipo de Transacción:</label>
+                <div class="flex flex-col space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="transactionType" value="VENTA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'VENTA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Venta</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="transactionType" value="COMPRA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'COMPRA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Compra</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="transactionType" value="DEVOLUCION_VENTA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'DEVOLUCION_VENTA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Devolución de Venta</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="transactionType" value="DEVOLUCION_COMPRA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'DEVOLUCION_COMPRA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Devolución de Compra</span>
+                    </label>
                 </div>
             </div>
         `;
     }
-    
-    validateCurrentStep() {
-        switch (this.currentStep) {
-            case 1:
-                if (!this.wizardData.type) {
-                    this.showToast('Debe seleccionar un tipo de transacción', 'warning');
-                    return false;
-                }
-                return true;
-                
-            case 2:
-                const contraparte = document.getElementById('contraparteSelect')?.value;
-                const fecha = document.getElementById('fechaTransaccion')?.value;
-                
-                if (!contraparte) {
-                    this.showToast('Debe seleccionar una contraparte', 'warning');
-                    return false;
-                }
-                
-                if (!fecha) {
-                    this.showToast('Debe especificar una fecha', 'warning');
-                    return false;
-                }
-                
-                // Store form data
-                this.wizardData.contraparteId = contraparte;
-                this.wizardData.fecha = fecha;
-                this.wizardData.condicionesPago = document.getElementById('condicionesPago')?.value;
-                this.wizardData.metodoPago = document.getElementById('metodoPago')?.value;
-                this.wizardData.observaciones = document.getElementById('observaciones')?.value;
-                
-                if (this.wizardData.type?.includes('DEVOLUCION')) {
-                    const transaccionOrigen = document.getElementById('transaccionOrigenSelect')?.value;
-                    if (!transaccionOrigen) {
-                        this.showToast('Debe seleccionar la transacción original para la devolución', 'warning');
-                        return false;
-                    }
-                    this.wizardData.transaccionOrigenId = transaccionOrigen;
-                }
-                
-                return true;
-                
-            case 3:
-                if (!this.wizardData.lineas || this.wizardData.lineas.length === 0) {
-                    this.showToast('Debe agregar al menos un producto', 'warning');
-                    return false;
-                }
-                
-                // Validate all product lines
-                for (let i = 0; i < this.wizardData.lineas.length; i++) {
-                    const linea = this.wizardData.lineas[i];
-                    if (!linea.productoId) {
-                        this.showToast(`Debe seleccionar un producto en la línea ${i + 1}`, 'warning');
-                        return false;
-                    }
-                    if (!linea.precioUnitario || linea.precioUnitario <= 0) {
-                        this.showToast(`Debe especificar un precio válido en la línea ${i + 1}`, 'warning');
-                        return false;
-                    }
-                    if (!linea.cantidad || linea.cantidad <= 0) {
-                        this.showToast(`Debe especificar una cantidad válida en la línea ${i + 1}`, 'warning');
-                        return false;
-                    }
-                }
-                
-                return true;
-                
-            case 4:
-                return this.createTransaction();
-        }
-        
-        return true;
-    }
-    
-    async createTransaction() {
-        try {
-            this.showLoading();
-            
-            // Prepare transaction data
-            const transactionData = {
-                tipo: this.wizardData.type,
-                contraparteId: parseInt(this.wizardData.contraparteId),
-                tipoContraparte: this.wizardData.type.includes('VENTA') ? 'CLIENTE' : 'SUPLIDOR',
-                contraparteNombre: document.getElementById('contraparteSelect')?.selectedOptions[0]?.text || '',
-                fecha: this.wizardData.fecha,
-                condicionesPago: this.wizardData.condicionesPago,
-                metodoPago: this.wizardData.metodoPago,
-                observaciones: this.wizardData.observaciones,
-                transaccionOrigenId: this.wizardData.transaccionOrigenId ? parseInt(this.wizardData.transaccionOrigenId) : null,
-                lineas: this.wizardData.lineas.map(linea => ({
-                    productoId: parseInt(linea.productoId),
-                    cantidad: linea.cantidad,
-                    precioUnitario: linea.precioUnitario,
-                    descuentoPorcentaje: linea.descuentoPorcentaje || 0
-                }))
-            };
-            
-            await this.transaccionService.crearTransaccion(transactionData);
-            
-            this.hideLoading();
-            this.close();
-            
-            // Notify success and refresh parent component
-            this.showToast('Transacción creada exitosamente', 'success');
-            
-            // Trigger refresh of parent component
-            if (window.contabilidad && typeof window.contabilidad.loadTransactions === 'function') {
-                await window.contabilidad.loadTransactions();
-                await window.contabilidad.loadStatistics();
-            }
-            
-            return true;
-            
-        } catch (error) {
-            console.error('Error creating transaction:', error);
-            this.hideLoading();
-            this.showToast('Error al crear la transacción: ' + (error.message || 'Error desconocido'), 'error');
+
+    validateStep1() {
+        const selectedType = document.querySelector('input[name="transactionType"]:checked');
+        if (!selectedType) {
+            window.showToast('Por favor, selecciona un tipo de transacción.', 'error');
             return false;
         }
+        this.transactionData.tipoTransaccion = selectedType.value;
+        return true;
     }
-    
-    // Utility methods
-    formatCurrency(amount) {
-        if (!amount && amount !== 0) return 'RD$ 0.00';
-        
-        const number = Math.abs(amount);
-        const parts = number.toFixed(2).split('.');
-        const integer = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        const decimal = parts[1];
-        
-        return `RD$ ${integer}.${decimal}`;
+
+    // --- Step 2: Transaction Details ---
+    getStep2Content() {
+        return `
+            <div class="space-y-4">
+                <div>
+                    <label for="clientSearch" class="block text-gray-700 text-sm font-bold mb-2">Cliente:</label>
+                    <div class="flex">
+                        <input type="text" id="clientSearch" placeholder="Buscar cliente por cédula o nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <button id="searchClientBtn" class="bg-brand-brown hover:bg-brand-light-brown text-white font-bold py-2 px-4 rounded ml-2">Buscar</button>
+                    </div>
+                    <div id="selectedClientInfo" class="mt-2 p-2 border rounded bg-gray-100 ${this.transactionData.cliente ? '' : 'hidden'}">
+                        ${this.transactionData.cliente ? `
+                            <p><strong>Nombre:</strong> ${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido}</p>
+                            <p><strong>Cédula:</strong> ${this.transactionData.cliente.cedula}</p>
+                        ` : ''}
+                    </div>
+                </div>
+                <div>
+                    <label for="paymentMethod" class="block text-gray-700 text-sm font-bold mb-2">Método de Pago:</label>
+                    <select id="paymentMethod" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">Selecciona un método</option>
+                        <option value="EFECTIVO" ${this.transactionData.metodoPago === 'EFECTIVO' ? 'selected' : ''}>Efectivo</option>
+                        <option value="TARJETA" ${this.transactionData.metodoPago === 'TARJETA' ? 'selected' : ''}>Tarjeta</option>
+                        <option value="TRANSFERENCIA" ${this.transactionData.metodoPago === 'TRANSFERENCIA' ? 'selected' : ''}>Transferencia</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="observations" class="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
+                    <textarea id="observations" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">${this.transactionData.observaciones}</textarea>
+                </div>
+            </div>
+        `;
     }
-    
-    formatDate(dateString) {
-        if (!dateString) return '';
-        return new Date(dateString).toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
+
+    async loadStep2Data() {
+        const searchClientBtn = document.getElementById('searchClientBtn');
+        const clientSearchInput = document.getElementById('clientSearch');
+        const selectedClientInfoDiv = document.getElementById('selectedClientInfo');
+        const paymentMethodSelect = document.getElementById('paymentMethod');
+        const observationsTextarea = document.getElementById('observations');
+
+        if (clientSearchInput) {
+            clientSearchInput.value = this.transactionData.cliente ? (this.transactionData.cliente.cedula || '') : '';
+        }
+        if (paymentMethodSelect) {
+            paymentMethodSelect.value = this.transactionData.metodoPago;
+        }
+        if (observationsTextarea) {
+            observationsTextarea.value = this.transactionData.observaciones;
+        }
+
+        if (searchClientBtn) {
+            searchClientBtn.onclick = async () => {
+                const searchTerm = clientSearchInput.value.trim();
+                if (searchTerm) {
+                    try {
+                        const client = await this.transaccionService.getClienteByCedula(searchTerm);
+                        if (client) {
+                            this.transactionData.cliente = client;
+                            selectedClientInfoDiv.innerHTML = `
+                                <p><strong>Nombre:</strong> ${client.nombre} ${client.apellido}</p>
+                                <p><strong>Cédula:</strong> ${client.cedula}</p>
+                            `;
+                            selectedClientInfoDiv.classList.remove('hidden');
+                            window.showToast('Cliente encontrado.', 'success');
+                        } else {
+                            this.transactionData.cliente = null;
+                            selectedClientInfoDiv.classList.add('hidden');
+                            window.showToast('Cliente no encontrado.', 'info');
+                        }
+                    } catch (error) {
+                        console.error('Error searching client:', error);
+                        window.showToast('Error al buscar cliente.', 'error');
+                        this.transactionData.cliente = null;
+                        selectedClientInfoDiv.classList.add('hidden');
+                    }
+                } else {
+                    this.transactionData.cliente = null;
+                    selectedClientInfoDiv.classList.add('hidden');
+                }
+            };
+        }
+    }
+
+    validateStep2() {
+        const paymentMethodSelect = document.getElementById('paymentMethod');
+        const observationsTextarea = document.getElementById('observations');
+
+        if (!paymentMethodSelect.value) {
+            window.showToast('Por favor, selecciona un método de pago.', 'error');
+            return false;
+        }
+
+        this.transactionData.metodoPago = paymentMethodSelect.value;
+        this.transactionData.observaciones = observationsTextarea.value;
+        return true;
+    }
+
+    // --- Step 3: Add Products ---
+    getStep3Content() {
+        return `
+            <div class="space-y-4">
+                <div>
+                    <label for="productSearch" class="block text-gray-700 text-sm font-bold mb-2">Producto:</label>
+                    <div class="flex">
+                        <input type="text" id="productSearch" placeholder="Buscar producto por código o nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <button id="searchProductBtn" class="bg-brand-brown hover:bg-brand-light-brown text-white font-bold py-2 px-4 rounded ml-2">Buscar</button>
+                    </div>
+                    <div id="foundProductInfo" class="mt-2 p-2 border rounded bg-gray-100 hidden"></div>
+                </div>
+                <div>
+                    <label for="productQuantity" class="block text-gray-700 text-sm font-bold mb-2">Cantidad:</label>
+                    <input type="number" id="productQuantity" value="1" min="1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <button id="addProductBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Añadir Producto</button>
+                
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Productos en la Transacción:</h3>
+                    <div id="transactionProductsList" class="border rounded p-2">
+                        <!-- Products will be listed here -->
+                        ${this.transactionData.lineas.length > 0 ? this.transactionData.lineas.map((line, index) => `
+                            <div class="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span>${line.nombreProducto} (x${line.cantidad}) - ${this.formatCurrency(line.subtotalLinea)}</span>
+                                <button data-index="${index}" class="remove-product-btn text-red-500 hover:text-red-700">X</button>
+                            </div>
+                        `).join('') : '<p class="text-gray-500">No hay productos añadidos.</p>'}
+                    </div>
+                    <div class="mt-2 text-right">
+                        <p>Subtotal: <strong>${this.formatCurrency(this.transactionData.subtotal)}</strong></p>
+                        <p>Impuestos: <strong>${this.formatCurrency(this.transactionData.impuestos)}</strong></p>
+                        <p class="text-xl font-bold">Total: <strong>${this.formatCurrency(this.transactionData.total)}</strong></p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async loadStep3Data() {
+        const productSearchInput = document.getElementById('productSearch');
+        const searchProductBtn = document.getElementById('searchProductBtn');
+        const foundProductInfoDiv = document.getElementById('foundProductInfo');
+        const productQuantityInput = document.getElementById('productQuantity');
+        const addProductBtn = document.getElementById('addProductBtn');
+        const transactionProductsList = document.getElementById('transactionProductsList');
+
+        let selectedProduct = null;
+
+        const renderProductList = () => {
+            if (this.transactionData.lineas.length > 0) {
+                transactionProductsList.innerHTML = this.transactionData.lineas.map((line, index) => `
+                    <div class="flex justify-between items-center p-2 border-b last:border-b-0">
+                        <span>${line.nombreProducto} (x${line.cantidad}) - ${this.formatCurrency(line.subtotalLinea)}</span>
+                        <button data-index="${index}" class="remove-product-btn text-red-500 hover:text-red-700">X</button>
+                    </div>
+                `).join('');
+            } else {
+                transactionProductsList.innerHTML = '<p class="text-gray-500">No hay productos añadidos.</p>';
+            }
+            this.updateTotals();
+        };
+
+        if (searchProductBtn) {
+            searchProductBtn.onclick = async () => {
+                const searchTerm = productSearchInput.value.trim();
+                if (searchTerm) {
+                    try {
+                        const product = await this.transaccionService.getProductoByCodigo(searchTerm); // Assuming search by code
+                        if (product) {
+                            selectedProduct = product;
+                            foundProductInfoDiv.innerHTML = `
+                                <p><strong>Nombre:</strong> ${product.nombre}</p>
+                                <p><strong>Precio:</strong> ${this.formatCurrency(product.precioVenta)}</p>
+                                <p><strong>Disponible:</strong> ${product.cantidadDisponible}</p>
+                            `;
+                            foundProductInfoDiv.classList.remove('hidden');
+                            window.showToast('Producto encontrado.', 'success');
+                        } else {
+                            selectedProduct = null;
+                            foundProductInfoDiv.classList.add('hidden');
+                            window.showToast('Producto no encontrado.', 'info');
+                        }
+                    } catch (error) {
+                        console.error('Error searching product:', error);
+                        window.showToast('Error al buscar producto.', 'error');
+                        selectedProduct = null;
+                        foundProductInfoDiv.classList.add('hidden');
+                    }
+                } else {
+                    selectedProduct = null;
+                    foundProductInfoDiv.classList.add('hidden');
+                }
+            };
+        }
+
+        if (addProductBtn) {
+            addProductBtn.onclick = () => {
+                if (!selectedProduct) {
+                    window.showToast('Por favor, busca y selecciona un producto.', 'error');
+                    return;
+                }
+                const quantity = parseInt(productQuantityInput.value, 10);
+                if (isNaN(quantity) || quantity <= 0) {
+                    window.showToast('La cantidad debe ser un número positivo.', 'error');
+                    return;
+                }
+                if (quantity > selectedProduct.cantidadDisponible) {
+                    window.showToast('Cantidad excede la disponibilidad del producto.', 'error');
+                    return;
+                }
+
+                const existingLineIndex = this.transactionData.lineas.findIndex(line => line.productoId === selectedProduct.id);
+
+                if (existingLineIndex > -1) {
+                    // Update existing line
+                    const existingLine = this.transactionData.lineas[existingLineIndex];
+                    existingLine.cantidad += quantity;
+                    existingLine.subtotalLinea = existingLine.precioUnitario * existingLine.cantidad; // Simple calculation
+                } else {
+                    // Add new line
+                    this.transactionData.lineas.push({
+                        productoId: selectedProduct.id,
+                        nombreProducto: selectedProduct.nombre,
+                        codigoProducto: selectedProduct.codigo,
+                        cantidad: quantity,
+                        precioUnitario: selectedProduct.precioVenta,
+                        descuento: 0, // For now, no discount
+                        subtotalLinea: selectedProduct.precioVenta * quantity, // Simple calculation
+                        categoria: selectedProduct.categoria
+                    });
+                }
+                
+                productSearchInput.value = '';
+                productQuantityInput.value = 1;
+                foundProductInfoDiv.classList.add('hidden');
+                selectedProduct = null;
+                renderProductList();
+                window.showToast('Producto añadido.', 'success');
+            };
+        }
+
+        // Event listener for removing products
+        if (transactionProductsList) {
+            transactionProductsList.addEventListener('click', (event) => {
+                if (event.target.classList.contains('remove-product-btn')) {
+                    const index = parseInt(event.target.dataset.index, 10);
+                    this.transactionData.lineas.splice(index, 1);
+                    renderProductList();
+                    window.showToast('Producto eliminado.', 'info');
+                }
+            });
+        }
+
+        renderProductList(); // Initial render of products
+    }
+
+    validateStep3() {
+        if (this.transactionData.lineas.length === 0) {
+            window.showToast('Por favor, añade al menos un producto a la transacción.', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    // --- Step 4: Confirmation ---
+    getStep4Content() {
+        return `
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-gray-800">Resumen de la Transacción</h3>
+                <div class="p-4 border rounded bg-gray-50">
+                    <p><strong>Tipo:</strong> ${this.formatTransactionType(this.transactionData.tipoTransaccion)}</p>
+                    <p><strong>Cliente:</strong> ${this.transactionData.cliente ? `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` : 'Consumidor Final'}</p>
+                    <p><strong>Método de Pago:</strong> ${this.transactionData.metodoPago}</p>
+                    <p><strong>Observaciones:</strong> ${this.transactionData.observaciones || 'N/A'}</p>
+                </div>
+                
+                <h4 class="text-lg font-semibold text-gray-700 mt-4">Productos:</h4>
+                <div class="border rounded p-2">
+                    ${this.transactionData.lineas.length > 0 ? this.transactionData.lineas.map(line => `
+                        <div class="flex justify-between items-center p-1 border-b last:border-b-0">
+                            <span>${line.nombreProducto} (x${line.cantidad})</span>
+                            <span>${this.formatCurrency(line.subtotalLinea)}</span>
+                        </div>
+                    `).join('') : '<p class="text-gray-500">No hay productos.</p>'}
+                </div>
+
+                <div class="mt-4 text-right">
+                    <p>Subtotal: <strong>${this.formatCurrency(this.transactionData.subtotal)}</strong></p>
+                    <p>Impuestos: <strong>${this.formatCurrency(this.transactionData.impuestos)}</strong></p>
+                    <p class="text-2xl font-bold">Total: <strong>${this.formatCurrency(this.transactionData.total)}</strong></p>
+                </div>
+            </div>
+        `;
+    }
+
+    loadStep4Data() {
+        // Data is already in this.transactionData, just needs to be rendered by getStep4Content
+        this.updateTotals(); // Ensure totals are up-to-date before displaying
+    }
+
+    async finalizeTransaction() {
+        try {
+            // Prepare data for API call
+            const payload = {
+                tipoTransaccion: this.transactionData.tipoTransaccion,
+                cliente: this.transactionData.cliente ? {
+                    cedula: this.transactionData.cliente.cedula,
+                    nombre: this.transactionData.cliente.nombre,
+                    apellido: this.transactionData.cliente.apellido
+                } : null,
+                metodoPago: this.transactionData.metodoPago,
+                observaciones: this.transactionData.observaciones,
+                lineas: this.transactionData.lineas.map(line => ({
+                    productoId: line.productoId,
+                    cantidad: line.cantidad,
+                    precioUnitario: line.precioUnitario,
+                    descuento: line.descuento,
+                    subtotalLinea: line.subtotalLinea
+                })),
+                subtotal: this.transactionData.subtotal,
+                impuestos: this.transactionData.impuestos,
+                total: this.transactionData.total
+            };
+
+            const result = await this.transaccionService.crearTransaccion(payload);
+            console.log('Transaction created:', result);
+            window.showToast('Transacción creada exitosamente.', 'success');
+            this.close();
+            // Optionally, refresh the main transaction list or redirect
+            // window.location.reload(); // Or a more targeted update
+        } catch (error) {
+            console.error('Error finalizing transaction:', error);
+            window.showToast('Error al crear la transacción.', 'error');
+        }
+    }
+
+    // --- Utility Functions ---
+    updateTotals() {
+        let subtotal = 0;
+        let impuestos = 0;
+        let total = 0;
+
+        this.transactionData.lineas.forEach(line => {
+            subtotal += line.subtotalLinea;
+            // Assuming a fixed ITBIS for now, or fetch from product
+            // For simplicity, let's assume 18% ITBIS on subtotalLinea for now if product.itbis is not available
+            const productItbisRate = line.itbis || 0.18; // Use 18% if not specified
+            impuestos += line.subtotalLinea * productItbisRate;
         });
-    }
-    
-    showLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
+
+        total = subtotal + impuestos;
+
+        this.transactionData.subtotal = subtotal;
+        this.transactionData.impuestos = impuestos;
+        this.transactionData.total = total;
+
+        // Update displayed totals
+        const subtotalElement = this.wizardContent.querySelector('p:has(strong)'); // Find the subtotal paragraph
+        if (subtotalElement) {
+            subtotalElement.innerHTML = `Subtotal: <strong>${this.formatCurrency(this.transactionData.subtotal)}</strong>`;
+            subtotalElement.nextElementSibling.innerHTML = `Impuestos: <strong>${this.formatCurrency(this.transactionData.impuestos)}</strong>`;
+            subtotalElement.nextElementSibling.nextElementSibling.innerHTML = `Total: <strong>${this.formatCurrency(this.transactionData.total)}</strong>`;
         }
     }
-    
-    hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
+
+    formatCurrency(amount) {
+        if (typeof amount !== 'number') {
+            amount = parseFloat(amount) || 0;
         }
+        return new Intl.NumberFormat('es-DO', {
+            style: 'currency',
+            currency: 'DOP',
+            minimumFractionDigits: 2
+        }).format(amount);
     }
-    
-    showToast(message, type = 'info') {
-        if (window.showToast) {
-            window.showToast(message, type);
-        } else {
-            // Fallback alert
-            alert(message);
-        }
+
+    formatTransactionType(type) {
+        const types = {
+            'COMPRA': 'Compra',
+            'VENTA': 'Venta',
+            'DEVOLUCION_COMPRA': 'Devolución Compra',
+            'DEVOLUCION_VENTA': 'Devolución Venta'
+        };
+        return types[type] || type;
     }
 }
 
-// Export for global use
-window.TransactionWizard = TransactionWizard;
+// Make wizard globally accessible for HTML onclicks
+window.transactionWizard = new TransactionWizard();
+window.openTransactionWizard = (type) => window.transactionWizard.open(type);
+window.closeTransactionWizard = () => window.transactionWizard.close();
+window.wizardNextStep = () => window.transactionWizard.nextStep();
+window.wizardPrevStep = () => window.transactionWizard.prevStep();
