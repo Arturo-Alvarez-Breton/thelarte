@@ -35,6 +35,16 @@
         <p class="text-gray-600 mt-1">Administra la información de tus empleados</p>
       </div>
       <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input id="searchInput" type="text" placeholder="Buscar (nombre, apellido, cédula, email)..." class="border border-gray-300 rounded-md px-3 py-2 text-sm w-44 focus:ring focus:ring-brandGold focus:border-brandGold transition" />
+          <button id="btnFilter" type="button"
+                  class="bg-brandBrown text-white px-3 py-2 rounded-md hover:bg-brandGold transition text-sm flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-1 1h-16a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-1 1h-16a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-1 1h-16a1 1 0 01-1-1v-2z"></path>
+            </svg>
+            Más filtros
+          </button>
+        </div>
         <div class="flex items-center gap-2">
           <label for="viewToggle" class="text-sm text-gray-700">Vista</label>
           <select id="viewToggle" class="border-gray-300 rounded-md text-sm p-1">
@@ -92,6 +102,45 @@
          class="bg-brandGold text-white px-6 py-3 rounded-lg hover:bg-brandBrown transition inline-block text-sm">
         Agregar Primer Empleado
       </a>
+    </div>
+
+    <!-- Modal de filtros avanzados -->
+    <div id="filterModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 items-center justify-center hidden">
+      <div class="bg-white rounded-xl shadow-lg mx-auto max-w-md w-full p-6 relative flex flex-col gap-4">
+        <button id="closeModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <h2 class="text-xl font-bold text-brandGold mb-2">Filtros avanzados</h2>
+        <!-- Filtro por rol -->
+        <div>
+          <label for="filterRol" class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+          <select id="filterRol" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="ADMIN">ADMIN</option>
+            <option value="GERENTE">GERENTE</option>
+            <option value="COMERCIAL">COMERCIAL</option>
+            <option value="VENDEDOR">VENDEDOR</option>
+            <!-- Agrega más si tu enum Rol tiene otros valores -->
+          </select>
+        </div>
+        <!-- Filtro por fecha de contratación (mes/año) -->
+        <div>
+          <label for="filterFecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha de contratación</label>
+          <input id="filterFecha" type="month" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+        </div>
+        <!-- Filtro solo empleados con comisión (solo para rol COMERCIAL) -->
+        <div>
+          <label for="filterComision" class="block text-sm font-medium text-gray-700 mb-1">Solo con comisión</label>
+          <select id="filterComision" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="true">Sí</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 mt-4">
+          <button id="btnClearFilter" class="px-4 py-2 text-sm rounded-lg border border-brandGold text-brandGold hover:bg-brandGold hover:text-white transition">Limpiar</button>
+          <button id="btnApplyFilter" class="px-4 py-2 text-sm rounded-lg bg-brandGold text-white hover:bg-brandBrown transition">Aplicar</button>
+        </div>
+      </div>
     </div>
 
   </div>
