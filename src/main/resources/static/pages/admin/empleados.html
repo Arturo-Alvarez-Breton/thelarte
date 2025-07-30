@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contabilidad - Empleados</title>
+    <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
+                        'brandGold': '#7B5222'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex h-screen bg-gray-100">
+<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+    <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
+    <nav class="flex-1">
+        <ul class="space-y-2">
+            <li>
+                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-home flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Inicio Admin</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-users flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Clientes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/empleados.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-briefcase flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Empleados</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-truck flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Suplidores</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-chart-line flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Reportes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-cog flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Configuración</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6"></i>
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="flex-1 flex flex-col">
+    <header class="bg-white shadow p-4 flex justify-between items-center">
+        <div>
+            <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Empleados</h1>
+            <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta y gestiona información de empleados.</p>
+        </div>
+        <div id="cont-quick-actions" class="flex space-x-2">
+            <div class="text-gray-600 text-sm">
+                <i class="fas fa-pencil mr-2"></i>Modo Administrador
+            </div>
+        </div>
+    </header>
+    <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
+        <section class="p-4 bg-white rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Listado de Empleados</h2>
+                <button id="nuevoEmpleadoBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Nuevo Empleado
+                </button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="empleadoSearchInput" placeholder="Buscar empleados..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+            </div>
+            <div id="empleadosListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Empleados se cargarán aquí -->
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<!-- Modal Nuevo/Editar Empleado -->
+<div id="modalEmpleado" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 id="modalEmpleadoTitle" class="text-xl font-bold">Nuevo Empleado</h3>
+                    <button onclick="cerrarModalEmpleado()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <form id="formEmpleado" class="p-6 space-y-4" novalidate>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="empleadoCedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+                        <input type="text" id="empleadoCedula" name="cedula" required placeholder="XXX-XXXXXXX-X"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoCedulaError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="empleadoNombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <input type="text" id="empleadoNombre" name="nombre" required placeholder="Nombre"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoNombreError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="empleadoApellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                        <input type="text" id="empleadoApellido" name="apellido" required placeholder="Apellido"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoApellidoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="empleadoTelefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                        <input type="text" id="empleadoTelefono" name="telefono" required placeholder="XXX-XXX-XXXX"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoTelefonoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="empleadoEmail" class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
+                        <input type="email" id="empleadoEmail" name="email" placeholder="correo@dominio.com"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoEmailError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="empleadoRol" class="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
+                        <select id="empleadoRol" name="rol" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                            <option value="">Seleccione un rol</option>
+                            <option value="ADMIN">Administrador</option>
+                            <option value="COMERCIAL">Comercial</option>
+                            <option value="CAJERO">Cajero</option>
+                            <option value="USER">Usuario</option>
+                        </select>
+                        <p id="empleadoRolError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="empleadoSalario" class="block text-sm font-medium text-gray-700 mb-1">Salario *</label>
+                        <input type="number" id="empleadoSalario" name="salario" required placeholder="0.00" step="0.01"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoSalarioError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div id="empleadoComisionContainer" class="hidden">
+                        <label for="empleadoComision" class="block text-sm font-medium text-gray-700 mb-1">Comisión (%)</label>
+                        <input type="number" id="empleadoComision" name="comision" placeholder="Ej: 10.5" min="0" max="100" step="0.01"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="empleadoComisionError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div>
+                    <label for="empleadoFechaContratacion" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Contratación *</label>
+                    <input type="date" id="empleadoFechaContratacion" name="fechaContratacion"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <p id="empleadoFechaContratacionError" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+            </form>
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button type="button" onclick="cerrarModalEmpleado()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cancelar
+                </button>
+                <button type="submit" form="formEmpleado" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
+                    <i id="btnEmpleadoIcon" class="fas fa-plus mr-2"></i>
+                    <span id="btnEmpleadoText">Crear Empleado</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Empleado -->
+<div id="modalVerEmpleado" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Detalles del Empleado</h3>
+                    <button onclick="cerrarModalVerEmpleado()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6" id="detallesEmpleado">
+                <!-- Se llenará dinámicamente -->
+            </div>
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button onclick="editarEmpleadoDesdeDetalle()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-edit mr-2"></i>
+                    Editar
+                </button>
+                <button onclick="cerrarModalVerEmpleado()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/admin/main.js" type="module"></script>
+<script src="/js/components/notifications.js" type="module"></script>
+<script src="/js/services/empleadoService.js" type="module"></script>
+<script src="/js/admin/empleados.js" type="module"></script>
+<script src="/js/admin/empleados-form-validacion.js" type="module"></script>
+</body>
+</html>

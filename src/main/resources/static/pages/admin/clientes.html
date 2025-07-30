@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contabilidad - Clientes</title>
+    <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
+                        'brandGold': '#7B5222'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex h-screen bg-gray-100">
+<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+    <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
+    <nav class="flex-1">
+        <ul class="space-y-2">
+            <li>
+                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-home flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Inicio Admin</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-users flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Clientes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/empleados.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-briefcase flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Empleados</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-truck flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Suplidores</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-chart-line flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Reportes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-cog flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Configuración</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6"></i>
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
+    </div>
+</aside>
+
+
+<div class="flex-1 flex flex-col">
+    <header class="bg-white shadow p-4 flex justify-between items-center">
+        <div>
+            <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Clientes</h1>
+            <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta y gestiona información de clientes y sus transacciones.</p>
+        </div>
+        <div id="cont-quick-actions" class="flex space-x-2">
+            <div class="text-gray-600 text-sm">
+                <i class="fas fa-pencil mr-2"></i>Modo Administrador
+            </div>
+        </div>    </header>
+
+    <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
+        <section class="p-4 bg-white rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Listado de Clientes</h2>
+                <button id="nuevoClienteBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Nuevo Cliente
+                </button>
+            </div>
+            <div class="mb-4">
+                <input type="text" id="clientSearchInput" placeholder="Buscar clientes..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+            </div>
+            <div id="clientesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Clientes se cargarán aquí -->
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<!-- Modal Nuevo/Editar Cliente -->
+<div id="modalCliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 id="modalClienteTitle" class="text-xl font-bold">Nuevo Cliente</h3>
+                    <button onclick="cerrarModalCliente()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="formCliente" class="p-6 space-y-4" novalidate>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="clienteCedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+                        <input type="text" id="clienteCedula" name="cedula" required placeholder="XXX-XXXXXXX-X"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="clienteCedulaError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="clienteNombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <input type="text" id="clienteNombre" name="nombre" required placeholder="Nombre"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="clienteNombreError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="clienteApellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                        <input type="text" id="clienteApellido" name="apellido" required placeholder="Apellido"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="clienteApellidoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="clienteTelefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                        <input type="text" id="clienteTelefono" name="telefono" required placeholder="XXX-XXX-XXXX"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="clienteTelefonoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div>
+                    <label for="clienteEmail" class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico *</label>
+                    <input type="email" id="clienteEmail" name="email" required placeholder="correo@dominio.com"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <p id="clienteEmailError" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="clienteProvincia" class="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
+                        <select id="clienteProvincia" name="provincia" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" disabled>
+                            <option value="">Cargando provincias...</option>
+                        </select>
+                        <p id="clienteProvinciaError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="clienteDireccion" class="block text-sm font-medium text-gray-700 mb-1">Dirección Detallada *</label>
+                        <input type="text" id="clienteDireccion" name="direccion" required placeholder="Ej: Calle 10 #25, Ens. Naco, Santo Domingo"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="clienteDireccionError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+            </form>
+
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button type="button" onclick="cerrarModalCliente()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cancelar
+                </button>
+                <button type="submit" form="formCliente" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
+                    <i id="btnClienteIcon" class="fas fa-plus mr-2"></i>
+                    <span id="btnClienteText">Crear Cliente</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Cliente -->
+<div id="modalVerCliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Detalles del Cliente</h3>
+                    <button onclick="cerrarModalVerCliente()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6" id="detallesCliente">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button onclick="editarClienteDesdeDetalle()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-edit mr-2"></i>
+                    Editar
+                </button>
+                <button onclick="cerrarModalVerCliente()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/admin/main.js" type="module"></script>
+<script src="/js/components/notifications.js" type="module"></script>
+<script src="/js/components/transactionWizard.js" type="module"></script>
+<script src="/js/services/transaccionService.js" type="module"></script>
+<script src="/js/admin/clientes.js" type="module"></script>
+<script src="/js/admin/clientes-form-validacion.js" type="module"></script>
+</body>
+</html>
