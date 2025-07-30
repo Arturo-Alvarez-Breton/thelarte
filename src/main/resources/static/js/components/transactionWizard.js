@@ -40,7 +40,7 @@ export class TransactionWizard {
     }
 
     initStepsForType(type) {
-        switch(type) {
+        switch (type) {
             case 'VENTA':
                 this.steps = [
                     {
@@ -58,13 +58,20 @@ export class TransactionWizard {
                     {
                         title: 'Método de Pago',
                         content: this.getVentaStep3Content(),
-                        onNext: () => this.validateVentaStep3()
+                        onNext: () => this.validateVentaStep3(),
+                        onLoad: () => this.loadVentaStep3Data && this.loadVentaStep3Data() // Optional, in case you need listeners
                     },
                     {
                         title: 'Confirmación de Venta',
                         content: this.getVentaStep4Content(),
                         onNext: () => this.finalizeVenta(),
-                        onLoad: () => this.loadVentaStep4Data()
+                        onLoad: () => {
+                            // Siempre actualiza totales y renderiza el resumen al entrar al paso 4
+                            this.updateVentaTotals && this.updateVentaTotals();
+                            if (this.wizardContent && typeof this.getVentaStep4Content === 'function') {
+                                this.wizardContent.innerHTML = this.getVentaStep4Content();
+                            }
+                        }
                     }
                 ];
                 break;
@@ -86,12 +93,18 @@ export class TransactionWizard {
                         title: 'Confirmación de Compra',
                         content: this.getCompraStep3Content(),
                         onNext: () => this.finalizeCompra(),
-                        onLoad: () => this.loadCompraStep3Data()
+                        onLoad: () => {
+                            // Siempre actualiza totales y renderiza el resumen al entrar al paso 3 (confirmación)
+                            this.updateCompraTotals && this.updateCompraTotals();
+                            if (this.wizardContent && typeof this.getCompraStep3Content === 'function') {
+                                this.wizardContent.innerHTML = this.getCompraStep3Content();
+                            }
+                        }
                     }
                 ];
                 break;
             default:
-                // Keep original flow for unspecified types
+                // Para tipos no especificados, usa el flujo genérico
                 this.steps = [
                     {
                         title: 'Selecciona el tipo de transacción',
@@ -114,7 +127,13 @@ export class TransactionWizard {
                         title: 'Confirmación',
                         content: this.getStep4Content(),
                         onNext: () => this.finalizeTransaction(),
-                        onLoad: () => this.loadStep4Data()
+                        onLoad: () => {
+                            // Recalcula y renderiza el resumen al entrar al paso 4 genérico
+                            this.updateTotals && this.updateTotals();
+                            if (this.wizardContent && typeof this.getStep4Content === 'function') {
+                                this.wizardContent.innerHTML = this.getStep4Content();
+                            }
+                        }
                     }
                 ];
         }
@@ -155,14 +174,14 @@ export class TransactionWizard {
             impuestos: 0,
             total: 0
         };
-        
+
         // Initialize steps based on transaction type
         if (type) {
             this.initStepsForType(type);
         } else {
             this.initSteps();
         }
-        
+
         this.currentStep = 0;
         this.updateWizardUI();
         this.wizardModal.classList.remove('hidden');
@@ -495,7 +514,7 @@ export class TransactionWizard {
                         categoria: selectedProduct.categoria
                     });
                 }
-                
+
                 productSearchInput.value = '';
                 productQuantityInput.value = 1;
                 foundProductInfoDiv.classList.add('hidden');
@@ -560,27 +579,41 @@ export class TransactionWizard {
     }
 
     loadStep4Data() {
-        // Data is already in this.transactionData, just needs to be rendered by getStep4Content
-        this.updateTotals(); // Ensure totals are up-to-date before displaying
+        if (this.transactionData.tipoTransaccion === 'VENTA') {
+            this.updateVentaTotals && this.updateVentaTotals();
+            if (this.wizardContent && typeof this.getVentaStep4Content === 'function') {
+                this.wizardContent.innerHTML = this.getVentaStep4Content();
+            }
+        } else if (this.transactionData.tipoTransaccion === 'COMPRA') {
+            this.updateCompraTotals && this.updateCompraTotals();
+            if (this.wizardContent && typeof this.getCompraStep3Content === 'function') {
+                this.wizardContent.innerHTML = this.getCompraStep3Content();
+            }
+        } else {
+            this.updateTotals && this.updateTotals();
+            if (this.wizardContent && typeof this.getStep4Content === 'function') {
+                this.wizardContent.innerHTML = this.getStep4Content();
+            }
+        }
     }
 
     async finalizeTransaction() {
         try {
-            // Prepare data for API call
+            // Siempre calcula/actualiza los totales antes de enviar
+            this.updateTotals && this.updateTotals();
+            // Prepara el payload de forma genérica, adaptando para venta, compra, devolución, etc.
             const payload = {
                 tipoTransaccion: this.transactionData.tipoTransaccion,
-                cliente: this.transactionData.cliente ? {
-                    cedula: this.transactionData.cliente.cedula,
-                    nombre: this.transactionData.cliente.nombre,
-                    apellido: this.transactionData.cliente.apellido
-                } : null,
-                metodoPago: this.transactionData.metodoPago,
+                cliente: this.transactionData.cliente || null,
+                proveedor: this.transactionData.proveedor || null,
+                metodoPago: this.transactionData.metodoPago || 'EFECTIVO',
                 observaciones: this.transactionData.observaciones,
                 lineas: this.transactionData.lineas.map(line => ({
                     productoId: line.productoId,
+                    nombreProducto: line.nombreProducto,
                     cantidad: line.cantidad,
                     precioUnitario: line.precioUnitario,
-                    descuento: line.descuento,
+                    descuento: line.descuento ?? 0,
                     subtotalLinea: line.subtotalLinea
                 })),
                 subtotal: this.transactionData.subtotal,
@@ -588,15 +621,85 @@ export class TransactionWizard {
                 total: this.transactionData.total
             };
 
-            const result = await this.transaccionService.crearTransaccion(payload);
-            console.log('Transaction created:', result);
-            window.showToast('Transacción creada exitosamente.', 'success');
+            await this.transaccionService.crearTransaccion(payload);
+            window.showToast('Transacción procesada exitosamente.', 'success');
             this.close();
-            // Optionally, refresh the main transaction list or redirect
-            // window.location.reload(); // Or a more targeted update
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
         } catch (error) {
-            console.error('Error finalizing transaction:', error);
-            window.showToast('Error al crear la transacción.', 'error');
+            console.error('Error finalizando transacción:', error);
+            window.showToast('Error al procesar la transacción: ' + (error.message || error), 'error');
+        }
+    }
+
+    async finalizeVenta() {
+        try {
+            this.updateTotals && this.updateTotals();
+            const payload = {
+                tipoTransaccion: 'VENTA',
+                cliente: this.transactionData.cliente ? {
+                    cedula: this.transactionData.cliente.cedula,
+                    nombre: this.transactionData.cliente.nombre,
+                    apellido: this.transactionData.cliente.apellido
+                } : null,
+                proveedor: null,
+                metodoPago: this.transactionData.metodoPago,
+                observaciones: this.transactionData.observaciones,
+                lineas: this.transactionData.lineas.map(line => ({
+                    productoId: line.productoId,
+                    nombreProducto: line.nombreProducto,
+                    cantidad: line.cantidad,
+                    precioUnitario: line.precioUnitario,
+                    descuento: line.descuento ?? 0,
+                    subtotalLinea: line.subtotalLinea
+                })),
+                subtotal: this.transactionData.subtotal,
+                impuestos: this.transactionData.impuestos,
+                total: this.transactionData.total
+            };
+            await this.transaccionService.crearTransaccion(payload);
+            window.showToast('Venta procesada exitosamente.', 'success');
+            this.close();
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
+        } catch (error) {
+            console.error('Error al procesar venta:', error);
+            window.showToast('Error al procesar la venta: ' + (error.message || error), 'error');
+        }
+    }
+
+    async finalizeCompra() {
+        try {
+            this.updateTotals && this.updateTotals();
+            const payload = {
+                tipoTransaccion: 'COMPRA',
+                cliente: null,
+                proveedor: this.transactionData.proveedor ? {
+                    id: this.transactionData.proveedor.id,
+                    nombre: this.transactionData.proveedor.nombre,
+                    rnc: this.transactionData.proveedor.rnc,
+                    telefono: this.transactionData.proveedor.telefono,
+                    email: this.transactionData.proveedor.email
+                } : null,
+                metodoPago: this.transactionData.metodoPago || 'EFECTIVO',
+                observaciones: this.transactionData.observaciones ||
+                    (this.transactionData.proveedor ? `Compra de proveedor: ${this.transactionData.proveedor.nombre}` : ''),
+                lineas: this.transactionData.lineas.map(line => ({
+                    productoId: line.productoId,
+                    nombreProducto: line.nombreProducto,
+                    cantidad: line.cantidad,
+                    precioUnitario: line.precioUnitario,
+                    subtotalLinea: line.subtotalLinea
+                })),
+                subtotal: this.transactionData.subtotal,
+                impuestos: this.transactionData.impuestos,
+                total: this.transactionData.total
+            };
+            await this.transaccionService.crearTransaccion(payload);
+            window.showToast('Compra procesada exitosamente.', 'success');
+            this.close();
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
+        } catch (error) {
+            console.error('Error al procesar compra:', error);
+            window.showToast('Error al procesar la compra: ' + (error.message || error), 'error');
         }
     }
 
@@ -697,11 +800,11 @@ export class TransactionWizard {
                 if (cliente) {
                     this.transactionData.cliente = cliente;
                 } else {
-                    this.transactionData.cliente = { cedula: clienteCedula };
+                    this.transactionData.cliente = {cedula: clienteCedula};
                 }
             } catch (error) {
                 console.error('Error loading client:', error);
-                this.transactionData.cliente = { cedula: clienteCedula };
+                this.transactionData.cliente = {cedula: clienteCedula};
             }
         } else {
             this.transactionData.cliente = null;
@@ -765,30 +868,30 @@ export class TransactionWizard {
             const productos = await this.transaccionService.getProductosParaVenta();
             const select = document.getElementById('ventaProductoSelect');
             const searchInput = document.getElementById('ventaProductoSearch');
-            
+
             if (select) {
                 select.innerHTML = '<option value="">Seleccionar producto</option>';
                 productos.forEach(producto => {
                     select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
                 });
             }
-            
+
             // Setup search functionality
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.toLowerCase();
-                    const filteredProducts = productos.filter(producto => 
+                    const filteredProducts = productos.filter(producto =>
                         producto.nombre.toLowerCase().includes(searchTerm) ||
                         producto.codigo.toLowerCase().includes(searchTerm)
                     );
-                    
+
                     select.innerHTML = '<option value="">Seleccionar producto</option>';
                     filteredProducts.forEach(producto => {
                         select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
                     });
                 });
             }
-            
+
             this.updateVentaProductsList();
             this.updateVentaTotals();
         } catch (error) {
@@ -800,7 +903,7 @@ export class TransactionWizard {
     async addVentaProduct() {
         const productSelect = document.getElementById('ventaProductoSelect');
         const cantidadInput = document.getElementById('ventaCantidad');
-        
+
         if (!productSelect.value || !cantidadInput.value) {
             window.showToast('Selecciona un producto y cantidad válida.', 'error');
             return;
@@ -817,7 +920,7 @@ export class TransactionWizard {
         try {
             const productos = await this.transaccionService.getProductosParaVenta();
             const selectedProduct = productos.find(p => p.id === productId);
-            
+
             if (!selectedProduct) {
                 window.showToast('Producto no encontrado.', 'error');
                 return;
@@ -848,7 +951,7 @@ export class TransactionWizard {
                     categoria: selectedProduct.categoria
                 });
             }
-            
+
             cantidadInput.value = 1;
             productSelect.value = '';
             this.updateVentaProductsList();
@@ -892,22 +995,22 @@ export class TransactionWizard {
     updateVentaTotals() {
         let subtotal = 0;
         let impuestos = 0;
-        
+
         this.transactionData.lineas.forEach(line => {
             subtotal += line.subtotalLinea;
             // Assuming 18% ITBIS
             impuestos += line.subtotalLinea * 0.18;
         });
-        
+
         this.transactionData.subtotal = subtotal;
         this.transactionData.impuestos = impuestos;
         this.transactionData.total = subtotal + impuestos;
-        
+
         // Update display
         const subtotalElement = document.getElementById('ventaSubtotal');
         const impuestosElement = document.getElementById('ventaImpuestos');
         const totalElement = document.getElementById('ventaTotal');
-        
+
         if (subtotalElement) subtotalElement.textContent = this.formatCurrency(this.transactionData.subtotal);
         if (impuestosElement) impuestosElement.textContent = this.formatCurrency(this.transactionData.impuestos);
         if (totalElement) totalElement.textContent = this.formatCurrency(this.transactionData.total);
@@ -959,15 +1062,15 @@ export class TransactionWizard {
             window.showToast('Selecciona un método de pago.', 'error');
             return false;
         }
-        
+
         this.transactionData.metodoPago = metodoPago;
         this.transactionData.observaciones = document.getElementById('ventaObservaciones')?.value || '';
         return true;
     }
 
     getVentaStep4Content() {
-        const clienteInfo = this.transactionData.cliente ? 
-            `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` : 
+        const clienteInfo = this.transactionData.cliente ?
+            `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` :
             'Consumidor Final';
 
         return `
@@ -996,22 +1099,6 @@ export class TransactionWizard {
         // Data already loaded, just display
     }
 
-    async finalizeVenta() {
-        try {
-            window.showToast('Procesando venta...', 'info');
-            // Process the sale
-            const result = await this.transaccionService.crearTransaccion(this.transactionData);
-            window.showToast('Venta procesada exitosamente.', 'success');
-            this.close();
-            // Optionally reload transactions list if on transactions page
-            if (window.transaccionesManager) {
-                window.transaccionesManager.loadTransactions();
-            }
-        } catch (error) {
-            console.error('Error processing sale:', error);
-            window.showToast('Error al procesar la venta.', 'error');
-        }
-    }
 
     // =============== COMPRA WIZARD METHODS ===============
     getCompraStep1Content() {
@@ -1098,7 +1185,7 @@ export class TransactionWizard {
             this.transactionData.proveedor = {
                 id: suplidorSelect.value,
                 nombre: selectedOption.text,
-                rnc: '', 
+                rnc: '',
                 telefono: '',
                 email: ''
             };
@@ -1183,17 +1270,17 @@ export class TransactionWizard {
         const nombre = document.getElementById('compraNombreProducto')?.value;
         const cantidad = parseInt(document.getElementById('compraCantidad')?.value);
         const precio = parseFloat(document.getElementById('compraPrecioUnitario')?.value);
-        
+
         if (!nombre || !nombre.trim()) {
             window.showToast('El nombre del producto es requerido.', 'error');
             return;
         }
-        
+
         if (!cantidad || cantidad <= 0) {
             window.showToast('La cantidad debe ser mayor a 0.', 'error');
             return;
         }
-        
+
         if (!precio || precio <= 0) {
             window.showToast('El precio debe ser mayor a 0.', 'error');
             return;
@@ -1208,12 +1295,12 @@ export class TransactionWizard {
         };
 
         this.transactionData.lineas.push(lineaCompra);
-        
+
         // Clear form
         document.getElementById('compraNombreProducto').value = '';
         document.getElementById('compraCantidad').value = '1';
         document.getElementById('compraPrecioUnitario').value = '';
-        
+
         this.updateCompraProductsList();
         this.updateCompraTotals();
         window.showToast('Producto agregado exitosamente.', 'success');
@@ -1267,7 +1354,7 @@ export class TransactionWizard {
         this.transactionData.subtotal = total;
         this.transactionData.impuestos = 0; // No taxes on purchases for this simple case
         this.transactionData.total = total;
-        
+
         const totalElement = document.getElementById('compraTotal');
         if (totalElement) {
             totalElement.textContent = this.formatCurrency(total);
@@ -1321,35 +1408,6 @@ export class TransactionWizard {
         console.log('Total:', this.transactionData.total);
     }
 
-    async finalizeCompra() {
-        try {
-            window.showToast('Procesando compra...', 'info');
-            
-            // Prepare transaction data for COMPRA
-            const transactionData = {
-                tipoTransaccion: 'COMPRA',
-                cliente: null, // For purchases, cliente is null
-                proveedor: this.transactionData.proveedor,
-                metodoPago: 'EFECTIVO', // Default for purchases
-                observaciones: `Compra de proveedor: ${this.transactionData.proveedor.nombre}`,
-                lineas: this.transactionData.lineas,
-                subtotal: this.transactionData.subtotal,
-                impuestos: this.transactionData.impuestos,
-                total: this.transactionData.total
-            };
-            
-            console.log('Sending purchase data:', transactionData);
-            const result = await this.transaccionService.crearTransaccion(transactionData);
-            window.showToast('Compra procesada exitosamente.', 'success');
-            this.close();
-            if (window.transaccionesManager) {
-                window.transaccionesManager.loadTransactions();
-            }
-        } catch (error) {
-            console.error('Error processing purchase:', error);
-            window.showToast('Error al procesar la compra: ' + (error.message || error), 'error');
-        }
-    }
 }
 
 // Make wizard globally accessible for HTML onclicks

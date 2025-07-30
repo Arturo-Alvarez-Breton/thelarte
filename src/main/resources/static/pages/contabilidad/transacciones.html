@@ -87,11 +87,14 @@
             </div>
             <div id="cont-quick-actions" class="flex space-x-2">
                 <!-- Botones de acción rápida específicos de la página -->
-                <button data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                <button id='btnVenta' data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-plus mr-2"></i>Nueva Venta
                 </button>
-                <button data-action="open-wizard" data-type="COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                <button id='btnCompra' data-action="open-wizard" data-type="COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
+                </button>
+                <button id='btnDevolucion'data-action="open-wizard" data-type="DEVOLUCION" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-undo mr-2"></i>Devolución
                 </button>
             </div>
         </header>
@@ -107,6 +110,8 @@
                         <option value="">Todos los tipos</option>
                         <option value="VENTA">Ventas</option>
                         <option value="COMPRA">Compras</option>
+                        <option value="DEVVENTA">Devoluciones de Ventas</option>
+                        <option value="DEVCOMPRA">Devoluciones de Compras</option>
                     </select>
                     <select id="transaccionEstadoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                         <option value="">Todos los estados</option>
@@ -118,6 +123,7 @@
                 <div id="transaccionesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <!-- Las transacciones se cargarán aquí -->
                 </div>
+                <div id="paginacion" class="mt-6 flex justify-center"></div>
             </section>
         </main>
     </div>
@@ -127,7 +133,6 @@
             <span class="visually-hidden">Cargando...</span>
         </div>
     </div>
-
     <!-- Modal Ver Transacción -->
     <div id="modalVerTransaccion" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">

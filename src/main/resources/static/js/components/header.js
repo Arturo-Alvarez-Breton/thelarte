@@ -33,6 +33,9 @@ export const headerComponent = {
                 <button data-action="open-wizard" data-type="COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
                 </button>
+                <button data-action="open-wizard" data-type="DEVOLUCION" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-undo mr-2"></i>Devolución
+                </button>
             `;
         } else if (url.includes('/productos')) {
             title = 'Productos';
