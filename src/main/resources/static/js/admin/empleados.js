@@ -7,6 +7,7 @@ class EmpleadosManager {
         this.filteredEmpleados = [];
         this.currentPage = 0;
         this.empleadosPerPage = 10;
+        this.currentEmpleado = null; // Asegúrate de esto
         this.init();
     }
 
@@ -19,6 +20,22 @@ class EmpleadosManager {
         document.getElementById('nuevoEmpleadoBtn')?.addEventListener('click', () => this.newEmpleado());
         document.getElementById('empleadoSearchInput')?.addEventListener('input', () => this.filterEmpleados());
         document.getElementById('formEmpleado')?.addEventListener('submit', (e) => this.handleSubmitEmpleado(e));
+        document.getElementById('empleadosListContainer')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.classList.contains('ver-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.verEmpleado(cedula);
+            } else if (btn.classList.contains('edit-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.editEmpleado(cedula);
+            } else if (btn.classList.contains('delete-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.deleteEmpleado(cedula);
+            }
+        });
+        // Arreglo: Añade el event listener al botón del modal de detalles aquí (mejor que usar onclick)
+        document.getElementById('btnEditarDesdeDetalle')?.addEventListener('click', () => this.editarEmpleadoDesdeDetalle());
     }
 
     async loadEmpleados() {
@@ -87,8 +104,16 @@ class EmpleadosManager {
                 <p class="text-gray-600">Rol: ${emp.rol || 'N/A'}</p>
                 <p class="text-gray-600">Salario: ${emp.salario != null ? '$' + emp.salario.toLocaleString() : 'N/A'}</p>
                 <p class="text-gray-600">Fecha de Contratación: ${emp.fechaContratacion || 'N/A'}</p>
-                <div class="mt-4 flex space-x-2">
-                    <button onclick="empleadosManager.verEmpleado('${emp.cedula}')" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button data-cedula="${emp.cedula}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <button data-cedula="${emp.cedula}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Editar empleado">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button data-cedula="${emp.cedula}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm" title="Eliminar empleado">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -147,12 +172,6 @@ class EmpleadosManager {
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
                     <p class="mt-1 text-sm text-gray-900">${empleado.fechaContratacion || 'N/A'}</p>
-                </div>
-                <div class="md:col-span-2 flex justify-end mt-6">
-                    <button onclick="empleadosManager.editEmpleado('${empleado.cedula}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-edit mr-2"></i>
-                        Editar
-                    </button>
                 </div>
             </div>
         `;
@@ -248,7 +267,9 @@ class EmpleadosManager {
     editarEmpleadoDesdeDetalle() {
         if (this.currentEmpleado) {
             this.cerrarModalVerEmpleado();
-            this.editEmpleado(this.currentEmpleado.cedula);
+            setTimeout(() => {
+                this.editEmpleado(this.currentEmpleado.cedula);
+            }, 250); // Espera a que el modal de detalles se cierre antes de abrir el de edición
         }
     }
 
@@ -283,13 +304,25 @@ class EmpleadosManager {
             `;
         }
     }
+
+    async deleteEmpleado(cedula) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este empleado?')) return;
+        try {
+            await this.empleadoService.deleteEmpleado(cedula);
+            window.showToast('Empleado eliminado exitosamente.', 'success');
+            await this.loadEmpleados();
+        } catch (error) {
+            window.showToast('Error al eliminar el empleado.', 'error');
+        }
+    }
 }
 
 const empleadosManager = new EmpleadosManager();
 window.empleadosManager = empleadosManager;
 window.cerrarModalEmpleado = () => empleadosManager.cerrarModalEmpleado();
 window.cerrarModalVerEmpleado = () => empleadosManager.cerrarModalVerEmpleado();
-window.editarEmpleadoDesdeDetalle = () => empleadosManager.editarEmpleadoDesdeDetalle();
+
+// No es necesario window.editarEmpleadoDesdeDetalle ya que se usa addEventListener ahora
 
 // Formateo en tiempo real y comisión según rol
 document.addEventListener('DOMContentLoaded', () => {

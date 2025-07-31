@@ -22,6 +22,21 @@ class ClientesManager {
         document.getElementById('nuevoClienteBtn')?.addEventListener('click', () => this.newCliente());
         document.getElementById('clientSearchInput')?.addEventListener('keyup', () => this.filterClientes());
         document.getElementById('formCliente')?.addEventListener('submit', (e) => this.handleSubmitCliente(e));
+        // Delegación de eventos para los botones de acción en la lista de clientes
+        document.getElementById('clientesListContainer')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.classList.contains('ver-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.verCliente(cedula);
+            } else if (btn.classList.contains('edit-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.editCliente(cedula);
+            } else if (btn.classList.contains('delete-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.eliminarCliente(cedula);
+            }
+        });
     }
 
     async loadClientes() {
@@ -83,9 +98,35 @@ class ClientesManager {
                 <p class="text-gray-600">Cédula: ${cliente.cedula}</p>
                 <p class="text-gray-600">Teléfono: ${cliente.telefono || 'N/A'}</p>
                 <p class="text-gray-600">Email: ${cliente.email || 'N/A'}</p>
-                <div class="mt-4 flex space-x-2">
-                    <button onclick="clientesManager.verCliente('${cliente.cedula}')" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
-                    <button onclick="clientesManager.verTransaccionesCliente('${cliente.cedula}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Ver Transacciones</button>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm"
+                        title="Ver detalles"
+                    >
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <a 
+                        href="/pages/admin/transacciones.html?cedula=${cliente.cedula}"
+                        class="transacciones-btn flex items-center gap-2 bg-brand-accent text-brand-brown px-3 py-2 rounded-lg hover:bg-brand-brown hover:text-white transition-colors shadow-sm"
+                        title="Ver transacciones"
+                    >
+                        <i class="fas fa-exchange-alt"></i> Transacciones
+                    </a>
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        title="Editar cliente"
+                    >
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                        title="Eliminar cliente"
+                    >
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
@@ -187,7 +228,17 @@ class ClientesManager {
         }
     }
 
-    // Metodo deleteCliente eliminado - no se permite eliminar clientes
+    async eliminarCliente(cedula) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este cliente?')) return;
+        try {
+            await this.transaccionService.deleteCliente(cedula);
+            window.showToast('Cliente eliminado exitosamente.', 'success');
+            await this.loadClientes();
+        } catch (error) {
+            console.error('Error eliminando cliente:', error);
+            window.showToast('Error al eliminar el cliente.', 'error');
+        }
+    }
 
     async handleSubmitCliente(e) {
         e.preventDefault();
@@ -318,3 +369,4 @@ window.clientesManager = clientesManager;
 window.cerrarModalCliente = () => clientesManager.cerrarModalCliente();
 window.cerrarModalVerCliente = () => clientesManager.cerrarModalVerCliente();
 window.editarClienteDesdeDetalle = () => clientesManager.editarClienteDesdeDetalle();
+window.eliminarCliente = (cedula) => clientesManager.eliminarCliente(cedula);
