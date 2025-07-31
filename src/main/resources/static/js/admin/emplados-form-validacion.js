@@ -1,26 +1,4 @@
-// Formateo de cédula y teléfono
-function formatCedula(e) {
-    const input = e.target;
-    let digits = input.value.replace(/\D/g, '').slice(0, 11);
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 10);
-    let part3 = digits.slice(10, 11);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
-}
-function formatTelefono(e) {
-    const input = e.target;
-    let digits = input.value.replace(/\D/g, '').slice(0, 10);
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 6);
-    let part3 = digits.slice(6, 10);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
-}
+// Validación y formateo para formulario de empleado
 
 function showError(fieldId, message) {
     const errorEl = document.getElementById(fieldId + 'Error');
@@ -100,30 +78,3 @@ function validateFormEmpleado(data) {
 
     return valid;
 }
-
-// Asociar formateo y validación al DOM
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('empleadoCedula')?.addEventListener('input', formatCedula);
-    document.getElementById('empleadoTelefono')?.addEventListener('input', formatTelefono);
-
-    const form = document.getElementById('formEmpleado');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            const data = {
-                cedula: document.getElementById('empleadoCedula').value.trim(),
-                nombre: document.getElementById('empleadoNombre').value.trim(),
-                apellido: document.getElementById('empleadoApellido').value.trim(),
-                telefono: document.getElementById('empleadoTelefono').value.trim(),
-                email: document.getElementById('empleadoEmail').value.trim(),
-                rol: document.getElementById('empleadoRol').value,
-                salario: document.getElementById('empleadoSalario').value,
-                comision: document.getElementById('empleadoComision').value,
-                fechaContratacion: document.getElementById('empleadoFechaContratacion').value
-            };
-            if (!validateFormEmpleado(data)) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    }
-});

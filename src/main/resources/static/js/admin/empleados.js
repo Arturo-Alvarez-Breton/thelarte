@@ -1,13 +1,12 @@
-import { TransaccionService } from '../services/transaccionService.js';
+import { EmpleadoService } from '../services/empleadoService.js';
 
 class EmpleadosManager {
     constructor() {
-        this.transaccionService = new TransaccionService();
+        this.empleadoService = new EmpleadoService();
         this.empleados = [];
         this.filteredEmpleados = [];
         this.currentPage = 0;
         this.empleadosPerPage = 10;
-
         this.init();
     }
 
@@ -18,16 +17,27 @@ class EmpleadosManager {
 
     setupEventListeners() {
         document.getElementById('nuevoEmpleadoBtn')?.addEventListener('click', () => this.newEmpleado());
-        document.getElementById('empleadoSearchInput')?.addEventListener('keyup', () => this.filterEmpleados());
+        document.getElementById('empleadoSearchInput')?.addEventListener('input', () => this.filterEmpleados());
         document.getElementById('formEmpleado')?.addEventListener('submit', (e) => this.handleSubmitEmpleado(e));
     }
 
     async loadEmpleados() {
         this.showLoading();
         try {
-            const searchValue = document.getElementById('empleadoSearchInput')?.value || null;
-            this.empleados = await this.transaccionService.getEmpleados(searchValue, this.currentPage, this.empleadosPerPage);
-            this.filteredEmpleados = [...this.empleados];
+            const allEmpleados = await this.empleadoService.getEmpleados();
+            const searchValue = (document.getElementById('empleadoSearchInput')?.value || '').trim().toLowerCase();
+            if (searchValue) {
+                this.filteredEmpleados = allEmpleados.filter(emp =>
+                    (emp.nombre && emp.nombre.toLowerCase().includes(searchValue)) ||
+                    (emp.apellido && emp.apellido.toLowerCase().includes(searchValue)) ||
+                    (emp.cedula && emp.cedula.toLowerCase().includes(searchValue)) ||
+                    (emp.rol && emp.rol.toLowerCase().includes(searchValue)) ||
+                    (emp.email && emp.email.toLowerCase().includes(searchValue))
+                );
+            } else {
+                this.filteredEmpleados = allEmpleados;
+            }
+            this.empleados = allEmpleados;
             this.renderEmpleados();
         } catch (error) {
             console.error('Error loading empleados:', error);
@@ -85,7 +95,6 @@ class EmpleadosManager {
     }
 
     filterEmpleados() {
-        this.currentPage = 0;
         this.loadEmpleados();
     }
 
@@ -99,92 +108,71 @@ class EmpleadosManager {
         document.getElementById('modalEmpleado').classList.remove('hidden');
     }
 
-    async verEmpleado(cedula) {
-        try {
-            const empleado = this.empleados.find(e => e.cedula === cedula);
-            if (!empleado) {
-                window.showToast('Empleado no encontrado.', 'error');
-                return;
-            }
-            document.getElementById('detallesEmpleado').innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.nombre}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Apellido</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.apellido}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Cédula</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.cedula}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Teléfono</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.telefono || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Rol</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.rol || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Salario</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.salario != null ? '$' + empleado.salario.toLocaleString() : 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Comisión</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.comision != null ? empleado.comision + '%' : 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
-                        <p class="mt-1 text-sm text-gray-900">${empleado.fechaContratacion || 'N/A'}</p>
-                    </div>
-                    <div class="md:col-span-2 flex justify-end mt-6">
-                        <button onclick="empleadosManager.editEmpleado('${empleado.cedula}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                            <i class="fas fa-edit mr-2"></i>
-                            Editar
-                        </button>
-                    </div>
-                </div>
-            `;
-            this.currentEmpleado = empleado;
-            document.getElementById('modalVerEmpleado').classList.remove('hidden');
-        } catch (error) {
-            console.error('Error viewing empleado:', error);
-            window.showToast('Error al mostrar los detalles del empleado.', 'error');
+    verEmpleado(cedula) {
+        const empleado = this.empleados.find(e => e.cedula === cedula);
+        if (!empleado) {
+            window.showToast('Empleado no encontrado.', 'error');
+            return;
         }
+        document.getElementById('detallesEmpleado').innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.nombre}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Apellido</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.apellido}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cédula</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.cedula}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.telefono || 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Rol</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.rol || 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Salario</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.salario != null ? '$' + empleado.salario.toLocaleString() : 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Comisión</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.comision != null ? empleado.comision + '%' : 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.fechaContratacion || 'N/A'}</p>
+                </div>
+                <div class="md:col-span-2 flex justify-end mt-6">
+                    <button onclick="empleadosManager.editEmpleado('${empleado.cedula}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-edit mr-2"></i>
+                        Editar
+                    </button>
+                </div>
+            </div>
+        `;
+        this.currentEmpleado = empleado;
+        document.getElementById('modalVerEmpleado').classList.remove('hidden');
     }
 
-    async editEmpleado(cedula) {
-        try {
-            const empleado = this.empleados.find(e => e.cedula === cedula);
-            if (!empleado) {
-                window.showToast('Empleado no encontrado.', 'error');
-                return;
-            }
-            this.currentEmpleado = empleado;
-            this.fillForm(this.currentEmpleado);
-            document.getElementById('modalEmpleadoTitle').textContent = 'Editar Empleado';
-            document.getElementById('btnEmpleadoIcon').className = 'fas fa-save mr-2';
-            document.getElementById('btnEmpleadoText').textContent = 'Actualizar Empleado';
-            document.getElementById('empleadoCedula').disabled = true;
-            document.getElementById('modalEmpleado').classList.remove('hidden');
-        } catch (error) {
-            console.error('Error loading empleado for edit:', error);
-            const empleado = this.empleados.find(e => e.cedula === cedula);
-            if (empleado) {
-                this.currentEmpleado = empleado;
-                this.fillForm(empleado);
-                document.getElementById('modalEmpleadoTitle').textContent = 'Editar Empleado';
-                document.getElementById('btnEmpleadoIcon').className = 'fas fa-save mr-2';
-                document.getElementById('btnEmpleadoText').textContent = 'Actualizar Empleado';
-                document.getElementById('empleadoCedula').disabled = true;
-                document.getElementById('modalEmpleado').classList.remove('hidden');
-            } else {
-                window.showToast('Error al cargar los datos del empleado.', 'error');
-            }
+    editEmpleado(cedula) {
+        const empleado = this.empleados.find(e => e.cedula === cedula);
+        if (!empleado) {
+            window.showToast('Empleado no encontrado.', 'error');
+            return;
         }
+        this.currentEmpleado = empleado;
+        this.fillForm(this.currentEmpleado);
+        document.getElementById('modalEmpleadoTitle').textContent = 'Editar Empleado';
+        document.getElementById('btnEmpleadoIcon').className = 'fas fa-save mr-2';
+        document.getElementById('btnEmpleadoText').textContent = 'Actualizar Empleado';
+        document.getElementById('empleadoCedula').disabled = true;
+        document.getElementById('modalEmpleado').classList.remove('hidden');
     }
 
     async handleSubmitEmpleado(e) {
@@ -203,16 +191,20 @@ class EmpleadosManager {
             fechaContratacion: formData.get('fechaContratacion')
         };
 
+        if (typeof validateFormEmpleado === "function" && !validateFormEmpleado(empleadoData)) {
+            return;
+        }
+
         try {
             if (this.currentEmpleado) {
-                await this.transaccionService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
+                await this.empleadoService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
                 window.showToast('Empleado actualizado exitosamente.', 'success');
             } else {
-                await this.transaccionService.createEmpleado(empleadoData);
+                await this.empleadoService.createEmpleado(empleadoData);
                 window.showToast('Empleado creado exitosamente.', 'success');
             }
             this.cerrarModalEmpleado();
-            this.loadEmpleados();
+            await this.loadEmpleados();
         } catch (error) {
             console.error('Error saving empleado:', error);
             const errorMessage = error.message || 'Error desconocido';
@@ -235,7 +227,6 @@ class EmpleadosManager {
         document.getElementById('empleadoSalario').value = empleado.salario || '';
         document.getElementById('empleadoComision').value = empleado.comision != null ? empleado.comision : '';
         document.getElementById('empleadoFechaContratacion').value = empleado.fechaContratacion || '';
-        // Mostrar u ocultar comisión según rol
         if (empleado.rol === 'COMERCIAL') {
             document.getElementById('empleadoComisionContainer').classList.remove('hidden');
         } else {
@@ -274,10 +265,7 @@ class EmpleadosManager {
         }
     }
 
-    hideLoading() {
-        // No-op
-    }
-
+    hideLoading() {}
     showError(message) {
         const container = document.getElementById('empleadosListContainer');
         if (container) {
@@ -303,7 +291,27 @@ window.cerrarModalEmpleado = () => empleadosManager.cerrarModalEmpleado();
 window.cerrarModalVerEmpleado = () => empleadosManager.cerrarModalVerEmpleado();
 window.editarEmpleadoDesdeDetalle = () => empleadosManager.editarEmpleadoDesdeDetalle();
 
-// Formateo en tiempo real
+// Formateo en tiempo real y comisión según rol
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('empleadoCedula')?.addEventListener('input', formatCedula);
+    document.getElementById('empleadoTelefono')?.addEventListener('input', formatTelefono);
+    document.getElementById('empleadoRol')?.addEventListener('change', function () {
+        const rol = this.value;
+        const comisionContainer = document.getElementById('empleadoComisionContainer');
+        if (rol === 'COMERCIAL') {
+            comisionContainer.classList.remove('hidden');
+        } else {
+            comisionContainer.classList.add('hidden');
+            document.getElementById('empleadoComision').value = '';
+            const errorEl = document.getElementById('empleadoComisionError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('hidden');
+            }
+        }
+    });
+});
+
 function formatCedula(e) {
     const input = e.target;
     let digits = input.value.replace(/\D/g, '').slice(0, 11);
@@ -326,25 +334,3 @@ function formatTelefono(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
-
-// Mostrar/ocultar comisión según rol
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('empleadoCedula')?.addEventListener('input', formatCedula);
-    document.getElementById('empleadoTelefono')?.addEventListener('input', formatTelefono);
-    document.getElementById('empleadoRol')?.addEventListener('change', function () {
-        const rol = this.value;
-        const comisionContainer = document.getElementById('empleadoComisionContainer');
-        if (rol === 'COMERCIAL') {
-            comisionContainer.classList.remove('hidden');
-        } else {
-            comisionContainer.classList.add('hidden');
-            document.getElementById('empleadoComision').value = '';
-            // Limpia error si hay
-            const errorEl = document.getElementById('empleadoComisionError');
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.classList.add('hidden');
-            }
-        }
-    });
-});
