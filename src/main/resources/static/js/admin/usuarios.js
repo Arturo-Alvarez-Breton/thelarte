@@ -89,13 +89,19 @@ class UsuariosManager {
         }
         container.innerHTML = this.filteredUsuarios.map(u => `
             <div class="bg-white rounded-lg shadow-md p-4">
-                <h3 class="text-lg font-semibold">${u.username}</h3>
+                <h3 class="text-lg font-semibold flex items-center gap-2"><i class='fa-regular fa-user text-brand-brown'></i> ${u.username}</h3>
                 <p class="text-gray-600">Rol: ${Array.isArray(u.roles) ? u.roles.join(', ') : (u.roles || 'N/A')}</p>
-                <p class="text-gray-600">Activo: ${u.active ? '<span class="text-green-600 font-semibold">Sí</span>' : '<span class="text-red-600">No</span>'}</p>
-                <div class="mt-4 flex space-x-2">
-                    <button data-username="${u.username}" class="ver-btn bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
-                    <button data-username="${u.username}" class="edit-btn bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Editar</button>
-                    <button data-username="${u.username}" class="delete-btn bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
+                <p class="text-gray-600">Activo: ${u.active ? '<span class=\"text-green-600 font-semibold\">Sí</span>' : '<span class=\"text-red-600\">No</span>'}</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button data-username="${u.username}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <button data-username="${u.username}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Editar usuario">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button data-username="${u.username}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm" title="Eliminar usuario">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
