@@ -1,4 +1,4 @@
-// src/main/resources/static/js/contabilidad/suplidores.js
+// src/main/resources/static/js/admin/suplidores.js
 
 import { TransaccionService } from '../services/transaccionService.js';
 
@@ -11,11 +11,19 @@ class SuplidoresManager {
         this.suplidoresPerPage = 10;
         this.currentSuplidor = null;
 
+        // Geo cache
+        this.countries = [];
+        this.citiesByIso2 = new Map();
+
+        // Tel input instances
+        this.telInputs = new Map(); // Map<HTMLInputElement, intlTelInputInstance>
+
         this.init();
     }
 
     async init() {
         this.setupEventListeners();
+        await this.loadCountries();
         await this.loadSuplidores();
     }
 
@@ -23,6 +31,7 @@ class SuplidoresManager {
         document.getElementById('nuevoSuplidorBtn')?.addEventListener('click', () => this.newSuplidor());
         document.getElementById('suplidorSearchInput')?.addEventListener('input', () => this.filterSuplidores());
         document.getElementById('formSuplidor')?.addEventListener('submit', (e) => this.handleSubmitSuplidor(e));
+
         document.getElementById('suplidoresListContainer')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
@@ -37,12 +46,161 @@ class SuplidoresManager {
                 this.deleteSuplidor(id);
             }
         });
+
         document.getElementById('btnEditarDesdeDetalle')?.addEventListener('click', () => this.editarSuplidorDesdeDetalle());
+
+        // País -> Carga ciudades + actualiza formato telefónico
+        document.getElementById('suplidorPaisSelect')?.addEventListener('change', async (e) => {
+            const iso2 = e.target.value;
+            await this.populateCities(iso2);
+            this.updateAllTelInputsCountry(iso2 || 'DO');
+        });
+
         window.cerrarModalSuplidor = () => this.cerrarModalSuplidor();
         window.cerrarModalVerSuplidor = () => this.cerrarModalVerSuplidor();
         window.agregarTelefono = () => this.agregarTelefono();
         window.eliminarTelefono = (button) => this.eliminarTelefono(button);
     }
+
+    // ---------------- GEO ----------------
+
+    async loadCountries() {
+        try {
+            const res = await fetch('/api/geo/countries');
+            this.countries = await res.json();
+            const sel = document.getElementById('suplidorPaisSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Seleccione un país...</option>' + this.countries
+                .map(c => `<option value="${c.iso2}">${c.name}</option>`)
+                .join('');
+        } catch (e) {
+            console.error('Error cargando países:', e);
+            window.showToast?.('No se pudieron cargar los países.', 'error');
+        }
+    }
+
+    async populateCities(iso2, preselectCity = '') {
+        const citySelect = document.getElementById('suplidorCiudadSelect');
+        if (!citySelect) return;
+
+        if (!iso2) {
+            citySelect.disabled = true;
+            citySelect.innerHTML = '<option value="">Seleccione un país primero...</option>';
+            return;
+        }
+
+        citySelect.disabled = true;
+        citySelect.innerHTML = '<option value="">Cargando ciudades...</option>';
+
+        try {
+            let cities = this.citiesByIso2.get(iso2);
+            if (!cities) {
+                const res = await fetch(`/api/geo/countries/${encodeURIComponent(iso2)}/cities`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                cities = await res.json();
+                this.citiesByIso2.set(iso2, cities);
+            }
+
+            if (!Array.isArray(cities) || cities.length === 0) {
+                citySelect.innerHTML = '<option value="">No hay ciudades disponibles</option>';
+                citySelect.disabled = false;
+                return;
+            }
+
+            citySelect.innerHTML = '<option value="">Seleccione una ciudad...</option>' + cities
+                .map(city => `<option value="${city}">${city}</option>`)
+                .join('');
+            citySelect.disabled = false;
+
+            if (preselectCity) {
+                const opt = Array.from(citySelect.options).find(o => o.value.toLowerCase() === preselectCity.toLowerCase());
+                if (opt) {
+                    citySelect.value = opt.value;
+                }
+            }
+        } catch (e) {
+            console.error('Error cargando ciudades:', e);
+            window.showToast?.('No se pudieron cargar las ciudades.', 'error');
+            citySelect.innerHTML = '<option value="">Error cargando ciudades</option>';
+            citySelect.disabled = false;
+        }
+    }
+
+    // ---------------- Teléfono (intl-tel-input) ----------------
+
+    initTelInput(input, initialIso2 = 'DO', presetValue = '') {
+        if (!window.intlTelInput) return;
+        // Asegura ISO2 en minúscula para la librería
+        const iso2 = (initialIso2 || 'DO').toLowerCase();
+
+        const iti = window.intlTelInput(input, {
+            initialCountry: iso2,
+            allowDropdown: false,           // El país lo controla el select de País
+            autoPlaceholder: 'polite',      // Muestra ejemplo para guiar al usuario
+            formatOnDisplay: true,
+            nationalMode: false,            // Muestra +código país y valida internacional
+            utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/22.0.2/js/utils.min.js',
+            separateDialCode: false,
+            strictMode: true
+        });
+
+        // Si había valor preestablecido, colócalo mediante la API
+        if (presetValue) {
+            try { iti.setNumber(String(presetValue)); } catch {}
+        }
+
+        // Guarda la instancia
+        this.telInputs.set(input, iti);
+
+        // Limpia mensajes de error al escribir
+        input.addEventListener('input', () => {
+            const err = input.nextElementSibling?.classList?.contains('text-red-500') ? input.nextElementSibling : null;
+            input.classList.remove('border-red-500');
+            if (err) { err.classList.add('hidden'); err.textContent = ''; }
+        });
+    }
+
+    destroyTelInput(input) {
+        const iti = this.telInputs.get(input);
+        if (iti) {
+            try { iti.destroy(); } catch {}
+            this.telInputs.delete(input);
+        }
+    }
+
+    destroyAllTelInputs() {
+        this.telInputs.forEach((iti, input) => {
+            try { iti.destroy(); } catch {}
+        });
+        this.telInputs.clear();
+    }
+
+    updateAllTelInputsCountry(iso2) {
+        const country = (iso2 || 'DO').toLowerCase();
+        this.telInputs.forEach((iti) => {
+            try { iti.setCountry(country); } catch {}
+        });
+    }
+
+    getValidatedPhonesE164OrErrors() {
+        const results = [];
+        let firstInvalid = null;
+
+        this.telInputs.forEach((iti, input) => {
+            const raw = input.value.trim();
+            if (!raw) return; // permitir vacíos (se filtran luego)
+            const valid = iti.isValidNumber();
+            if (!valid && !firstInvalid) {
+                firstInvalid = { input, message: 'Número de teléfono inválido para el país seleccionado' };
+            }
+            const e164 = valid ? iti.getNumber(intlTelInputUtils.numberFormat.E164) : raw;
+            results.push({ e164, valid, input });
+        });
+
+        return { results, firstInvalid };
+    }
+
+    // ---------------- CRUD Suplidores ----------------
 
     async loadSuplidores() {
         this.showLoading();
@@ -53,7 +211,7 @@ class SuplidoresManager {
             this.renderSuplidores();
         } catch (error) {
             console.error('Error loading suppliers:', error);
-            window.showToast('Error al cargar los suplidores.', 'error');
+            window.showToast?.('Error al cargar los suplidores.', 'error');
         } finally {
             this.hideLoading();
         }
@@ -96,35 +254,23 @@ class SuplidoresManager {
                     ${s.nombre}
                 </h3>
                 <div class="space-y-2 text-sm text-gray-600 mb-4">
-                    <p><i class="fas fa-map-marker-alt w-4"></i> ${s.ciudad || 'N/A'}</p>
+                    <p><i class="fas fa-map-marker-alt w-4"></i> ${[s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A'}</p>
                     <p><i class="fas fa-id-card w-4"></i> RNC: ${s.rNC || 'N/A'}</p>
                     ${s.nCF ? `<p><i class="fas fa-file-alt w-4"></i> NCF: ${s.nCF}</p>` : ''}
                     <p><i class="fas fa-envelope w-4"></i> ${s.email || 'N/A'}</p>
-                    ${s.telefonos && s.telefonos.length > 0 ? 
-                        `<p><i class="fas fa-phone w-4"></i> ${s.telefonos[0]}</p>` : 
-                        '<p><i class="fas fa-phone w-4"></i> Sin teléfono</p>'
-                    }
+                    ${s.telefonos && s.telefonos.length > 0 ?
+            `<p><i class="fas fa-phone w-4"></i> ${s.telefonos[0]}</p>` :
+            '<p><i class="fas fa-phone w-4"></i> Sin teléfono</p>'
+        }
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <button 
-                        data-id="${s.id}" 
-                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs"
-                        title="Ver detalles"
-                    >
+                    <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
                         <i class="fas fa-eye"></i> Detalles
                     </button>
-                    <button 
-                        data-id="${s.id}" 
-                        class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs"
-                        title="Editar suplidor"
-                    >
+                    <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
                         <i class="fas fa-edit"></i> Editar
                     </button>
-                    <button 
-                        data-id="${s.id}" 
-                        class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs"
-                        title="Eliminar suplidor"
-                    >
+                    <button data-id="${s.id}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs">
                         <i class="fas fa-trash-alt"></i> 
                     </button>
                 </div>
@@ -140,17 +286,27 @@ class SuplidoresManager {
     newSuplidor() {
         this.currentSuplidor = null;
         this.clearForm();
+
         document.getElementById('modalSuplidorTitle').textContent = 'Nuevo Suplidor';
         document.getElementById('btnSuplidorIcon').className = 'fas fa-plus mr-2';
         document.getElementById('btnSuplidorText').textContent = 'Crear Suplidor';
         document.getElementById('modalSuplidor').classList.remove('hidden');
+
+        // País por defecto: Dominican Republic (DO)
+        const paisSel = document.getElementById('suplidorPaisSelect');
+        if (paisSel && this.countries.length > 0) {
+            paisSel.value = 'DO';
+            this.populateCities('DO');
+        }
+        // Inicializa los inputs de teléfono con DO
+        this.initAllCurrentTelInputs('DO');
     }
 
     async verSuplidor(id) {
         try {
             const suplidor = this.suplidores.find(s => String(s.id) === String(id));
             if (!suplidor) {
-                window.showToast('Suplidor no encontrado.', 'error');
+                window.showToast?.('Suplidor no encontrado.', 'error');
                 return;
             }
 
@@ -159,6 +315,10 @@ class SuplidoresManager {
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Nombre</label>
                         <p class="mt-1 text-sm text-gray-900">${suplidor.nombre}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">País</label>
+                        <p class="mt-1 text-sm text-gray-900">${suplidor.pais || 'N/A'}</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Ciudad</label>
@@ -179,10 +339,10 @@ class SuplidoresManager {
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Teléfonos</label>
                         <div class="mt-1 text-sm text-gray-900">
-                            ${suplidor.telefonos && suplidor.telefonos.length > 0 ? 
-                                suplidor.telefonos.map(tel => `<p>${tel}</p>`).join('') :
-                                '<p>Sin teléfonos registrados</p>'
-                            }
+                            ${suplidor.telefonos && suplidor.telefonos.length > 0 ?
+                suplidor.telefonos.map(tel => `<p>${tel}</p>`).join('') :
+                '<p>Sin teléfonos registrados</p>'
+            }
                         </div>
                     </div>
                     <div class="md:col-span-2">
@@ -191,24 +351,25 @@ class SuplidoresManager {
                     </div>
                 </div>
             `;
-            
+
             this.currentSuplidor = suplidor;
             document.getElementById('modalVerSuplidor').classList.remove('hidden');
         } catch (error) {
             console.error('Error viewing supplier:', error);
-            window.showToast('Error al mostrar los detalles del suplidor.', 'error');
+            window.showToast?.('Error al mostrar los detalles del suplidor.', 'error');
         }
     }
 
-    editSuplidor(id) {
+    async editSuplidor(id) {
         const suplidor = this.suplidores.find(s => String(s.id) === String(id));
         if (!suplidor) {
-            window.showToast('Suplidor no encontrado.', 'error');
+            window.showToast?.('Suplidor no encontrado.', 'error');
             return;
         }
 
         this.currentSuplidor = suplidor;
-        this.fillForm(suplidor);
+        await this.fillForm(suplidor);
+
         document.getElementById('modalSuplidorTitle').textContent = 'Editar Suplidor';
         document.getElementById('btnSuplidorIcon').className = 'fas fa-save mr-2';
         document.getElementById('btnSuplidorText').textContent = 'Actualizar Suplidor';
@@ -218,31 +379,31 @@ class SuplidoresManager {
     async handleSubmitSuplidor(e) {
         e.preventDefault();
 
-        // Validaciones básicas
         const nombre = document.getElementById('suplidorNombre').value.trim();
-        const ciudad = document.getElementById('suplidorCiudad').value.trim();
+        const paisSelect = document.getElementById('suplidorPaisSelect');
+        const ciudadSelect = document.getElementById('suplidorCiudadSelect');
+        const paisIso2 = paisSelect.value;
+        const paisNombre = paisSelect.options[paisSelect.selectedIndex]?.text?.trim() || '';
+        const ciudad = ciudadSelect.value;
         const direccion = document.getElementById('suplidorDireccion').value.trim();
 
-        if (!nombre) {
-            this.showFieldError('suplidorNombre', 'El nombre es requerido');
-            return;
-        }
-        if (!ciudad) {
-            this.showFieldError('suplidorCiudad', 'La ciudad es requerida');
-            return;
-        }
-        if (!direccion) {
-            this.showFieldError('suplidorDireccion', 'La dirección es requerida');
-            return;
-        }
+        if (!nombre) return this.showFieldError('suplidorNombre', 'El nombre es requerido');
+        if (!paisIso2) return this.showFieldError('suplidorPaisSelect', 'El país es requerido');
+        if (!ciudad) return this.showFieldError('suplidorCiudadSelect', 'La ciudad es requerida');
+        if (!direccion) return this.showFieldError('suplidorDireccion', 'La dirección es requerida');
 
-        // Recopilar teléfonos
-        const telefonos = Array.from(document.querySelectorAll('.telefono-input'))
-            .map(input => input.value.trim())
-            .filter(tel => tel !== '');
+        // Validar/formatear teléfonos a E.164
+        const { results, firstInvalid } = this.getValidatedPhonesE164OrErrors();
+        if (firstInvalid) {
+            const { input, message } = firstInvalid;
+            this.showCustomFieldError(input, message);
+            return;
+        }
+        const telefonos = results.map(r => r.e164);
 
         const suplidorData = {
             nombre: nombre,
+            pais: paisNombre,
             ciudad: ciudad,
             direccion: direccion,
             email: document.getElementById('suplidorEmail').value.trim() || null,
@@ -256,46 +417,71 @@ class SuplidoresManager {
         try {
             if (this.currentSuplidor) {
                 await this.transaccionService.updateSuplidor(this.currentSuplidor.id, suplidorData);
-                window.showToast('Suplidor actualizado exitosamente.', 'success');
+                window.showToast?.('Suplidor actualizado exitosamente.', 'success');
             } else {
                 await this.transaccionService.createSuplidor(suplidorData);
-                window.showToast('Suplidor creado exitosamente.', 'success');
+                window.showToast?.('Suplidor creado exitosamente.', 'success');
             }
             this.cerrarModalSuplidor();
             this.loadSuplidores();
         } catch (error) {
             console.error('Error saving supplier:', error);
-            window.showToast('Error al guardar el suplidor.', 'error');
+            window.showToast?.('Error al guardar el suplidor.', 'error');
         }
     }
 
     showFieldError(fieldId, message) {
         const field = document.getElementById(fieldId);
-        const errorElement = field.nextElementSibling;
-        field.classList.add('border-red-500');
+        const errorElement = field?.nextElementSibling;
+        field?.classList.add('border-red-500');
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        field?.focus();
+    }
+
+    showCustomFieldError(inputEl, message) {
+        // Si no hay <p> de error junto al input, crea uno temporal
+        let errorElement = inputEl.nextElementSibling;
+        if (!errorElement || !errorElement.classList.contains('text-red-500')) {
+            errorElement = document.createElement('p');
+            errorElement.className = 'text-xs text-red-500 mt-1';
+            inputEl.after(errorElement);
+        }
+        inputEl.classList.add('border-red-500');
         errorElement.textContent = message;
         errorElement.classList.remove('hidden');
-        field.focus();
+        inputEl.focus();
     }
 
     clearFieldErrors() {
-        document.querySelectorAll('.border-red-500').forEach(field => {
-            field.classList.remove('border-red-500');
-        });
-        document.querySelectorAll('.text-red-500').forEach(error => {
+        document.querySelectorAll('.border-red-500').forEach(field => field.classList.remove('border-red-500'));
+        document.querySelectorAll('#formSuplidor p.text-red-500').forEach(error => {
             error.classList.add('hidden');
             error.textContent = '';
         });
     }
 
     clearForm() {
+        // Destruye instancias de teléfono previas
+        this.destroyAllTelInputs();
+
         document.getElementById('formSuplidor').reset();
         this.clearFieldErrors();
+
+        // Reset ciudad
+        const ciudadSel = document.getElementById('suplidorCiudadSelect');
+        if (ciudadSel) {
+            ciudadSel.innerHTML = '<option value="">Seleccione un país primero...</option>';
+            ciudadSel.disabled = true;
+        }
+
         // Resetear teléfonos a solo uno
         const container = document.getElementById('telefonosContainer');
         container.innerHTML = `
             <div class="flex gap-2 mb-2">
-                <input type="tel" placeholder="Ej: +1-809-123-4567" 
+                <input type="tel"
                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown telefono-input">
                 <button type="button" onclick="agregarTelefono()" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700">
                     <i class="fas fa-plus"></i>
@@ -304,55 +490,99 @@ class SuplidoresManager {
         `;
     }
 
-    fillForm(suplidor) {
+    async fillForm(suplidor) {
+        this.clearForm();
+
         document.getElementById('suplidorNombre').value = suplidor.nombre || '';
-        document.getElementById('suplidorCiudad').value = suplidor.ciudad || '';
+        document.getElementById('suplidorEmail').value = suplidor.email || '';
         document.getElementById('suplidorRNC').value = suplidor.rNC || '';
         document.getElementById('suplidorNCF').value = suplidor.nCF || '';
-        document.getElementById('suplidorEmail').value = suplidor.email || '';
         document.getElementById('suplidorDireccion').value = suplidor.direccion || '';
 
-        // Llenar teléfonos
+        // País y ciudad
+        const paisSel = document.getElementById('suplidorPaisSelect');
+        const ciudadSel = document.getElementById('suplidorCiudadSelect');
+
+        let iso2ToUse = 'DO';
+        if (suplidor.pais) {
+            const matchCountry = this.countries.find(c => c.name.toLowerCase() === String(suplidor.pais).toLowerCase());
+            if (matchCountry) {
+                paisSel.value = matchCountry.iso2;
+                iso2ToUse = matchCountry.iso2;
+                await this.populateCities(matchCountry.iso2, suplidor.ciudad || '');
+            } else {
+                paisSel.value = '';
+                ciudadSel.innerHTML = '<option value="">Seleccione un país primero...</option>';
+                ciudadSel.disabled = true;
+            }
+        }
+
+        // Teléfonos
         const container = document.getElementById('telefonosContainer');
         container.innerHTML = '';
-
         if (suplidor.telefonos && suplidor.telefonos.length > 0) {
             suplidor.telefonos.forEach((telefono, index) => {
-                this.addTelefonoField(telefono, index === 0);
+                this.addTelefonoField(telefono, index === 0, iso2ToUse);
             });
         } else {
-            this.addTelefonoField('', true);
+            this.addTelefonoField('', true, iso2ToUse);
         }
     }
 
     agregarTelefono() {
-        this.addTelefonoField('', false);
+        // Usa país actual del select
+        const iso2 = document.getElementById('suplidorPaisSelect')?.value || 'DO';
+        this.addTelefonoField('', false, iso2);
     }
 
-    addTelefonoField(value = '', isFirst = false) {
+    addTelefonoField(value = '', isFirst = false, iso2 = 'DO') {
         const container = document.getElementById('telefonosContainer');
         const telefonoDiv = document.createElement('div');
-        telefonoDiv.className = 'flex gap-2 mb-2';
+        telefonoDiv.className = 'flex gap-2 mb-2 items-center'; // changed from items-start to items-center
 
         telefonoDiv.innerHTML = `
-            <input type="tel" placeholder="Ej: +1-809-123-4567" value="${value}"
-                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown telefono-input">
+            <div class="flex-1 flex items-center gap-2">
+                <input type="tel"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown telefono-input h-10" style="min-width:0;">
+                <p class="text-xs text-red-500 mt-1 hidden"></p>
+            </div>
             ${isFirst ? `
-                <button type="button" onclick="agregarTelefono()" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700">
+                <button type="button" onclick="agregarTelefono()" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 flex items-center justify-center h-10 w-10 min-w-[2.5rem]">
                     <i class="fas fa-plus"></i>
                 </button>
             ` : `
-                <button type="button" onclick="eliminarTelefono(this)" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700">
+                <button type="button" onclick="eliminarTelefono(this)" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 flex items-center justify-center h-10 w-10 min-w-[2.5rem]">
                     <i class="fas fa-minus"></i>
                 </button>
             `}
         `;
 
         container.appendChild(telefonoDiv);
+
+        const input = telefonoDiv.querySelector('input.telefono-input');
+        // Inicializa intl-tel-input con el país actual y valor pre-cargado
+        this.initTelInput(input, iso2, value);
+    }
+
+    initAllCurrentTelInputs(iso2 = 'DO') {
+        const inputs = document.querySelectorAll('#telefonosContainer input.telefono-input');
+        inputs.forEach(input => {
+            if (!this.telInputs.has(input)) {
+                this.initTelInput(input, iso2, input.value || '');
+            } else {
+                // Si ya existe instancia, solo actualiza país
+                const iti = this.telInputs.get(input);
+                try { iti.setCountry((iso2 || 'DO').toLowerCase()); } catch {}
+            }
+        });
     }
 
     eliminarTelefono(button) {
-        button.closest('.flex').remove();
+        const wrapper = button.closest('.flex');
+        if (!wrapper) return;
+        const input = wrapper.querySelector('input.telefono-input');
+        if (input) this.destroyTelInput(input);
+        wrapper.remove();
     }
 
     cerrarModalSuplidor() {
@@ -377,10 +607,10 @@ class SuplidoresManager {
         if (!confirm('¿Estás seguro de que deseas eliminar este suplidor?')) return;
         try {
             await this.transaccionService.deleteSuplidor(id);
-            window.showToast('Suplidor eliminado exitosamente.', 'success');
+            window.showToast?.('Suplidor eliminado exitosamente.', 'success');
             await this.loadSuplidores();
         } catch (error) {
-            window.showToast('Error al eliminar el suplidor.', 'error');
+            window.showToast?.('Error al eliminar el suplidor.', 'error');
         }
     }
 
@@ -388,51 +618,32 @@ class SuplidoresManager {
         document.getElementById('suplidoresListContainer').innerHTML = '<div class="flex items-center justify-center py-12 col-span-full"><div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div></div>';
     }
 
-    hideLoading() {
-        // No specific hide loading for now, as content replaces spinner
-    }
+    hideLoading() { /* contenido reemplaza spinner */ }
 }
 
 const suplidoresManager = new SuplidoresManager();
 window.suplidoresManager = suplidoresManager;
 
-// Funciones globales para los event handlers de los modales
+// Handlers globales
 window.cerrarModalSuplidor = () => suplidoresManager.cerrarModalSuplidor();
 window.cerrarModalVerSuplidor = () => suplidoresManager.cerrarModalVerSuplidor();
 window.editarSuplidorDesdeDetalle = () => suplidoresManager.editarSuplidorDesdeDetalle();
 
-// Formateo en tiempo real para cédula y teléfono en el formulario de suplidor
-// Similar a empleados.js
-
+// Formateo en tiempo real RNC (opcional, sin cambios)
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('suplidorRnc')?.addEventListener('input', formatCedulaRnc);
-    document.getElementById('suplidorTelefono')?.addEventListener('input', formatTelefono);
+    document.getElementById('suplidorRNC')?.addEventListener('input', formatCedulaRnc);
 });
 
 function formatCedulaRnc(e) {
     const input = e.target;
     let digits = input.value.replace(/\D/g, '').slice(0, 11);
-    // Si es RNC (9 dígitos), no formatear con guiones
     if (digits.length <= 9) {
         input.value = digits;
         return;
     }
-    // Si es cédula (11 dígitos), formatear XXX-XXXXXXX-X
     let part1 = digits.slice(0, 3);
     let part2 = digits.slice(3, 10);
     let part3 = digits.slice(10, 11);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
-}
-
-function formatTelefono(e) {
-    const input = e.target;
-    let digits = input.value.replace(/\D/g, '').slice(0, 10);
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 6);
-    let part3 = digits.slice(6, 10);
     let formatted = part1;
     if (part2) formatted += '-' + part2;
     if (part3) formatted += '-' + part3;
