@@ -58,7 +58,33 @@ class SuplidoresManager {
 
         window.cerrarModalSuplidor = () => this.cerrarModalSuplidor();
         window.cerrarModalVerSuplidor = () => this.cerrarModalVerSuplidor();
-        window.agregarTelefono = () => this.agregarTelefono();
+        window.agregarTelefono = () => {
+            const container = document.getElementById('telefonosContainer');
+            const iso2 = document.getElementById('suplidorPaisSelect')?.value || 'DO';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex items-center gap-2 mb-2';
+
+            const input = document.createElement('input');
+            input.type = 'tel';
+            input.placeholder = 'Ej: +1-809-123-4567';
+            input.className = 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown telefono-input';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 flex items-center justify-center';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            deleteBtn.onclick = () => {
+                this.destroyTelInput(input);
+                wrapper.remove();
+            };
+
+            wrapper.appendChild(input);
+            wrapper.appendChild(deleteBtn);
+            container.appendChild(wrapper);
+
+            this.initTelInput(input, iso2);
+        };
         window.eliminarTelefono = (button) => this.eliminarTelefono(button);
     }
 
