@@ -94,20 +94,38 @@ class ProductosManager {
         }
         container.innerHTML = this.filteredProductos.map(p => `
             <div class="bg-white rounded-lg shadow-md p-4 flex flex-col">
-                <div class="flex items-center gap-4 mb-2">
-                    <img src="${p.fotoUrl || '/images/product-placeholder.png'}" class="w-24 h-16 object-cover rounded-lg border border-gray-200 bg-gray-100" alt="${p.nombre || 'Producto'}">
-                    <div>
-                        <h3 class="text-lg font-semibold">${p.nombre || 'Sin nombre'}</h3>
-                        <p class="text-gray-600">Tipo: ${p.tipo || 'N/A'}</p>
-                        <p class="text-gray-600 text-sm">${p.descripcion || ''}</p>
-                    </div>
+                <div class="w-full aspect-[16/9] bg-gray-100 rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center mb-4">
+                    <img src="${p.fotoUrl || '/images/product-placeholder.png'}" class="object-cover w-full h-full" alt="${p.nombre || 'Producto'}">
                 </div>
-                <div class="flex justify-between items-center mt-2">
-                    <span class="text-brand-brown font-bold text-lg">$${p.precioVenta ? Number(p.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</span>
-                    <div class="flex space-x-2">
-                        <button data-id="${p.id}" class="ver-btn bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
-                        <button data-id="${p.id}" class="edit-btn bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">Editar</button>
-                        <button data-id="${p.id}" class="delete-btn bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Eliminar</button>
+                <div class="flex-1 flex flex-col justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">${p.nombre || 'Sin nombre'}</h3>
+                    <p class="text-gray-600 mb-1">Tipo: ${p.tipo || 'N/A'}</p>
+                    <p class="text-gray-600 text-sm mb-2">${p.descripcion || ''}</p>
+                    <div class="mt-auto flex flex-wrap gap-2 items-center justify-between">
+                        <span class="text-brand-brown font-bold text-lg">$${p.precioVenta ? Number(p.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</span>
+                        <div class="flex flex-wrap gap-2">
+                            <button 
+                                data-id="${p.id}"
+                                class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm"
+                                title="Ver detalles"
+                            >
+                                <i class="fas fa-eye"></i> Detalles
+                            </button>
+                            <button 
+                                data-id="${p.id}"
+                                class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                                title="Editar producto"
+                            >
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button 
+                                data-id="${p.id}"
+                                class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                                title="Eliminar producto"
+                            >
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -135,38 +153,31 @@ class ProductosManager {
             return;
         }
         document.getElementById('detallesProducto').innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                    <p class="mt-1 text-sm text-gray-900">${producto.nombre}</p>
+            <div class="flex flex-col gap-6">
+                <div class="w-full flex justify-center items-center bg-gray-100 rounded-lg overflow-hidden mb-4">
+                    <img src="${producto.fotoUrl || '/images/product-placeholder.png'}" class="w-full max-h-[500px] object-contain" alt="Foto producto">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Tipo</label>
-                    <p class="mt-1 text-sm text-gray-900">${producto.tipo}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Descripción</label>
-                    <p class="mt-1 text-sm text-gray-900">${producto.descripcion || 'N/A'}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Precio Venta</label>
-                    <p class="mt-1 text-sm text-gray-900">$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Precio Compra</label>
-                    <p class="mt-1 text-sm text-gray-900">$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Foto</label>
-                    <div class="mt-1">
-                        <img src="${producto.fotoUrl || '/images/product-placeholder.png'}" class="w-32 h-24 object-cover rounded-lg border border-gray-200 bg-gray-100" alt="Foto producto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.nombre}</p>
                     </div>
-                </div>
-                <div class="md:col-span-2 flex justify-end mt-6">
-                    <button onclick="productosManager.editProducto('${producto.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-edit mr-2"></i>
-                        Editar
-                    </button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.tipo}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Descripción</label>
+                        <p class="mt-1 text-sm text-gray-900">${producto.descripcion || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Precio Venta</label>
+                        <p class="mt-1 text-sm text-gray-900">$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Precio Compra</label>
+                        <p class="mt-1 text-sm text-gray-900">$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
+                    </div>
                 </div>
             </div>
         `;
