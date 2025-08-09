@@ -152,36 +152,18 @@ class ProductosManager {
             window.showToast('Producto no encontrado.', 'error');
             return;
         }
-        document.getElementById('detallesProducto').innerHTML = `
-            <div class="flex flex-col gap-6">
-                <div class="w-full flex justify-center items-center bg-gray-100 rounded-lg overflow-hidden mb-4">
-                    <img src="${producto.fotoUrl || '/images/product-placeholder.png'}" class="w-full max-h-[500px] object-contain" alt="Foto producto">
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                        <p class="mt-1 text-sm text-gray-900">${producto.nombre}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Tipo</label>
-                        <p class="mt-1 text-sm text-gray-900">${producto.tipo}</p>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Descripción</label>
-                        <p class="mt-1 text-sm text-gray-900">${producto.descripcion || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Precio Venta</label>
-                        <p class="mt-1 text-sm text-gray-900">$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Precio Compra</label>
-                        <p class="mt-1 text-sm text-gray-900">$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        this.currentProducto = producto;
+
+        // Llenar datos
+        document.getElementById('detalleProductoImg').src = producto.fotoUrl || '/images/product-placeholder.png';
+        document.getElementById('detalleProductoNombre').textContent = producto.nombre || 'Sin nombre';
+        document.getElementById('detalleProductoTipo').textContent = producto.tipo || 'N/A';
+        document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
+        document.getElementById('detalleProductoPrecioVenta').textContent =
+            `$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
+        document.getElementById('detalleProductoPrecioCompra').textContent =
+            `$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
+
+        // Mostrar modal
         document.getElementById('modalVerProducto').classList.remove('hidden');
     }
 

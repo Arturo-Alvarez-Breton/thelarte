@@ -215,30 +215,53 @@
 <!-- Modal Ver Producto -->
 <div id="modalVerProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div class="bg-brand-brown text-white p-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold">Detalles del Producto</h3>
-                    <button onclick="cerrarModalVerProducto()" class="text-white hover:text-gray-300">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden">
+            <!-- Header -->
+            <div class="bg-brand-brown text-white p-5 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Detalles del Producto</h3>
+                <button onclick="cerrarModalVerProducto()" class="text-white hover:text-gray-300">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido -->
+            <div class="p-6">
+                <div id="detallesProducto" class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                    <!-- Imagen -->
+                    <div class="w-full md:w-1/2 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img id="detalleProductoImg" src="/images/product-placeholder.png"
+                             class="object-contain w-full h-full max-h-[400px]"
+                             alt="Foto producto">
+                    </div>
+
+                    <!-- Información -->
+                    <div class="w-full md:w-1/2 space-y-4">
+                        <h4 id="detalleProductoNombre" class="text-2xl font-bold text-brand-brown"></h4>
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div><span class="font-semibold text-gray-700">Tipo:</span> <span id="detalleProductoTipo" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Descripción:</span> <span id="detalleProductoDescripcion" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Venta:</span> <span id="detalleProductoPrecioVenta" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Compra:</span> <span id="detalleProductoPrecioCompra" class="text-gray-600"></span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="p-6" id="detallesProducto">
-                <!-- Se llenará dinámicamente -->
-            </div>
-            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                <button onclick="editarProductoDesdeDetalle()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-edit mr-2"></i>
-                    Editar
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 border-t border-gray-200">
+                <button onclick="editarProductoDesdeDetalle()"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                    <i class="fas fa-edit mr-2"></i> Editar
                 </button>
-                <button onclick="cerrarModalVerProducto()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                <button onclick="cerrarModalVerProducto()"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg flex items-center justify-center">
                     Cerrar
                 </button>
             </div>
         </div>
     </div>
 </div>
+
 
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
