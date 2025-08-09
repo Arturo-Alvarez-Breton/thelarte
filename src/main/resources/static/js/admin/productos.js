@@ -178,7 +178,8 @@ class ProductosManager {
         document.getElementById('modalProductoTitle').textContent = 'Editar Producto';
         document.getElementById('btnProductoIcon').className = 'fas fa-save mr-2';
         document.getElementById('btnProductoText').textContent = 'Actualizar Producto';
-        document.getElementById('productoNombre').disabled = true;
+        // Permitir editar el nombre
+        document.getElementById('productoNombre').disabled = false;
         document.getElementById('modalProducto').classList.remove('hidden');
     }
 
