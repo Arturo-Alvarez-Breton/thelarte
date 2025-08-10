@@ -8,8 +8,9 @@ class ClientesManager {
         this.clientes = [];
         this.filteredClientes = [];
         this.currentPage = 0;
-        this.clientesPerPage = 10;
-
+        this.clientesPerPage = 15; // Cambiado a 15 por página
+        this.totalPages = 1;
+        this.totalClientes = 0;
         this.init();
     }
 
@@ -42,20 +43,26 @@ class ClientesManager {
     async loadClientes() {
         this.showLoading();
         try {
-            const filters = {
-                busqueda: document.getElementById('clientSearchInput')?.value || null,
-                page: this.currentPage,
-                size: this.clientesPerPage
-            };
-            this.clientes = await this.transaccionService.getClientes(filters.busqueda, filters.page, filters.size);
+            const busqueda = document.getElementById('clientSearchInput')?.value || null;
+            // Obtener todos los clientes filtrados
+            const allClientes = await this.transaccionService.getClientes(busqueda);
+            this.totalClientes = allClientes.length;
+            this.totalPages = Math.ceil(this.totalClientes / this.clientesPerPage);
+            // Paginar en frontend
+            const start = this.currentPage * this.clientesPerPage;
+            const end = start + this.clientesPerPage;
+            this.clientes = allClientes.slice(start, end);
             this.filteredClientes = [...this.clientes];
             this.renderClientes();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading clients:', error);
-            // Show empty state instead of error for no data scenarios
             this.clientes = [];
             this.filteredClientes = [];
+            this.totalClientes = 0;
+            this.totalPages = 1;
             this.renderClientes();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -130,6 +137,46 @@ class ClientesManager {
                 </div>
             </div>
         `).join('');
+    }
+
+    renderPagination() {
+        let pagContainer = document.getElementById('clientesPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'clientesPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('clientesListContainer').after(pagContainer);
+        }
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+        for (let i = 0; i < this.totalPages; i++) {
+            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadClientes();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadClientes();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadClientes();
+                    }
+                }
+            };
+        });
     }
 
     filterClientes() {
