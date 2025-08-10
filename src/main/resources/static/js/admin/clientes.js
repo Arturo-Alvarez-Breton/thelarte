@@ -242,7 +242,6 @@ class ClientesManager {
 
     async handleSubmitCliente(e) {
         e.preventDefault();
-        console.log('Submit form triggered');
         
         const formData = new FormData(e.target);
         const clienteData = {
@@ -254,17 +253,19 @@ class ClientesManager {
             direccion: formData.get('direccion')
         };
 
-        console.log('Cliente data:', clienteData);
-
         try {
             if (this.currentCliente) {
                 console.log('Updating client:', this.currentCliente.cedula);
                 await this.transaccionService.updateCliente(this.currentCliente.cedula, clienteData);
                 window.showToast('Cliente actualizado exitosamente.', 'success');
             } else {
-                console.log('Creating new client');
+                // Check for duplicate cedula before creating
+                const cedulaExists = this.clientes.some(c => c.cedula === clienteData.cedula);
+                if (cedulaExists) {
+                    window.alert('Ya existe un cliente con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
+                    return;
+                }
                 await this.transaccionService.createCliente(clienteData);
-                window.showToast('Cliente creado exitosamente.', 'success');
             }
             
             this.cerrarModalCliente();

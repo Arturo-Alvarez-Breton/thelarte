@@ -217,10 +217,14 @@ class EmpleadosManager {
         try {
             if (this.currentEmpleado) {
                 await this.empleadoService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
-                window.showToast('Empleado actualizado exitosamente.', 'success');
             } else {
+                // Validación: no permitir empleados con cédula duplicada
+                const cedulaExists = th is.empleados.some(e => e.cedula === empleadoData.cedula);
+                if (cedulaExists) {
+                    window.alert('Ya existe un Empleado con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
+                    return;
+                }
                 await this.empleadoService.createEmpleado(empleadoData);
-                window.showToast('Empleado creado exitosamente.', 'success');
             }
             this.cerrarModalEmpleado();
             await this.loadEmpleados();
