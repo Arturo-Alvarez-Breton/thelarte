@@ -219,7 +219,7 @@ class EmpleadosManager {
                 await this.empleadoService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
             } else {
                 // Validación: no permitir empleados con cédula duplicada
-                const cedulaExists = th is.empleados.some(e => e.cedula === empleadoData.cedula);
+                const cedulaExists = this.empleados.some(e => e.cedula === empleadoData.cedula);
                 if (cedulaExists) {
                     window.alert('Ya existe un Empleado con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
                     return;
