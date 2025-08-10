@@ -130,6 +130,9 @@ class EmpleadosManager {
         document.getElementById('btnEmpleadoIcon').className = 'fas fa-plus mr-2';
         document.getElementById('btnEmpleadoText').textContent = 'Crear Empleado';
         document.getElementById('empleadoCedula').disabled = false;
+        // Mostrar campo de contraseña
+        document.getElementById('empleadoPasswordContainer').classList.remove('hidden');
+        document.getElementById('empleadoPassword').value = '';
         document.getElementById('modalEmpleado').classList.remove('hidden');
     }
 
@@ -191,6 +194,9 @@ class EmpleadosManager {
         document.getElementById('btnEmpleadoIcon').className = 'fas fa-save mr-2';
         document.getElementById('btnEmpleadoText').textContent = 'Actualizar Empleado';
         document.getElementById('empleadoCedula').disabled = true;
+        // Ocultar campo de contraseña
+        document.getElementById('empleadoPasswordContainer').classList.add('hidden');
+        document.getElementById('empleadoPassword').value = '';
         document.getElementById('modalEmpleado').classList.remove('hidden');
     }
 
@@ -209,9 +215,33 @@ class EmpleadosManager {
             comision: formData.get('comision') !== '' ? parseFloat(formData.get('comision')) : null,
             fechaContratacion: formData.get('fechaContratacion')
         };
+        const password = formData.get('password');
 
         if (typeof validateFormEmpleado === "function" && !validateFormEmpleado(empleadoData)) {
             return;
+        }
+
+        // Validación de contraseña solo al crear
+        if (!this.currentEmpleado) {
+            if (!password || password.length < 8) {
+                const errorEl = document.getElementById('empleadoPasswordError');
+                errorEl.textContent = 'La contraseña es obligatoria y debe tener al menos 8 caracteres';
+                errorEl.classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('empleadoPasswordError').classList.add('hidden');
+            }
+        }
+
+        // Mapeo de rol empleado → userRole para crear usuario
+        function mapEmpleadoRolToUserRole(rol) {
+            switch (rol) {
+                case "ADMIN": return "GERENTE";
+                case "USER": return "TI";
+                case "COMERCIAL": return "VENDEDOR";
+                case "CAJERO": return "CONTABILIDAD";
+                default: return "VENDEDOR";
+            }
         }
 
         try {
@@ -224,7 +254,25 @@ class EmpleadosManager {
                     window.alert('Ya existe un Empleado con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
                     return;
                 }
+                // Crear empleado
                 await this.empleadoService.createEmpleado(empleadoData);
+                // Crear usuario asociado (username = nombre+apellido sin espacios y minúsculas, rol mapeado, password)
+                const usuarioNombre = (empleadoData.nombre + empleadoData.apellido).replace(/\s+/g, '').toLowerCase();
+                const usuarioData = {
+                    username: usuarioNombre,
+                    password: password,
+                    roles: [mapEmpleadoRolToUserRole(empleadoData.rol)]
+                };
+                // Intentar crear usuario
+                try {
+                    await fetch('/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(usuarioData)
+                    });
+                } catch (err) {
+                    window.alert('Empleado creado, pero hubo un problema creando el usuario. Puedes crearlo manualmente.');
+                }
             }
             this.cerrarModalEmpleado();
             await this.loadEmpleados();
