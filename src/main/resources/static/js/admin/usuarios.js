@@ -6,6 +6,10 @@ class UsuariosManager {
         this.usuarios = [];
         this.filteredUsuarios = [];
         this.currentUsuario = null;
+        this.currentPage = 0;
+        this.usuariosPerPage = 12;
+        this.totalPages = 1;
+        this.totalUsuarios = 0;
         this.init();
     }
 
@@ -39,21 +43,29 @@ class UsuariosManager {
         try {
             const allUsuarios = await this.usuarioService.getUsuarios();
             const searchValue = (document.getElementById('usuarioSearchInput')?.value || '').trim().toLowerCase();
+            let filtered = allUsuarios;
             if (searchValue) {
-                this.filteredUsuarios = allUsuarios.filter(u =>
+                filtered = allUsuarios.filter(u =>
                     (u.username && u.username.toLowerCase().includes(searchValue)) ||
                     (Array.isArray(u.roles) && u.roles.join(', ').toLowerCase().includes(searchValue)) ||
                     (u.active !== undefined && (u.active ? 'sí' : 'no').includes(searchValue))
                 );
-            } else {
-                this.filteredUsuarios = allUsuarios;
             }
+            this.totalUsuarios = filtered.length;
+            this.totalPages = Math.ceil(this.totalUsuarios / this.usuariosPerPage) || 1;
+            const start = this.currentPage * this.usuariosPerPage;
+            const end = start + this.usuariosPerPage;
+            this.filteredUsuarios = filtered.slice(start, end);
             this.usuarios = allUsuarios;
             this.renderUsuarios();
+            this.renderPagination();
         } catch (error) {
             this.usuarios = [];
             this.filteredUsuarios = [];
+            this.totalUsuarios = 0;
+            this.totalPages = 1;
             this.renderUsuarios();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -107,7 +119,48 @@ class UsuariosManager {
         `).join('');
     }
 
+    renderPagination() {
+        let pagContainer = document.getElementById('usuariosPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'usuariosPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('usuariosListContainer').after(pagContainer);
+        }
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+        for (let i = 0; i < this.totalPages; i++) {
+            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadUsuarios();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadUsuarios();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadUsuarios();
+                    }
+                }
+            };
+        });
+    }
+
     filterUsuarios() {
+        this.currentPage = 0;
         this.loadUsuarios();
     }
 
