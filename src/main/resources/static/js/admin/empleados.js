@@ -6,8 +6,10 @@ class EmpleadosManager {
         this.empleados = [];
         this.filteredEmpleados = [];
         this.currentPage = 0;
-        this.empleadosPerPage = 10;
-        this.currentEmpleado = null; // Asegúrate de esto
+        this.empleadosPerPage = 15;
+        this.totalPages = 1;
+        this.totalEmpleados = 0;
+        this.currentEmpleado = null;
         this.init();
     }
 
@@ -43,24 +45,32 @@ class EmpleadosManager {
         try {
             const allEmpleados = await this.empleadoService.getEmpleados();
             const searchValue = (document.getElementById('empleadoSearchInput')?.value || '').trim().toLowerCase();
+            let filtered = allEmpleados;
             if (searchValue) {
-                this.filteredEmpleados = allEmpleados.filter(emp =>
+                filtered = allEmpleados.filter(emp =>
                     (emp.nombre && emp.nombre.toLowerCase().includes(searchValue)) ||
                     (emp.apellido && emp.apellido.toLowerCase().includes(searchValue)) ||
                     (emp.cedula && emp.cedula.toLowerCase().includes(searchValue)) ||
                     (emp.rol && emp.rol.toLowerCase().includes(searchValue)) ||
                     (emp.email && emp.email.toLowerCase().includes(searchValue))
                 );
-            } else {
-                this.filteredEmpleados = allEmpleados;
             }
+            this.totalEmpleados = filtered.length;
+            this.totalPages = Math.ceil(this.totalEmpleados / this.empleadosPerPage) || 1;
+            const start = this.currentPage * this.empleadosPerPage;
+            const end = start + this.empleadosPerPage;
+            this.filteredEmpleados = filtered.slice(start, end);
             this.empleados = allEmpleados;
             this.renderEmpleados();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading empleados:', error);
             this.empleados = [];
             this.filteredEmpleados = [];
+            this.totalEmpleados = 0;
+            this.totalPages = 1;
             this.renderEmpleados();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -119,7 +129,48 @@ class EmpleadosManager {
         `).join('');
     }
 
+    renderPagination() {
+        let pagContainer = document.getElementById('empleadosPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'empleadosPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('empleadosListContainer').after(pagContainer);
+        }
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+        for (let i = 0; i < this.totalPages; i++) {
+            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadEmpleados();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadEmpleados();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadEmpleados();
+                    }
+                }
+            };
+        });
+    }
+
     filterEmpleados() {
+        this.currentPage = 0;
         this.loadEmpleados();
     }
 
