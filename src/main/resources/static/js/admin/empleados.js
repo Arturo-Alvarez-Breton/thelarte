@@ -312,7 +312,8 @@ class EmpleadosManager {
                 const usuarioData = {
                     username: usuarioNombre,
                     password: password,
-                    roles: [mapEmpleadoRolToUserRole(empleadoData.rol)]
+                    roles: [mapEmpleadoRolToUserRole(empleadoData.rol)],
+                    empleadoCedula: empleadoData.cedula // <-- Enviar la cédula del empleado
                 };
                 // Intentar crear usuario
                 try {

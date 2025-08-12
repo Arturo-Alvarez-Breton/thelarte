@@ -103,7 +103,6 @@ class UsuariosManager {
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2"><i class='fa-regular fa-user text-brand-brown'></i> ${u.username}</h3>
                 <p class="text-gray-600">Rol: ${Array.isArray(u.roles) ? u.roles.join(', ') : (u.roles || 'N/A')}</p>
-                <p class="text-gray-600">Activo: ${u.active ? '<span class=\"text-green-600 font-semibold\">Sí</span>' : '<span class=\"text-red-600\">No</span>'}</p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button data-username="${u.username}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
                         <i class="fas fa-eye"></i> Detalles
@@ -181,6 +180,23 @@ class UsuariosManager {
             window.showToast('Usuario no encontrado.', 'error');
             return;
         }
+        // Mostrar datos del usuario y del empleado relacionado (si existe)
+        let empleadoHtml = '';
+        if (usuario.empleado) {
+            const emp = usuario.empleado;
+            empleadoHtml = `
+                <div class="mt-6 border-t pt-4">
+                    <h4 class="text-md font-semibold text-brand-brown mb-2 flex items-center gap-2"><i class="fas fa-briefcase"></i> Empleado Relacionado</h4>
+                    <div class="space-y-1 text-sm">
+                        <div><span class="font-medium">Cédula:</span> ${emp.cedula || ''}</div>
+                        <div><span class="font-medium">Nombre:</span> ${emp.nombre || ''} ${emp.apellido || ''}</div>
+                        <div><span class="font-medium">Rol:</span> ${emp.rol || ''}</div>
+                        <div><span class="font-medium">Teléfono:</span> ${emp.telefono || ''}</div>
+                        <div><span class="font-medium">Email:</span> ${emp.email || ''}</div>
+                    </div>
+                </div>
+            `;
+        }
         document.getElementById('detallesUsuario').innerHTML = `
             <div class="space-y-3">
                 <div>
@@ -191,10 +207,7 @@ class UsuariosManager {
                     <label class="block text-sm font-medium text-gray-700">Rol</label>
                     <p class="mt-1 text-sm text-gray-900">${Array.isArray(usuario.roles) ? usuario.roles.join(', ') : (usuario.roles || 'N/A')}</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Activo</label>
-                    <p class="mt-1 text-sm text-gray-900">${usuario.active ? '<span class="text-green-600 font-semibold">Sí</span>' : '<span class="text-red-600">No</span>'}</p>
-                </div>
+                ${empleadoHtml}
                 <div class="flex justify-end mt-6">
                     <button onclick="usuariosManager.editUsuario('${usuario.username}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-edit mr-2"></i>

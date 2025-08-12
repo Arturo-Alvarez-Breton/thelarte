@@ -1,6 +1,5 @@
 package com.thelarte.auth.entity;
 
-import com.thelarte.user.model.Empleado;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -35,9 +34,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private boolean active;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "empleado_cedula", referencedColumnName = "cedula")
-    private Empleado empleado;
+    @Column(name = "empleado_cedula")
+    private String empleadoCedula;
 
     public User() {}
 
@@ -92,12 +90,12 @@ public class User implements UserDetails {
         this.active = active;
     }
 
-    public Empleado getEmpleado() {
-        return empleado;
+    public String getEmpleadoCedula() {
+        return empleadoCedula;
     }
 
-    public void setEmpleado(Empleado empleado) {
-        this.empleado = empleado;
+    public void setEmpleadoCedula(String empleadoCedula) {
+        this.empleadoCedula = empleadoCedula;
     }
 
     // UserDetails

@@ -1,7 +1,7 @@
 package com.thelarte.auth.controller;
 
 import com.thelarte.auth.dto.UserEditDTO;
-import com.thelarte.auth.dto.UserResponseDTO;
+import com.thelarte.auth.dto.UserWithEmpleadoDTO;
 import com.thelarte.auth.entity.User;
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.service.UserService;
@@ -21,26 +21,24 @@ public class UsuarioController {
         this.userService = userService;
     }
 
-    // Listar usuarios
+    // Listar usuarios con información del empleado
     @GetMapping
-    public ResponseEntity<List<UserResponseDTO>> listarUsuarios() {
-        List<UserResponseDTO> result = userService.findAll().stream()
-                .map(this::toDto)
-                .toList();
+    public ResponseEntity<List<UserWithEmpleadoDTO>> listarUsuarios() {
+        List<UserWithEmpleadoDTO> result = userService.findAllWithEmpleados();
         return ResponseEntity.ok(result);
     }
 
-    // Obtener usuario por username
+    // Obtener usuario por username con información del empleado
     @GetMapping("/{username}")
-    public ResponseEntity<UserResponseDTO> getUsuario(@PathVariable String username) {
-        return userService.findByUsername(username)
-                .map(user -> ResponseEntity.ok(toDto(user)))
+    public ResponseEntity<UserWithEmpleadoDTO> getUsuario(@PathVariable String username) {
+        return userService.findByUsernameWithEmpleado(username)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Editar usuario
     @PutMapping("/{username}")
-    public ResponseEntity<UserResponseDTO> editarUsuario(
+    public ResponseEntity<UserWithEmpleadoDTO> editarUsuario(
             @PathVariable String username,
             @RequestBody UserEditDTO editDto) {
 
@@ -55,7 +53,8 @@ public class UsuarioController {
         );
 
         return updated
-                .map(user -> ResponseEntity.ok(toDto(user)))
+                .map(user -> userService.findByUsernameWithEmpleado(user.getUsername()).orElse(null))
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -68,13 +67,5 @@ public class UsuarioController {
         } else {
             return ResponseEntity.notFound().build();
         }
-    }
-
-    // Mapper
-    private UserResponseDTO toDto(User user) {
-        List<String> roles = user.getRoles() != null
-                ? user.getRoles().stream().map(Enum::name).toList()
-                : List.of();
-        return new UserResponseDTO(user.getId(), user.getUsername(), roles, user.isActive());
     }
 }
