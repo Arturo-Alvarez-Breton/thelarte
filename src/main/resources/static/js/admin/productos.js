@@ -1,4 +1,5 @@
 import { ProductoService } from '../services/productoService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class ProductosManager {
     constructor() {
@@ -6,6 +7,61 @@ class ProductosManager {
         this.productos = [];
         this.filteredProductos = [];
         this.currentProducto = null;
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#productosListContainer', {
+            columns: [
+                { header: 'Código', field: 'codigo' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Tipo', field: 'tipo' },
+                {
+                    header: 'Precio Venta',
+                    field: 'precioVenta',
+                    formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
+                },
+                {
+                    header: 'Precio Compra',
+                    field: 'precioCompra',
+                    formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
+                },
+                {
+                    header: 'Estado',
+                    field: 'estado',
+                    formatter: (value) => {
+                        const estados = {
+                            'DISPONIBLE': '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Disponible</span>',
+                            'AGOTADO': '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Agotado</span>',
+                            'DESCONTINUADO': '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Descontinuado</span>'
+                        };
+                        return estados[value] || 'N/A';
+                    }
+                }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'productosManager.verProducto',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'productosManager.editProducto',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'productosManager.deleteProducto',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['nombre', 'tipo', 'descripcion', 'codigo'],
+            idField: 'id',
+            emptyIcon: 'fas fa-box-open'
+        });
+
         this.init();
     }
 
@@ -54,10 +110,15 @@ class ProductosManager {
             }
             this.filteredProductos = filtered;
             this.productos = allProductos;
+
+            // Update table view with all data
+            this.tableViewManager.setData(allProductos);
+
             this.renderProductos();
         } catch (error) {
             this.productos = [];
             this.filteredProductos = [];
+            this.tableViewManager.setData([]);
             this.renderProductos();
         } finally {
             this.hideLoading();
@@ -133,6 +194,15 @@ class ProductosManager {
     }
 
     filterProductos() {
+        const searchTerm = document.getElementById('productoSearchInput')?.value || '';
+        const tipoFilter = document.getElementById('productoTipoFilter')?.value || '';
+
+        const additionalFilters = {};
+        if (tipoFilter) {
+            additionalFilters.tipo = tipoFilter;
+        }
+
+        this.tableViewManager.filterData(searchTerm, additionalFilters);
         this.loadProductos();
     }
 
@@ -323,6 +393,10 @@ class ProductosManager {
 }
 const productosManager = new ProductosManager();
 window.productosManager = productosManager;
+
+// Make table view manager available globally
+window.tableViewManager = productosManager.tableViewManager;
+
 window.cerrarModalProducto = () => productosManager.cerrarModalProducto();
 window.cerrarModalVerProducto = () => productosManager.cerrarModalVerProducto();
 window.editarProductoDesdeDetalle = () => productosManager.editarProductoDesdeDetalle();

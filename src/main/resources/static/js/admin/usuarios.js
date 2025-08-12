@@ -1,4 +1,5 @@
 import { UsuarioService } from '../services/usuarioService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class UsuariosManager {
     constructor() {
@@ -10,6 +11,59 @@ class UsuariosManager {
         this.usuariosPerPage = 12;
         this.totalPages = 1;
         this.totalUsuarios = 0;
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#usuariosListContainer', {
+            columns: [
+                { header: 'Usuario', field: 'username' },
+                {
+                    header: 'Roles',
+                    field: 'roles',
+                    formatter: (value) => Array.isArray(value) ? value.join(', ') : (value || 'N/A')
+                },
+                {
+                    header: 'Estado',
+                    field: 'active',
+                    formatter: (value) => value ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
+                },
+                {
+                    header: 'Empleado Relacionado',
+                    field: 'empleado.nombre',
+                    formatter: (value, item) => {
+                        if (item.empleado) {
+                            return `${item.empleado.nombre || ''} ${item.empleado.apellido || ''}`.trim() || 'N/A';
+                        }
+                        return 'N/A';
+                    }
+                }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'usuariosManager.verUsuario',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'usuariosManager.editUsuario',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'usuariosManager.deleteUsuario',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['username', 'roles'],
+            idField: 'username',
+            emptyIcon: 'fa-regular fa-user'
+        });
+
         this.init();
     }
 
@@ -57,6 +111,10 @@ class UsuariosManager {
             const end = start + this.usuariosPerPage;
             this.filteredUsuarios = filtered.slice(start, end);
             this.usuarios = allUsuarios;
+
+            // Update table view with all data
+            this.tableViewManager.setData(allUsuarios);
+
             this.renderUsuarios();
             this.renderPagination();
         } catch (error) {
@@ -64,6 +122,7 @@ class UsuariosManager {
             this.filteredUsuarios = [];
             this.totalUsuarios = 0;
             this.totalPages = 1;
+            this.tableViewManager.setData([]);
             this.renderUsuarios();
             this.renderPagination();
         } finally {
@@ -159,6 +218,8 @@ class UsuariosManager {
     }
 
     filterUsuarios() {
+        const searchTerm = document.getElementById('usuarioSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
         this.currentPage = 0;
         this.loadUsuarios();
     }
@@ -326,6 +387,10 @@ class UsuariosManager {
 }
 const usuariosManager = new UsuariosManager();
 window.usuariosManager = usuariosManager;
+
+// Make table view manager available globally
+window.tableViewManager = usuariosManager.tableViewManager;
+
 window.cerrarModalUsuario = () => usuariosManager.cerrarModalUsuario();
 window.cerrarModalVerUsuario = () => usuariosManager.cerrarModalVerUsuario();
 window.editarUsuarioDesdeDetalle = () => usuariosManager.editarUsuarioDesdeDetalle();

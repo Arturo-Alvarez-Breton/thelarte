@@ -1,6 +1,7 @@
 // src/main/resources/static/js/contabilidad/clientes.js
 
 import { TransaccionService } from '../services/transaccionService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class ClientesManager {
     constructor() {
@@ -11,6 +12,48 @@ class ClientesManager {
         this.clientesPerPage = 15; // Cambiado a 15 por página
         this.totalPages = 1;
         this.totalClientes = 0;
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#clientesListContainer', {
+            columns: [
+                { header: 'Cédula', field: 'cedula' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Apellido', field: 'apellido' },
+                { header: 'Teléfono', field: 'telefono' },
+                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
+                { header: 'Provincia', field: 'direccion', formatter: (value) => value || 'N/A' }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'clientesManager.verCliente',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-exchange-alt',
+                    handler: 'clientesManager.verTransaccionesCliente',
+                    className: 'text-brand-accent hover:text-brand-brown',
+                    title: 'Ver transacciones'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'clientesManager.editCliente',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'clientesManager.eliminarCliente',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['cedula', 'nombre', 'apellido', 'telefono', 'email'],
+            idField: 'cedula',
+            emptyIcon: 'fas fa-users'
+        });
+
         this.init();
     }
 
@@ -53,6 +96,10 @@ class ClientesManager {
             const end = start + this.clientesPerPage;
             this.clientes = allClientes.slice(start, end);
             this.filteredClientes = [...this.clientes];
+
+            // Update table view with all data
+            this.tableViewManager.setData(allClientes);
+
             this.renderClientes();
             this.renderPagination();
         } catch (error) {
@@ -61,6 +108,7 @@ class ClientesManager {
             this.filteredClientes = [];
             this.totalClientes = 0;
             this.totalPages = 1;
+            this.tableViewManager.setData([]);
             this.renderClientes();
             this.renderPagination();
         } finally {
@@ -180,6 +228,8 @@ class ClientesManager {
     }
 
     filterClientes() {
+        const searchTerm = document.getElementById('clientSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
         this.currentPage = 0;
         this.loadClientes();
     }
@@ -357,7 +407,7 @@ class ClientesManager {
             }
 
             // Redirect to transactions page with client filter
-            const transaccionesUrl = new URL('/pages/contabilidad/transacciones.html', window.location.origin);
+            const transaccionesUrl = new URL('/pages/admin/transacciones.html', window.location.origin);
             transaccionesUrl.searchParams.set('cliente', cedula);
             transaccionesUrl.searchParams.set('clienteNombre', `${cliente.nombre} ${cliente.apellido}`);
             window.location.href = transaccionesUrl.toString();
@@ -412,6 +462,9 @@ class ClientesManager {
 
 const clientesManager = new ClientesManager();
 window.clientesManager = clientesManager;
+
+// Make table view manager available globally
+window.tableViewManager = clientesManager.tableViewManager;
 
 // Funciones globales para los event handlers de los modales
 window.cerrarModalCliente = () => clientesManager.cerrarModalCliente();

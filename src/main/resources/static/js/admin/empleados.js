@@ -1,4 +1,5 @@
 import { EmpleadoService } from '../services/empleadoService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class EmpleadosManager {
     constructor() {
@@ -10,6 +11,51 @@ class EmpleadosManager {
         this.totalPages = 1;
         this.totalEmpleados = 0;
         this.currentEmpleado = null;
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#empleadosListContainer', {
+            columns: [
+                { header: 'Cédula', field: 'cedula' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Apellido', field: 'apellido' },
+                { header: 'Teléfono', field: 'telefono' },
+                { header: 'Rol', field: 'rol' },
+                {
+                    header: 'Salario',
+                    field: 'salario',
+                    formatter: (value) => value != null ? `$${Number(value).toLocaleString('es-DO')}` : 'N/A'
+                },
+                {
+                    header: 'Comisión',
+                    field: 'comision',
+                    formatter: (value) => value != null ? `${value}%` : 'N/A'
+                }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'empleadosManager.verEmpleado',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'empleadosManager.editEmpleado',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'empleadosManager.deleteEmpleado',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['cedula', 'nombre', 'apellido', 'telefono', 'rol', 'email'],
+            idField: 'cedula',
+            emptyIcon: 'fas fa-briefcase'
+        });
+
         this.init();
     }
 
@@ -61,6 +107,10 @@ class EmpleadosManager {
             const end = start + this.empleadosPerPage;
             this.filteredEmpleados = filtered.slice(start, end);
             this.empleados = allEmpleados;
+
+            // Update table view with all data
+            this.tableViewManager.setData(allEmpleados);
+
             this.renderEmpleados();
             this.renderPagination();
         } catch (error) {
@@ -69,6 +119,7 @@ class EmpleadosManager {
             this.filteredEmpleados = [];
             this.totalEmpleados = 0;
             this.totalPages = 1;
+            this.tableViewManager.setData([]);
             this.renderEmpleados();
             this.renderPagination();
         } finally {
@@ -170,6 +221,8 @@ class EmpleadosManager {
     }
 
     filterEmpleados() {
+        const searchTerm = document.getElementById('empleadoSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
         this.currentPage = 0;
         this.loadEmpleados();
     }
@@ -423,6 +476,10 @@ class EmpleadosManager {
 
 const empleadosManager = new EmpleadosManager();
 window.empleadosManager = empleadosManager;
+
+// Make table view manager available globally
+window.tableViewManager = empleadosManager.tableViewManager;
+
 window.cerrarModalEmpleado = () => empleadosManager.cerrarModalEmpleado();
 window.cerrarModalVerEmpleado = () => empleadosManager.cerrarModalVerEmpleado();
 

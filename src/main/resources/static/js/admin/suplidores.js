@@ -1,6 +1,7 @@
 // src/main/resources/static/js/admin/suplidores.js
 
 import { TransaccionService } from '../services/transaccionService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class SuplidoresManager {
     constructor() {
@@ -17,6 +18,55 @@ class SuplidoresManager {
 
         // Tel input instances
         this.telInputs = new Map(); // Map<HTMLInputElement, intlTelInputInstance>
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#suplidoresListContainer', {
+            columns: [
+                { header: 'Nombre', field: 'nombre' },
+                {
+                    header: 'Ubicación',
+                    field: 'ciudad',
+                    formatter: (value, item) => {
+                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
+                    }
+                },
+                { header: 'RNC', field: 'rNC', formatter: (value) => value || 'N/A' },
+                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
+                {
+                    header: 'Teléfono',
+                    field: 'telefonos',
+                    formatter: (value) => {
+                        if (value && Array.isArray(value) && value.length > 0) {
+                            return value[0];
+                        }
+                        return 'N/A';
+                    }
+                }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'suplidoresManager.verSuplidor',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'suplidoresManager.editSuplidor',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'suplidoresManager.deleteSuplidor',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['nombre', 'ciudad', 'pais', 'email', 'rNC'],
+            idField: 'id',
+            emptyIcon: 'fas fa-truck'
+        });
 
         this.init();
     }
@@ -234,6 +284,10 @@ class SuplidoresManager {
             const searchTerm = document.getElementById('suplidorSearchInput')?.value || null;
             this.suplidores = await this.transaccionService.getSuplidores(searchTerm);
             this.filteredSuplidores = [...this.suplidores];
+
+            // Update table view with all data
+            this.tableViewManager.setData(this.suplidores);
+
             this.renderSuplidores();
         } catch (error) {
             console.error('Error loading suppliers:', error);
@@ -305,6 +359,8 @@ class SuplidoresManager {
     }
 
     filterSuplidores() {
+        const searchTerm = document.getElementById('suplidorSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
         this.currentPage = 0;
         this.loadSuplidores();
     }
@@ -649,6 +705,9 @@ class SuplidoresManager {
 
 const suplidoresManager = new SuplidoresManager();
 window.suplidoresManager = suplidoresManager;
+
+// Make table view manager available globally
+window.tableViewManager = suplidoresManager.tableViewManager;
 
 // Handlers globales
 window.cerrarModalSuplidor = () => suplidoresManager.cerrarModalSuplidor();
