@@ -1,0 +1,530 @@
+import { EmpleadoService } from '../services/empleadoService.js';
+import { TableViewManager } from '../components/tableView.js';
+
+class EmpleadosManager {
+    constructor() {
+        this.empleadoService = new EmpleadoService();
+        this.empleados = [];
+        this.filteredEmpleados = [];
+        this.currentPage = 0;
+        this.empleadosPerPage = 15;
+        this.totalPages = 1;
+        this.totalEmpleados = 0;
+        this.currentEmpleado = null;
+
+        // Initialize table view manager
+        this.tableViewManager = new TableViewManager('#empleadosListContainer', {
+            columns: [
+                { header: 'Cédula', field: 'cedula' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Apellido', field: 'apellido' },
+                { header: 'Teléfono', field: 'telefono' },
+                { header: 'Rol', field: 'rol' },
+                {
+                    header: 'Salario',
+                    field: 'salario',
+                    formatter: (value) => value != null ? `$${Number(value).toLocaleString('es-DO')}` : 'N/A'
+                },
+                {
+                    header: 'Comisión',
+                    field: 'comision',
+                    formatter: (value) => value != null ? `${value}%` : 'N/A'
+                }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'empleadosManager.verEmpleado',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'empleadosManager.editEmpleado',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'empleadosManager.deleteEmpleado',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['cedula', 'nombre', 'apellido', 'telefono', 'rol', 'email'],
+            idField: 'cedula',
+            emptyIcon: 'fas fa-briefcase'
+        });
+
+        this.init();
+    }
+
+    async init() {
+        this.setupEventListeners();
+        await this.loadEmpleados();
+    }
+
+    setupEventListeners() {
+        document.getElementById('nuevoEmpleadoBtn')?.addEventListener('click', () => this.newEmpleado());
+        document.getElementById('empleadoSearchInput')?.addEventListener('input', () => this.filterEmpleados());
+        document.getElementById('formEmpleado')?.addEventListener('submit', (e) => this.handleSubmitEmpleado(e));
+        document.getElementById('empleadosListContainer')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.classList.contains('ver-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.verEmpleado(cedula);
+            } else if (btn.classList.contains('edit-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.editEmpleado(cedula);
+            } else if (btn.classList.contains('delete-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.deleteEmpleado(cedula);
+            }
+        });
+        // Arreglo: Añade el event listener al botón del modal de detalles aquí (mejor que usar onclick)
+        document.getElementById('btnEditarDesdeDetalle')?.addEventListener('click', () => this.editarEmpleadoDesdeDetalle());
+    }
+
+    async loadEmpleados() {
+        this.showLoading();
+        try {
+            const allEmpleados = await this.empleadoService.getEmpleados();
+            const searchValue = (document.getElementById('empleadoSearchInput')?.value || '').trim().toLowerCase();
+            let filtered = allEmpleados;
+            if (searchValue) {
+                filtered = allEmpleados.filter(emp =>
+                    (emp.nombre && emp.nombre.toLowerCase().includes(searchValue)) ||
+                    (emp.apellido && emp.apellido.toLowerCase().includes(searchValue)) ||
+                    (emp.cedula && emp.cedula.toLowerCase().includes(searchValue)) ||
+                    (emp.rol && emp.rol.toLowerCase().includes(searchValue)) ||
+                    (emp.email && emp.email.toLowerCase().includes(searchValue))
+                );
+            }
+            this.totalEmpleados = filtered.length;
+            this.totalPages = Math.ceil(this.totalEmpleados / this.empleadosPerPage) || 1;
+            const start = this.currentPage * this.empleadosPerPage;
+            const end = start + this.empleadosPerPage;
+            this.filteredEmpleados = filtered.slice(start, end);
+            this.empleados = allEmpleados;
+
+            // Update table view with all data
+            this.tableViewManager.setData(allEmpleados);
+
+            this.renderEmpleados();
+            this.renderPagination();
+        } catch (error) {
+            console.error('Error loading empleados:', error);
+            this.empleados = [];
+            this.filteredEmpleados = [];
+            this.totalEmpleados = 0;
+            this.totalPages = 1;
+            this.tableViewManager.setData([]);
+            this.renderEmpleados();
+            this.renderPagination();
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    renderEmpleados() {
+        const container = document.getElementById('empleadosListContainer');
+        if (!container) return;
+        if (this.filteredEmpleados.length === 0) {
+            const searchTerm = document.getElementById('empleadoSearchInput')?.value;
+            const emptyMessage = searchTerm ?
+                `No se encontraron empleados que coincidan con "${searchTerm}".` :
+                'No hay empleados registrados.';
+
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-briefcase text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin empleados</h3>
+                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    ${!searchTerm ? `
+                        <button onclick="empleadosManager.newEmpleado()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                            <i class="fas fa-plus mr-2"></i>Agregar Primer Empleado
+                        </button>
+                    ` : `
+                        <button onclick="document.getElementById('empleadoSearchInput').value = ''; empleadosManager.filterEmpleados();" class="text-brand-brown hover:text-brand-light-brown">
+                            <i class="fas fa-times mr-2"></i>Limpiar búsqueda
+                        </button>
+                    `}
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.filteredEmpleados.map(emp => `
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="text-lg font-semibold">${emp.nombre} ${emp.apellido}</h3>
+                <p class="text-gray-600">Cédula: ${emp.cedula}</p>
+                <p class="text-gray-600">Teléfono: ${emp.telefono || 'N/A'}</p>
+                <p class="text-gray-600">Rol: ${emp.rol || 'N/A'}</p>
+                <p class="text-gray-600">Salario: ${emp.salario != null ? '$' + emp.salario.toLocaleString() : 'N/A'}</p>
+                <p class="text-gray-600">Fecha de Contratación: ${emp.fechaContratacion || 'N/A'}</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button data-cedula="${emp.cedula}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <button data-cedula="${emp.cedula}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Editar empleado">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button data-cedula="${emp.cedula}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm" title="Eliminar empleado">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderPagination() {
+        let pagContainer = document.getElementById('empleadosPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'empleadosPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('empleadosListContainer').after(pagContainer);
+        }
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+        for (let i = 0; i < this.totalPages; i++) {
+            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadEmpleados();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadEmpleados();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadEmpleados();
+                    }
+                }
+            };
+        });
+    }
+
+    filterEmpleados() {
+        const searchTerm = document.getElementById('empleadoSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
+        this.currentPage = 0;
+        this.loadEmpleados();
+    }
+
+    newEmpleado() {
+        this.currentEmpleado = null;
+        this.clearForm();
+        document.getElementById('modalEmpleadoTitle').textContent = 'Nuevo Empleado';
+        document.getElementById('btnEmpleadoIcon').className = 'fas fa-plus mr-2';
+        document.getElementById('btnEmpleadoText').textContent = 'Crear Empleado';
+        document.getElementById('empleadoCedula').disabled = false;
+        // Mostrar campo de contraseña
+        document.getElementById('empleadoPasswordContainer').classList.remove('hidden');
+        document.getElementById('empleadoPassword').value = '';
+        document.getElementById('modalEmpleado').classList.remove('hidden');
+    }
+
+    verEmpleado(cedula) {
+        const empleado = this.empleados.find(e => e.cedula === cedula);
+        if (!empleado) {
+            window.showToast('Empleado no encontrado.', 'error');
+            return;
+        }
+        document.getElementById('detallesEmpleado').innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.nombre}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Apellido</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.apellido}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cédula</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.cedula}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.telefono || 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Rol</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.rol || 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Salario</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.salario != null ? '$' + empleado.salario.toLocaleString() : 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Comisión</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.comision != null ? empleado.comision + '%' : 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.fechaContratacion || 'N/A'}</p>
+                </div>
+            </div>
+        `;
+        this.currentEmpleado = empleado;
+        document.getElementById('modalVerEmpleado').classList.remove('hidden');
+    }
+
+    editEmpleado(cedula) {
+        const empleado = this.empleados.find(e => e.cedula === cedula);
+        if (!empleado) {
+            window.showToast('Empleado no encontrado.', 'error');
+            return;
+        }
+        this.currentEmpleado = empleado;
+        this.fillForm(this.currentEmpleado);
+        document.getElementById('modalEmpleadoTitle').textContent = 'Editar Empleado';
+        document.getElementById('btnEmpleadoIcon').className = 'fas fa-save mr-2';
+        document.getElementById('btnEmpleadoText').textContent = 'Actualizar Empleado';
+        document.getElementById('empleadoCedula').disabled = true;
+        // Ocultar campo de contraseña
+        document.getElementById('empleadoPasswordContainer').classList.add('hidden');
+        document.getElementById('empleadoPassword').value = '';
+        document.getElementById('modalEmpleado').classList.remove('hidden');
+    }
+
+    async handleSubmitEmpleado(e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const empleadoData = {
+            nombre: formData.get('nombre'),
+            apellido: formData.get('apellido'),
+            cedula: formData.get('cedula'),
+            telefono: formData.get('telefono'),
+            email: formData.get('email'),
+            rol: formData.get('rol'),
+            salario: formData.get('salario') ? parseFloat(formData.get('salario')) : null,
+            comision: formData.get('comision') !== '' ? parseFloat(formData.get('comision')) : null,
+            fechaContratacion: formData.get('fechaContratacion')
+        };
+        const password = formData.get('password');
+
+        if (typeof validateFormEmpleado === "function" && !validateFormEmpleado(empleadoData)) {
+            return;
+        }
+
+        // Validación de contraseña solo al crear
+        if (!this.currentEmpleado) {
+            if (!password || password.length < 8) {
+                const errorEl = document.getElementById('empleadoPasswordError');
+                errorEl.textContent = 'La contraseña es obligatoria y debe tener al menos 8 caracteres';
+                errorEl.classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('empleadoPasswordError').classList.add('hidden');
+            }
+        }
+
+        // Mapeo de rol empleado → userRole para crear usuario
+        function mapEmpleadoRolToUserRole(rol) {
+            switch (rol) {
+                case "ADMIN": return "GERENTE";
+                case "USER": return "TI";
+                case "COMERCIAL": return "VENDEDOR";
+                case "CAJERO": return "CONTABILIDAD";
+                default: return "VENDEDOR";
+            }
+        }
+
+        try {
+            if (this.currentEmpleado) {
+                await this.empleadoService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
+            } else {
+                // Validación: no permitir empleados con cédula duplicada
+                const cedulaExists = this.empleados.some(e => e.cedula === empleadoData.cedula);
+                if (cedulaExists) {
+                    window.alert('Ya existe un Empleado con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
+                    return;
+                }
+                // Crear empleado
+                await this.empleadoService.createEmpleado(empleadoData);
+                // Crear usuario asociado (username = nombre+apellido sin espacios y minúsculas, rol mapeado, password)
+                const usuarioNombre = (empleadoData.nombre + empleadoData.apellido).replace(/\s+/g, '').toLowerCase();
+                const usuarioData = {
+                    username: usuarioNombre,
+                    password: password,
+                    roles: [mapEmpleadoRolToUserRole(empleadoData.rol)],
+                    empleadoCedula: empleadoData.cedula // <-- Enviar la cédula del empleado
+                };
+                // Intentar crear usuario
+                try {
+                    await fetch('/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(usuarioData)
+                    });
+                } catch (err) {
+                    window.alert('Empleado creado, pero hubo un problema creando el usuario. Puedes crearlo manualmente.');
+                }
+            }
+            this.cerrarModalEmpleado();
+            await this.loadEmpleados();
+        } catch (error) {
+            console.error('Error saving empleado:', error);
+            const errorMessage = error.message || 'Error desconocido';
+            window.showToast(`Error al guardar el empleado: ${errorMessage}`, 'error');
+        }
+    }
+
+    clearForm() {
+        document.getElementById('formEmpleado').reset();
+        document.getElementById('empleadoComisionContainer').classList.add('hidden');
+    }
+
+    fillForm(empleado) {
+        document.getElementById('empleadoNombre').value = empleado.nombre || '';
+        document.getElementById('empleadoApellido').value = empleado.apellido || '';
+        document.getElementById('empleadoCedula').value = empleado.cedula || '';
+        document.getElementById('empleadoTelefono').value = empleado.telefono || '';
+        document.getElementById('empleadoEmail').value = empleado.email || '';
+        document.getElementById('empleadoRol').value = empleado.rol || '';
+        document.getElementById('empleadoSalario').value = empleado.salario || '';
+        document.getElementById('empleadoComision').value = empleado.comision != null ? empleado.comision : '';
+        document.getElementById('empleadoFechaContratacion').value = empleado.fechaContratacion || '';
+        if (empleado.rol === 'COMERCIAL') {
+            document.getElementById('empleadoComisionContainer').classList.remove('hidden');
+        } else {
+            document.getElementById('empleadoComisionContainer').classList.add('hidden');
+        }
+    }
+
+    cerrarModalEmpleado() {
+        document.getElementById('modalEmpleado').classList.add('hidden');
+        this.clearForm();
+        this.currentEmpleado = null;
+    }
+
+    cerrarModalVerEmpleado() {
+        document.getElementById('modalVerEmpleado').classList.add('hidden');
+        this.currentEmpleado = null;
+    }
+
+    editarEmpleadoDesdeDetalle() {
+        if (this.currentEmpleado) {
+            this.cerrarModalVerEmpleado();
+            setTimeout(() => {
+                this.editEmpleado(this.currentEmpleado.cedula);
+            }, 250); // Espera a que el modal de detalles se cierre antes de abrir el de edición
+        }
+    }
+
+    showLoading() {
+        const container = document.getElementById('empleadosListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-600 font-medium">Consultando información de empleados...</p>
+                    <p class="text-gray-500 text-sm mt-2">Un momento, por favor</p>
+                </div>
+            `;
+        }
+    }
+
+    hideLoading() {}
+    showError(message) {
+        const container = document.getElementById('empleadosListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button onclick="empleadosManager.loadEmpleados()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-refresh mr-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    async deleteEmpleado(cedula) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este empleado?')) return;
+        try {
+            await this.empleadoService.deleteEmpleado(cedula);
+            window.showToast('Empleado eliminado exitosamente.', 'success');
+            await this.loadEmpleados();
+        } catch (error) {
+            window.showToast('Error al eliminar el empleado.', 'error');
+        }
+    }
+}
+
+const empleadosManager = new EmpleadosManager();
+window.empleadosManager = empleadosManager;
+
+// Make table view manager available globally
+window.tableViewManager = empleadosManager.tableViewManager;
+
+window.cerrarModalEmpleado = () => empleadosManager.cerrarModalEmpleado();
+window.cerrarModalVerEmpleado = () => empleadosManager.cerrarModalVerEmpleado();
+
+// No es necesario window.editarEmpleadoDesdeDetalle ya que se usa addEventListener ahora
+
+// Formateo en tiempo real y comisión según rol
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('empleadoCedula')?.addEventListener('input', formatCedula);
+    document.getElementById('empleadoTelefono')?.addEventListener('input', formatTelefono);
+    document.getElementById('empleadoRol')?.addEventListener('change', function () {
+        const rol = this.value;
+        const comisionContainer = document.getElementById('empleadoComisionContainer');
+        if (rol === 'COMERCIAL') {
+            comisionContainer.classList.remove('hidden');
+        } else {
+            comisionContainer.classList.add('hidden');
+            document.getElementById('empleadoComision').value = '';
+            const errorEl = document.getElementById('empleadoComisionError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('hidden');
+            }
+        }
+    });
+});
+
+function formatCedula(e) {
+    const input = e.target;
+    let digits = input.value.replace(/\D/g, '').slice(0, 11);
+    let part1 = digits.slice(0, 3);
+    let part2 = digits.slice(3, 10);
+    let part3 = digits.slice(10, 11);
+    let formatted = part1;
+    if (part2) formatted += '-' + part2;
+    if (part3) formatted += '-' + part3;
+    input.value = formatted;
+}
+function formatTelefono(e) {
+    const input = e.target;
+    let digits = input.value.replace(/\D/g, '').slice(0, 10);
+    let part1 = digits.slice(0, 3);
+    let part2 = digits.slice(3, 6);
+    let part3 = digits.slice(6, 10);
+    let formatted = part1;
+    if (part2) formatted += '-' + part2;
+    if (part3) formatted += '-' + part3;
+    input.value = formatted;
+}
