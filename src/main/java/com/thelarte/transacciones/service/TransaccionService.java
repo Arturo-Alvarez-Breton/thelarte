@@ -515,23 +515,23 @@ public class TransaccionService {
                         producto.setDescripcion("Mueble nuevo agregado por compra");
                         producto.setItbis(18.0f);
                         producto.setPrecioCompra(linea.getPrecioUnitario());
-                        producto.setPrecioVenta(linea.getPrecioUnitario()); // Usar el precio del frontend
+                        producto.setPrecioVenta(linea.getPrecioUnitario());
                         producto.setFotoURL("");
-                        producto.setCantidadDisponible(linea.getCantidad());
+                        producto.setCantidadDisponible(0); // Al comprar, entra a almacen, no disponible
                         producto.setCantidadReservada(0);
                         producto.setCantidadDanada(0);
                         producto.setCantidadDevuelta(0);
-                        producto.setCantidadAlmacen(0);
+                        producto.setCantidadAlmacen(linea.getCantidad()); // Aquí entra el stock de la compra
                         producto = productoRepository.save(producto);
 
                         linea.setProductoId(producto.getId());
                         linea.setPrecioUnitario(producto.getPrecioVenta());
                     } else {
-                        // Producto existente: suma cantidad a disponible
+                        // Producto existente: suma cantidad a almacen
                         producto = productoRepository.findById(linea.getProductoId())
                                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
-                        producto.setCantidadDisponible(
-                                (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + linea.getCantidad()
+                        producto.setCantidadAlmacen(
+                                (producto.getCantidadAlmacen() != null ? producto.getCantidadAlmacen() : 0) + linea.getCantidad()
                         );
                         productoRepository.save(producto);
                     }
@@ -540,13 +540,37 @@ public class TransaccionService {
                             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
                     int disponible = producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0;
-                    if (disponible < linea.getCantidad()) {
-                        throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                    int reservada = producto.getCantidadReservada() != null ? producto.getCantidadReservada() : 0;
+                    int cantidad = linea.getCantidad() != null ? linea.getCantidad() : 0;
+
+                    // Si la venta está pendiente, reserva el stock (lo quita de disponible y lo suma a reservada)
+                    if (transaccion.getEstado() == Transaccion.EstadoTransaccion.PENDIENTE) {
+                        if (disponible < cantidad) {
+                            throw new IllegalArgumentException("Stock insuficiente para reservar el producto: " + producto.getNombre());
+                        }
+                        producto.setCantidadDisponible(disponible - cantidad);
+                        producto.setCantidadReservada(reservada + cantidad);
                     }
-                    producto.setCantidadDisponible(disponible - linea.getCantidad());
+                    // Si la venta está confirmada, completada o entregada, descuenta de reservada (la mercancía se entrega)
+                    else if (transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA ||
+                            transaccion.getEstado() == Transaccion.EstadoTransaccion.COMPLETADA ||
+                            transaccion.getEstado() == Transaccion.EstadoTransaccion.ENTREGADA) {
+                        if (reservada < cantidad) {
+                            throw new IllegalArgumentException("Stock reservado insuficiente para el producto: " + producto.getNombre());
+                        }
+                        producto.setCantidadReservada(reservada - cantidad);
+                        // Ya no sumamos a disponible porque ya fue reservado previamente
+                    }
+                    // Por si acaso, si la venta se crea directamente como completada, descuenta de disponible
+                    else {
+                        if (disponible < cantidad) {
+                            throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                        }
+                        producto.setCantidadDisponible(disponible - cantidad);
+                    }
                     productoRepository.save(producto);
                 }
-                // NOTA: puedes agregar aquí lógica para campos de reservados, dañados, almacén, etc. si la necesitas
+                // Puedes agregar aquí lógica para dañados, devueltos, etc. si lo necesitas
             }
         }
     }

@@ -50,7 +50,7 @@ class ReportesManager {
         container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin h-6 w-6 border-4 border-brand-brown border-t-transparent rounded-full"></div></div>';
 
         try {
-            const products = await this.transaccionService.getProductosMasVendidos(dateFrom, dateTo, 5); // Limit to 5
+            const products = await this.transaccionService.getProductosMasVendidos(dateFrom, dateTo, 5);
             if (products.length === 0) {
                 container.innerHTML = '<p class="text-gray-600">No hay productos más vendidos en el período seleccionado.</p>';
                 return;
