@@ -15,6 +15,10 @@ public class ProductoCajeroDTO {
     private String fotoURL;
     private Float itbis;
     private Boolean esNuevo;
+    private Integer cantidadReservada; // cantidad reservada para transacciones pendientes
+    private Integer cantidadDanada;
+    private Integer cantidadDevuelta;
+    private Integer cantidadAlmacen;
     
     public ProductoCajeroDTO() {}
     
@@ -50,7 +54,39 @@ public class ProductoCajeroDTO {
     
     public Boolean getEsNuevo() { return esNuevo; }
     public void setEsNuevo(Boolean esNuevo) { this.esNuevo = esNuevo; }
-    
+
+    public Integer getCantidadReservada() {
+        return cantidadReservada;
+    }
+
+    public void setCantidadReservada(Integer cantidadReservada) {
+        this.cantidadReservada = cantidadReservada;
+    }
+
+    public Integer getCantidadDanada() {
+        return cantidadDanada;
+    }
+
+    public void setCantidadDanada(Integer cantidadDanada) {
+        this.cantidadDanada = cantidadDanada;
+    }
+
+    public Integer getCantidadDevuelta() {
+        return cantidadDevuelta;
+    }
+
+    public void setCantidadDevuelta(Integer cantidadDevuelta) {
+        this.cantidadDevuelta = cantidadDevuelta;
+    }
+
+    public Integer getCantidadAlmacen() {
+        return cantidadAlmacen;
+    }
+
+    public void setCantidadAlmacen(Integer cantidadAlmacen) {
+        this.cantidadAlmacen = cantidadAlmacen;
+    }
+
     public boolean puedeVenderse() {
         return disponible != null && disponible && 
                cantidadDisponible != null && cantidadDisponible > 0;

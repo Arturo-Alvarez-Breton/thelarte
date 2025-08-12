@@ -1,5 +1,7 @@
 package com.thelarte.inventory.dto;
 
+import jakarta.persistence.Column;
+
 import java.math.BigDecimal;
 
 public class ProductoDTO {
@@ -13,12 +15,30 @@ public class ProductoDTO {
     private BigDecimal precioVenta;
     private String fotoBase64; // solo para recibir del frontend
     private String fotoUrl;
-    private int cantidadDisponible;// la URL del archivo en disco
+    private Integer cantidadDisponible;// la URL del archivo en disco
+    private Integer cantidadReservada; // cantidad reservada para transacciones pendientes
+    private Integer cantidadDanada;
+    private Integer cantidadDevuelta;
+    private Integer cantidadAlmacen;
 
     public ProductoDTO() {
     }
 
-    public ProductoDTO(long id, String codigo, String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl, int cantidadDisponible) {
+    public ProductoDTO(
+            long id,
+            String codigo,
+            String nombre,
+            String tipo,
+            String descripcion,
+            float itbis,
+            BigDecimal precioCompra,
+            BigDecimal precioVenta,
+            String fotoUrl,
+            int cantidadDisponible,
+            Integer cantidadDanada,
+            Integer cantidadDevuelta,
+            Integer cantidadAlmacen
+    ) {
         this.id = id;
         this.codigo = codigo;
         this.nombre = nombre;
@@ -29,6 +49,9 @@ public class ProductoDTO {
         this.precioVenta = precioVenta;
         this.fotoUrl = fotoUrl;
         this.cantidadDisponible = cantidadDisponible;
+        this.cantidadDanada = cantidadDanada;
+        this.cantidadDevuelta = cantidadDevuelta;
+        this.cantidadAlmacen = cantidadAlmacen;
     }
 
     public long getId() { return id; }
@@ -65,5 +88,32 @@ public class ProductoDTO {
     }
     public void setCantidadDisponible(int cantidadDisponible) {
         this.cantidadDisponible = cantidadDisponible;
+    }
+    public Integer getCantidadAlmacen() {
+        return cantidadAlmacen;
+    }
+
+    public void setCantidadAlmacen(Integer cantidadAlmacen) {
+        this.cantidadAlmacen = cantidadAlmacen;
+    }
+
+    public Integer getCantidadDanada() {
+        return cantidadDanada;
+    }
+
+    public void setCantidadDanada(Integer cantidadDanada) {
+        this.cantidadDanada = cantidadDanada;
+    }
+
+    public Integer getCantidadDevuelta() {
+        return cantidadDevuelta;
+    }
+
+    public void setCantidadDevuelta(Integer cantidadDevuelta) {
+        this.cantidadDevuelta = cantidadDevuelta;
+    }
+
+    public Integer getCantidadReservada() {
+        return cantidadReservada;
     }
 }

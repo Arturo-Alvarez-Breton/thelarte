@@ -2,7 +2,7 @@
 
 export class TransaccionService {
     constructor() {
-        this.baseUrl = '/api/cajero'; // Base URL for the API
+        this.baseUrl = '/api'; // Base URL for the API
     }
 
     async obtenerTransacciones(filters = {}) {

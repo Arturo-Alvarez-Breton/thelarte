@@ -2,7 +2,6 @@ package com.thelarte.inventory.service;
 
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.dto.ProductoDTO;
-import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +83,11 @@ public class ProductoService implements IProductoService {
         producto.setPrecioCompra(productoDTO.getPrecioCompra());
         producto.setPrecioVenta(productoDTO.getPrecioVenta());
         producto.setFotoURL(productoDTO.getFotoUrl());
+        producto.setCantidadDisponible(productoDTO.getCantidadDisponible());
+        producto.setCantidadReservada(productoDTO.getCantidadReservada());
+        producto.setCantidadDanada(productoDTO.getCantidadDanada());
+        producto.setCantidadDevuelta(productoDTO.getCantidadDevuelta());
+        producto.setCantidadAlmacen(productoDTO.getCantidadAlmacen());
 
         producto = productoRepository.save(producto);
 
@@ -127,12 +131,11 @@ public class ProductoService implements IProductoService {
                 p.getPrecioCompra(),
                 p.getPrecioVenta(),
                 p.getFotoURL(),
-                (int) p.getUnidades().stream()
-                    .filter(u -> u.getEstado() == com.thelarte.inventory.util.EstadoUnidad.DISPONIBLE)
-                    .count()
-
-        );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
-
+                p.getCantidadDisponible(),
+                p.getCantidadDanada(),
+                p.getCantidadDevuelta(),
+                p.getCantidadAlmacen()
+        );
     }
 
     @Transactional(readOnly = true)

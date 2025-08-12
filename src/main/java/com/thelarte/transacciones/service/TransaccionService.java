@@ -1,6 +1,5 @@
 package com.thelarte.transacciones.service;
 
-import com.thelarte.inventory.repository.UnidadRepository;
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
@@ -8,10 +7,7 @@ import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.inventory.model.Producto;
-import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
-import com.thelarte.inventory.service.UnidadService;
-import com.thelarte.inventory.util.EstadoUnidad;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import com.thelarte.auth.entity.User;
 import com.thelarte.auth.service.UserService;
@@ -43,11 +39,7 @@ public class TransaccionService {
     @Autowired
     private UserService userService;
 
-    @Autowired
-    private UnidadService unidadService;
-
-    @Autowired
-    private UnidadRepository unidadRepository;
+    // --- UNIDAD SERVICE/REPOSITORY ELIMINADOS ---
 
     public Transaccion crearTransaccion(Transaccion transaccion) {
         // Asignar la transacción a cada línea para que se guarde el transaccion_id
@@ -83,34 +75,31 @@ public class TransaccionService {
                 throw new IllegalArgumentException("La devolución requiere el ID de la transacción original");
             }
 
+            // Nueva lógica: actualizar cantidades en Producto (no unidades)
             for (LineaTransaccion linea : transaccion.getLineas()) {
-                // Busca las unidades asociadas a la transacción original y producto
-                List<Unidad> unidadesOriginales = unidadRepository.findByTransaccionOrigenIdAndProductoId(
-                        transaccion.getTransaccionOrigenId(),
-                        linea.getProductoId()
-                );
-                int cantidadADevolver = linea.getCantidad();
-                int count = 0;
+                if (linea.getProductoId() != null) {
+                    Producto producto = productoRepository.findById(linea.getProductoId())
+                            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+                    int cantidad = linea.getCantidad() != null ? linea.getCantidad() : 0;
 
-                for (Unidad unidad : unidadesOriginales) {
-                    if (count >= cantidadADevolver) break;
-
-                    // Solo unidades que aún no han sido devueltas
-                    if (
-                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA &&
-                                    (unidad.getEstado() == EstadoUnidad.DISPONIBLE || unidad.getEstado() == EstadoUnidad.RESERVADO)
-                    ) {
-                        unidad.setEstado(EstadoUnidad.DEVUELTO_COMPRA);
-                        unidadRepository.save(unidad);
-                        count++;
-                    } else if (
-                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA &&
-                                    (unidad.getEstado() == EstadoUnidad.VENDIDO || unidad.getEstado() == EstadoUnidad.RESERVADO)
-                    ) {
-                        unidad.setEstado(EstadoUnidad.DEVUELTO_VENTA);
-                        unidadRepository.save(unidad);
-                        count++;
+                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA) {
+                        // Si devuelves a suplidor, resta de disponible y suma a devueltos
+                        producto.setCantidadDisponible(
+                                (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) - cantidad
+                        );
+                        producto.setCantidadDevuelta(
+                                (producto.getCantidadDevuelta() != null ? producto.getCantidadDevuelta() : 0) + cantidad
+                        );
+                    } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
+                        // Si devuelves de cliente, suma a disponible y suma a devueltos
+                        producto.setCantidadDisponible(
+                                (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + cantidad
+                        );
+                        producto.setCantidadDevuelta(
+                                (producto.getCantidadDevuelta() != null ? producto.getCantidadDevuelta() : 0) + cantidad
+                        );
                     }
+                    productoRepository.save(producto);
                 }
             }
 
@@ -330,11 +319,15 @@ public class TransaccionService {
         transaccion.setEstado(Transaccion.EstadoTransaccion.RECIBIDA);
         transaccion.setFechaEntregaReal(LocalDateTime.now());
 
+        // Actualiza stock de productos, no unidades
         for (LineaTransaccion linea : transaccion.getLineas()) {
             if (linea.getProductoId() != null) {
-                for (int i = 0; i < linea.getCantidad(); i++) {
-                    unidadService.registrarUnidad(linea.getProductoId(), EstadoUnidad.DISPONIBLE, true, transaccion.getId());
-                }
+                Producto producto = productoRepository.findById(linea.getProductoId())
+                        .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+                producto.setCantidadDisponible(
+                        (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + linea.getCantidad()
+                );
+                productoRepository.save(producto);
             }
         }
         return transaccionRepository.save(transaccion);
@@ -430,23 +423,23 @@ public class TransaccionService {
     public void eliminarTransaccion(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         if (transaccion.isDeleted()) {
             throw new IllegalStateException("La transacción ya está eliminada");
         }
-        
+
         transaccion.setDeleted(true);
         transaccionRepository.save(transaccion);
     }
-    
+
     public void restaurarTransaccion(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         if (!transaccion.isDeleted()) {
             throw new IllegalStateException("La transacción no está eliminada");
         }
-        
+
         transaccion.setDeleted(false);
         transaccionRepository.save(transaccion);
     }
@@ -506,64 +499,54 @@ public class TransaccionService {
         transaccion.setTotal(total);
     }
 
+    /**
+     * Lógica de procesamiento de líneas usando solo los campos enteros de Producto.
+     */
     private void procesarLineasTransaccion(Transaccion transaccion) {
         if (transaccion.getLineas() != null) {
             for (LineaTransaccion linea : transaccion.getLineas()) {
                 if (transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA) {
+                    Producto producto;
                     if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
-                        // Producto nuevo: crea el producto y las unidades
-                        Producto nuevoProducto = new Producto();
-                        nuevoProducto.setNombre(linea.getProductoNombre());
-                        nuevoProducto.setTipo("Mueble");
-                        nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
-                        nuevoProducto.setItbis(18.0f);
-                        nuevoProducto.setPrecioCompra(linea.getPrecioUnitario());
-                        nuevoProducto.setPrecioVenta(linea.getPrecioUnitario()); // Usar el precio del frontend
-                        nuevoProducto.setFotoURL("");
-                        nuevoProducto.setEsNuevo(true);
-                        nuevoProducto.setCantidadDisponible(linea.getCantidad());
-                        nuevoProducto = productoRepository.save(nuevoProducto);
+                        // Producto nuevo: crea el producto con cantidades iniciales
+                        producto = new Producto();
+                        producto.setNombre(linea.getProductoNombre());
+                        producto.setTipo("Mueble");
+                        producto.setDescripcion("Mueble nuevo agregado por compra");
+                        producto.setItbis(18.0f);
+                        producto.setPrecioCompra(linea.getPrecioUnitario());
+                        producto.setPrecioVenta(linea.getPrecioUnitario()); // Usar el precio del frontend
+                        producto.setFotoURL("");
+                        producto.setCantidadDisponible(linea.getCantidad());
+                        producto.setCantidadReservada(0);
+                        producto.setCantidadDanada(0);
+                        producto.setCantidadDevuelta(0);
+                        producto.setCantidadAlmacen(0);
+                        producto = productoRepository.save(producto);
 
-                        for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(nuevoProducto.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
-                        }
-
-                        linea.setProductoId(nuevoProducto.getId());
-                        linea.setPrecioUnitario(nuevoProducto.getPrecioVenta()); // Asegura que la línea tenga el precio
-                    } else if (linea.getProductoId() != null) {
-                        Producto productoExistente = productoRepository.findById(linea.getProductoId())
+                        linea.setProductoId(producto.getId());
+                        linea.setPrecioUnitario(producto.getPrecioVenta());
+                    } else {
+                        // Producto existente: suma cantidad a disponible
+                        producto = productoRepository.findById(linea.getProductoId())
                                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
-
-                        for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(productoExistente.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
-                        }
-                        productoExistente.setCantidadDisponible(productoExistente.getCantidadDisponible() + linea.getCantidad());
-                        productoRepository.save(productoExistente);
+                        producto.setCantidadDisponible(
+                                (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + linea.getCantidad()
+                        );
+                        productoRepository.save(producto);
                     }
                 } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA && linea.getProductoId() != null) {
                     Producto producto = productoRepository.findById(linea.getProductoId())
                             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
-                    producto.actualizarEstadoPorUnidades();
-
-                    if (producto.getCantidadDisponible() < linea.getCantidad()) {
+                    int disponible = producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0;
+                    if (disponible < linea.getCantidad()) {
                         throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
                     }
-
-                    List<Unidad> unidadesDisponibles = producto.getUnidades().stream()
-                            .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
-                            .limit(linea.getCantidad())
-                            .collect(Collectors.toList());
-
-                    for (Unidad unidad : unidadesDisponibles) {
-                        unidad.setEstado(EstadoUnidad.RESERVADO);
-                        unidad.setTransaccionOrigenId(transaccion.getId()); // <<< marca la venta!
-                        unidadRepository.save(unidad);
-                    }
-
-                    producto.actualizarEstadoPorUnidades();
+                    producto.setCantidadDisponible(disponible - linea.getCantidad());
                     productoRepository.save(producto);
                 }
+                // NOTA: puedes agregar aquí lógica para campos de reservados, dañados, almacén, etc. si la necesitas
             }
         }
     }
@@ -748,14 +731,14 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
-    public List<Transaccion> getTransaccionesFiltered(String tipoFilter, String estadoFilter, 
-                                                     java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin, 
-                                                     int page, int size) {
+    public List<Transaccion> getTransaccionesFiltered(String tipoFilter, String estadoFilter,
+                                                      java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin,
+                                                      int page, int size) {
         LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
         LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59) : null;
-        
+
         List<Transaccion> transacciones = transaccionRepository.findByDeletedFalse();
-        
+
         if (tipoFilter != null && !tipoFilter.isEmpty()) {
             try {
                 Transaccion.TipoTransaccion tipo = Transaccion.TipoTransaccion.valueOf(tipoFilter);
@@ -766,7 +749,7 @@ public class TransaccionService {
                 // Ignorar filtro inválido
             }
         }
-        
+
         if (estadoFilter != null && !estadoFilter.isEmpty()) {
             try {
                 Transaccion.EstadoTransaccion estado = Transaccion.EstadoTransaccion.valueOf(estadoFilter);
@@ -777,21 +760,21 @@ public class TransaccionService {
                 // Ignorar filtro inválido
             }
         }
-        
+
         if (inicio != null && fin != null) {
             transacciones = transacciones.stream()
                     .filter(t -> t.getFecha().isAfter(inicio) && t.getFecha().isBefore(fin))
                     .collect(Collectors.toList());
         }
-        
+
         // Aplicar paginación manual
         int fromIndex = page * size;
         int toIndex = Math.min(fromIndex + size, transacciones.size());
-        
+
         if (fromIndex > transacciones.size()) {
             return List.of();
         }
-        
+
         return transacciones.subList(fromIndex, toIndex);
     }
 
@@ -808,23 +791,23 @@ public class TransaccionService {
     public Transaccion cancelarTransaccion(Long id, String motivo) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         transaccion.setEstado(Transaccion.EstadoTransaccion.CANCELADA);
         if (motivo != null && !motivo.isEmpty()) {
             String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
             transaccion.setObservaciones(observacionesActuales + " - Cancelada: " + motivo);
         }
-        
+
         return transaccionRepository.save(transaccion);
     }
 
     public void marcarComoImpresa(Long transaccionId) {
         Transaccion transaccion = transaccionRepository.findById(transaccionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
-        
+
         String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
         transaccion.setObservaciones(observacionesActuales + " - Factura impresa en " + LocalDateTime.now());
-        
+
         transaccionRepository.save(transaccion);
     }
 }

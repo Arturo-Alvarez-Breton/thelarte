@@ -6,7 +6,7 @@ class TransaccionesManager {
         this.transaccionService = new TransaccionService();
         this.transactions = [];
         this.currentPage = 0;
-        this.transactionsPerPage = 9; // Cambiado a 9
+        this.transactionsPerPage = 9;
         this.filtersVisible = false;
 
         this.init();
@@ -86,7 +86,6 @@ class TransaccionesManager {
     async loadTransactions() {
         this.showLoading();
         try {
-            // Si tu backend NO pagina, no pases page y size, solo usa los filtros
             const filters = {
                 tipo: document.getElementById('transaccionTipoFilter')?.value || null,
                 estado: document.getElementById('transaccionEstadoFilter')?.value || null,
@@ -107,7 +106,6 @@ class TransaccionesManager {
     }
 
     getFilteredTransactions() {
-        // Puedes meter aquí lógica extra de filtrado si tu backend no filtra bien
         return [...this.transactions];
     }
 
@@ -160,7 +158,7 @@ class TransaccionesManager {
             return `
                 <div class="bg-white rounded-lg shadow-md p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-semibold">${this.formatTransactionType(transaction.tipoTransaccion)} #${transaction.numeroFactura || transaction.id}</h3>
+                        <h3 class="text-lg font-semibold">${this.formatTransactionType(transaction.tipo)} #${transaction.numeroFactura || transaction.id}</h3>
                         <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
                             ${transaction.estado}
                         </span>
@@ -170,6 +168,12 @@ class TransaccionesManager {
                     <p class="text-lg font-bold text-brand-brown mt-2">Total: ${this.formatCurrency(transaction.total)}</p>
                     <div class="mt-4 flex space-x-2">
                         <button onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
+                        <a href="#" 
+                           data-action="eliminar" 
+                           data-id="${transaction.id}" 
+                           class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                           <i class="fas fa-trash mr-2"></i>Eliminar
+                        </a>
                     </div>
                 </div>
             `;
@@ -297,32 +301,34 @@ class TransaccionesManager {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
         let contraparteInfo = '';
-        if (transaction.tipoTransaccion === 'COMPRA' && transaction.proveedor) {
+        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
             contraparteInfo = `
                 <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
                 <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
                 <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
                 <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
             `;
-        } else if (transaction.cliente) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre} ${transaction.cliente.apellido} (${transaction.cliente.cedula})</p>`;
+        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''} (${transaction.cliente.cedula || ''})</p>`;
+        } else if (transaction.contraparteNombre) {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
         } else {
             contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
         }
         const productsList = transaction.lineas && transaction.lineas.length > 0
             ? transaction.lineas.map(line => `
-                <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
-                    <div>
-                        <p class="font-medium">${line.nombreProducto}</p>
-                        <p class="text-sm text-gray-600">Cantidad: ${line.cantidad} | Precio: ${this.formatCurrency(line.precioUnitario)}</p>
-                        <p class="text-sm text-gray-600">Código: ${line.codigoProducto || 'N/A'}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold">${this.formatCurrency(line.subtotalLinea)}</p>
-                        ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
-                    </div>
-                </div>
-            `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+        <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
+            <div>
+                <p class="font-medium">${line.nombreProducto || line.productoNombre || 'Sin nombre'}</p>
+                <p class="text-sm text-gray-600">Cantidad: ${line.cantidad} | Precio: ${this.formatCurrency(line.precioUnitario)}</p>
+                <p class="text-sm text-gray-600">Código: ${line.codigoProducto || 'N/A'}</p>
+            </div>
+            <div class="text-right">
+                <p class="font-bold">${this.formatCurrency(line.subtotalLinea ?? line.subtotal ?? 0)}</p>
+                ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
+            </div>
+        </div>
+    `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
         const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA'];
         const estadoSelect = `
             <div class="flex items-center space-x-2">
@@ -338,7 +344,7 @@ class TransaccionesManager {
             <div class="space-y-4">
                 <div class="bg-blue-50 p-3 rounded-lg">
                     <p><strong>Factura #:</strong> ${transaction.numeroFactura || 'N/A'}</p>
-                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipoTransaccion)}</p>
+                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipo)}</p>
                     <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
                     ${estadoSelect}
                 </div>
@@ -388,6 +394,20 @@ class TransaccionesManager {
     editTransaction(id) {
         window.showToast(`Editar transacción ${id} - Funcionalidad en desarrollo.`, 'info');
     }
+
+    async eliminarTransaccion(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
+            try {
+                await this.transaccionService.eliminarTransaccion(id);
+                await this.loadTransactions();
+                window.showToast('Transacción eliminada exitosamente', 'success');
+            } catch (error) {
+                console.error('Error al eliminar transacción:', error);
+                window.showToast('Error al eliminar la transacción', 'error');
+            }
+        }
+    }
+
 }
 
 // --- GLOBAL INSTANCE & EXPORTS ---
@@ -406,3 +426,12 @@ if (quickActions) {
         }
     });
 }
+
+document.getElementById('transaccionesListContainer').addEventListener('click', function(e) {
+    let btn = e.target.closest('[data-action="eliminar"]');
+    if (btn) {
+        const id = btn.getAttribute('data-id');
+        transaccionesManager.eliminarTransaccion(Number(id));
+        e.preventDefault();
+    }
+});

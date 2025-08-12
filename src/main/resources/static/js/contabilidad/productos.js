@@ -1,5 +1,3 @@
-// src/main/resources/static/js/contabilidad/productos.js
-
 import { TransaccionService } from '../services/transaccionService.js';
 
 class ProductosManager {
@@ -50,10 +48,10 @@ class ProductosManager {
 
         if (this.filteredProductos.length === 0) {
             const searchTerm = document.getElementById('productSearchInput')?.value;
-            const emptyMessage = searchTerm ? 
-                `No se encontraron productos que coincidan con "${searchTerm}".` : 
+            const emptyMessage = searchTerm ?
+                `No se encontraron productos que coincidan con "${searchTerm}".` :
                 'No hay productos disponibles en el inventario.';
-            
+
             container.innerHTML = `
                 <div class="text-center py-12">
                     <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -92,7 +90,6 @@ class ProductosManager {
         this.loadProductos();
     }
 
-
     async verProducto(id) {
         try {
             const producto = this.productos.find(p => p.id === id);
@@ -116,10 +113,6 @@ class ProductosManager {
                         <p class="mt-1 text-sm text-gray-900">${producto.categoria || 'N/A'}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Unidad</label>
-                        <p class="mt-1 text-sm text-gray-900">${producto.unidad?.nombre || 'N/A'}</p>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium text-gray-700">Precio Compra</label>
                         <p class="mt-1 text-sm text-gray-900">${this.formatCurrency(producto.precioCompra)}</p>
                     </div>
@@ -137,7 +130,7 @@ class ProductosManager {
                     </div>
                 </div>
             `;
-            
+
             this.currentProducto = producto;
             document.getElementById('modalVerProducto').classList.remove('hidden');
         } catch (error) {
@@ -145,7 +138,6 @@ class ProductosManager {
             window.showToast('Error al mostrar los detalles del producto.', 'error');
         }
     }
-
 
     cerrarModalVerProducto() {
         document.getElementById('modalVerProducto').classList.add('hidden');
