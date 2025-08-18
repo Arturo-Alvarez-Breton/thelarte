@@ -1,7 +1,6 @@
 package com.thelarte.inventory.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,82 +13,50 @@ public class Movimiento {
     @ManyToOne
     private Producto producto;
 
+    @Column(nullable = false)
+    private String tipo; // "ajuste_disponible", "almacen_a_disponible", etc.
+
     @Enumerated(EnumType.STRING)
-    private TipoMovimiento tipo; // Enum: ALMACEN_A_DISPONIBLE, DISPONIBLE_A_ALMACEN, etc.
+    @Column(nullable = false)
+    private TipoMovimientoSimple tipoSimple; // INGRESO, REBAJA, TRANSFERENCIA
 
     private Integer cantidad;
-
     private String motivo;
-
     private LocalDateTime fecha;
+    private String idUsuario;
 
-    private String usuario; // Opcional, para saber quién hizo el movimiento
+    public Movimiento() {}
 
-    public Movimiento(Producto producto, TipoMovimiento tipo, Integer cantidad, String motivo, LocalDateTime fecha, String usuario) {
+    public Movimiento(Producto producto, String tipo, TipoMovimientoSimple tipoSimple, Integer cantidad, String motivo, LocalDateTime fecha, String idUsuario) {
         this.producto = producto;
         this.tipo = tipo;
+        this.tipoSimple = tipoSimple;
         this.cantidad = cantidad;
         this.motivo = motivo;
         this.fecha = fecha;
-        this.usuario = usuario;
-    }
-    public Movimiento() {
-    }
-    public Producto getProducto() {
-        return producto;
+        this.idUsuario = idUsuario;
     }
 
-    public void setProducto(Producto producto) {
-        this.producto = producto;
-    }
+    // Getters y setters...
+    public Long getId() { return id; }
+    public Producto getProducto() { return producto; }
+    public void setProducto(Producto producto) { this.producto = producto; }
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
+    public TipoMovimientoSimple getTipoSimple() { return tipoSimple; }
+    public void setTipoSimple(TipoMovimientoSimple tipoSimple) { this.tipoSimple = tipoSimple; }
+    public Integer getCantidad() { return cantidad; }
+    public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+    public String getMotivo() { return motivo; }
+    public void setMotivo(String motivo) { this.motivo = motivo; }
+    public LocalDateTime getFecha() { return fecha; }
+    public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
+    public String getIdUsuario() { return idUsuario; }
+    public void setIdUsuario(String idUsuario) { this.idUsuario = idUsuario; }
 
-    public TipoMovimiento getTipo() {
-        return tipo;
-    }
-
-    public void setTipo(TipoMovimiento tipo) {
-        this.tipo = tipo;
-    }
-
-    public Integer getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(Integer cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public String getMotivo() {
-        return motivo;
-    }
-
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
-    }
-
-    public LocalDateTime getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(LocalDateTime fecha) {
-        this.fecha = fecha;
-    }
-
-    public String getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(String usuario) {
-        this.usuario = usuario;
-    }
-
-    public enum TipoMovimiento {
-        ALMACEN_A_DISPONIBLE,
-        DISPONIBLE_A_ALMACEN,
-        DANADA_A_DISPONIBLE,
-        DISPONIBLE_A_DANADA,
-        AJUSTE_DISPONIBLE,
-        AJUSTE_ALMACEN,
-        AJUSTE_DANADA
+    public enum TipoMovimientoSimple {
+        INGRESO,       // aumento
+        REBAJA,        // disminución
+        TRANSFERENCIA  // entre estados
     }
 }

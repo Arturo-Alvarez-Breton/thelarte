@@ -1,7 +1,48 @@
-// src/main/resources/static/js/contabilidad/productos.js
-
 import { ProductoService } from '../services/productoService.js';
 import { TableViewManager } from '../components/tableView.js';
+
+// Utilidades de error y validación (solo una vez, sin duplicados)
+function showError(fieldId, message) {
+    const errorEl = document.getElementById(fieldId + 'Error');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+    }
+}
+function clearError(fieldId) {
+    const errorEl = document.getElementById(fieldId + 'Error');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+    }
+}
+function validateFormProducto(data) {
+    let valid = true;
+    ['productoNombre', 'productoTipo', 'productoPrecioVenta', 'productoPrecioCompra'].forEach(field => clearError(field));
+    if (!data.nombre) {
+        showError('productoNombre', 'El nombre es obligatorio');
+        valid = false;
+    }
+    if (!data.tipo) {
+        showError('productoTipo', 'El tipo es obligatorio');
+        valid = false;
+    }
+    if (data.precioVenta == null || data.precioVenta === '') {
+        showError('productoPrecioVenta', 'El precio de venta es obligatorio');
+        valid = false;
+    } else if (isNaN(data.precioVenta) || data.precioVenta < 0) {
+        showError('productoPrecioVenta', 'El precio de venta debe ser mayor o igual a 0');
+        valid = false;
+    }
+    if (data.precioCompra == null || data.precioCompra === '') {
+        showError('productoPrecioCompra', 'El precio de compra es obligatorio');
+        valid = false;
+    } else if (isNaN(data.precioCompra) || data.precioCompra < 0) {
+        showError('productoPrecioCompra', 'El precio de compra debe ser mayor o igual a 0');
+        valid = false;
+    }
+    return valid;
+}
 
 class ProductosManager {
     constructor() {
@@ -207,18 +248,249 @@ class ProductosManager {
         `).join('');
     }
 
-    async handleMovimientoProducto(e, producto) {
-        e.preventDefault();
-        const tipo = document.getElementById('movimientoTipo').value;
-        const cantidad = parseInt(document.getElementById('movimientoCantidad').value, 10);
-        const motivo = document.getElementById('movimientoObservacion').value;
-        if (!tipo || !cantidad || cantidad <= 0) {
-            window.showToast('Debes seleccionar un tipo de movimiento y una cantidad válida.', 'error');
+    // MODAL DE MOVIMIENTOS: Agrega tabs para "Registrar" y "Ver historial"
+    renderMovimientosModal(producto) {
+        document.getElementById('movimientosProductoTitle').textContent = `Movimientos de "${producto.nombre}"`;
+        document.getElementById('movimientosProductoBody').innerHTML = `
+            <div class="flex gap-2 mb-6">
+                <button id="tabRegistrar" class="px-4 py-2 rounded-lg bg-brand-brown text-white font-semibold activeTab">Registrar movimiento</button>
+                <button id="tabHistorial" class="px-4 py-2 rounded-lg bg-gray-200 text-brand-brown font-semibold">Ver historial</button>
+            </div>
+            <div id="movimientosProductoTabContent"></div>
+        `;
+
+        // ✅ Controla el ancho del DIALOG (no del overlay)
+        const dialog = document.getElementById('movimientosDialog');
+        if (dialog) {
+            dialog.classList.remove('max-w-3xl');
+            dialog.classList.add('max-w-lg');
+        }
+
+        document.getElementById('tabRegistrar').onclick = () => this.setMovimientoTab('registrar', producto);
+        document.getElementById('tabHistorial').onclick = () => this.setMovimientoTab('historial', producto);
+
+        this.setMovimientoTab('registrar', producto);
+    }
+
+    setMovimientoTab(tab, producto) {
+        document.getElementById('tabRegistrar').classList.remove('activeTab', 'bg-brand-brown', 'text-white');
+        document.getElementById('tabHistorial').classList.remove('activeTab', 'bg-brand-brown', 'text-white');
+        document.getElementById('tabRegistrar').classList.add('bg-gray-200', 'text-brand-brown');
+        document.getElementById('tabHistorial').classList.add('bg-gray-200', 'text-brand-brown');
+
+        if (tab === 'registrar') {
+            document.getElementById('tabRegistrar').classList.add('activeTab', 'bg-brand-brown', 'text-white');
+            document.getElementById('tabRegistrar').classList.remove('bg-gray-200', 'text-brand-brown');
+            this.renderMovimientoRegistrar(producto);
+        } else {
+            document.getElementById('tabHistorial').classList.add('activeTab', 'bg-brand-brown', 'text-white');
+            document.getElementById('tabHistorial').classList.remove('bg-gray-200', 'text-brand-brown');
+            this.renderMovimientoHistorial(producto);
+        }
+    }
+
+    renderMovimientoRegistrar(producto) {
+        const estados = [
+            { value: 'disponible', label: 'Disponible' },
+            { value: 'almacen', label: 'Almacén' },
+            { value: 'danada', label: 'Dañada' },
+            { value: 'reservada', label: 'Reservada' },
+            { value: 'devuelta', label: 'Devuelta' }
+        ];
+        document.getElementById('movimientosProductoTabContent').innerHTML = `
+            <div class="mb-6">
+                <h4 class="font-semibold text-gray-700 mb-2">Cantidades actuales</h4>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Disponible:</strong> ${producto.cantidadDisponible ?? 0}</div>
+                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Almacén:</strong> ${producto.cantidadAlmacen ?? 0}</div>
+                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Reservada:</strong> ${producto.cantidadReservada ?? 0}</div>
+                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Dañada:</strong> ${producto.cantidadDanada ?? 0}</div>
+                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Devuelta:</strong> ${producto.cantidadDevuelta ?? 0}</div>
+                </div>
+            </div>
+            <form id="formMovimientoTipoSimple" class="mb-4">
+                <label class="block text-gray-700 mb-1 font-medium">Tipo de movimiento</label>
+                <select id="movimientoTipoSimple" name="tipoSimple" class="border rounded px-3 py-2 w-full" required>
+                    <option value="">Seleccione...</option>
+                    <option value="INGRESO">Ingreso (Aumenta cantidad)</option>
+                    <option value="REBAJA">Rebaja (Disminuye cantidad)</option>
+                    <option value="TRANSFERENCIA">Transferencia (Entre estados)</option>
+                </select>
+            </form>
+            <div id="movimientoFormContainer"></div>
+        `;
+        document.getElementById('movimientoTipoSimple').onchange = (e) => this.renderMovimientoForm(e.target.value, producto);
+    }
+
+    renderMovimientoForm(tipoSimple, producto) {
+        const container = document.getElementById('movimientoFormContainer');
+        const estados = [
+            { value: 'disponible', label: 'Disponible' },
+            { value: 'almacen', label: 'Almacén' },
+            { value: 'danada', label: 'Dañada' },
+            { value: 'reservada', label: 'Reservada' },
+            { value: 'devuelta', label: 'Devuelta' }
+        ];
+        let html = '';
+        if (!tipoSimple) {
+            container.innerHTML = '';
             return;
         }
-        // Lógica para actualizar el producto (deberías llamar a un endpoint/método backend para registrar movimiento)
+        if (tipoSimple === 'INGRESO' || tipoSimple === 'REBAJA') {
+            html = `
+            <form id="formMovimientoProducto">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">Estado</label>
+                    <select id="movimientoEstado" name="estado" class="border rounded px-3 py-2 w-full" required>
+                        <option value="">Seleccione...</option>
+                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">Cantidad</label>
+                    <input type="number" id="movimientoCantidad" name="cantidad" min="1" class="border rounded px-3 py-2 w-full" required>
+                    <span id="cantidadError" class="text-xs text-red-600 hidden"></span>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">Motivo u observación</label>
+                    <textarea id="movimientoMotivo" name="motivo" class="border rounded px-3 py-2 w-full"></textarea>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Registrar movimiento</button>
+                </div>
+            </form>
+        `;
+        } else if (tipoSimple === 'TRANSFERENCIA') {
+            html = `
+            <form id="formMovimientoProducto">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">De</label>
+                    <select id="movimientoEstadoOrigen" name="estadoOrigen" class="border rounded px-3 py-2 w-full" required>
+                        <option value="">Seleccione...</option>
+                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">A</label>
+                    <select id="movimientoEstadoDestino" name="estadoDestino" class="border rounded px-3 py-2 w-full" required>
+                        <option value="">Seleccione...</option>
+                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">Cantidad</label>
+                    <input type="number" id="movimientoCantidad" name="cantidad" min="1" class="border rounded px-3 py-2 w-full" required>
+                    <span id="cantidadError" class="text-xs text-red-600 hidden"></span>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-1 font-medium">Motivo u observación</label>
+                    <textarea id="movimientoMotivo" name="motivo" class="border rounded px-3 py-2 w-full"></textarea>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Registrar movimiento</button>
+                </div>
+            </form>
+        `;
+        }
+        container.innerHTML = html;
+        document.getElementById('formMovimientoProducto').onsubmit = (e) => this.handleMovimientoProducto(e, producto, tipoSimple);
+    }
+
+    // VER HISTORIAL DE MOVIMIENTOS
+    async renderMovimientoHistorial(producto) {
+        const container = document.getElementById('movimientosProductoTabContent');
+        container.innerHTML = `<div class="mb-4 text-gray-700 font-semibold">Historial de movimientos para <span class="font-bold">${producto.nombre}</span>:</div>
+            <div id="movimientosHistorialList" class="space-y-2"></div>
+            <div class="mt-4 flex justify-end">
+                <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
+            </div>
+        `;
+
+        // ✅ Ampliar el diálogo (no el overlay) para historial
+        const dialog = document.getElementById('movimientosDialog');
+        if (dialog) {
+            dialog.classList.remove('max-w-lg');
+            dialog.classList.add('max-w-3xl');
+        }
+
         try {
-            await this.productoService.registrarMovimientoProducto(producto.id, { tipo, cantidad, motivo });
+            const res = await fetch(`/api/movimientos/producto/${producto.id}`);
+            const movimientos = await res.json();
+            if (movimientos.length === 0) {
+                document.getElementById('movimientosHistorialList').innerHTML = '<div class="text-gray-500">No hay movimientos registrados para este producto.</div>';
+            } else {
+                document.getElementById('movimientosHistorialList').innerHTML = movimientos.map(mov =>
+                    `<div class="bg-gray-50 border rounded px-4 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                        <div>
+                            <span class="font-medium">${mov.tipoSimple}</span>
+                            <span class="text-xs text-gray-500">(${mov.tipo})</span>
+                            <span class="mx-2">Cantidad: <span class="font-bold">${mov.cantidad}</span></span>
+                            <span class="mx-2">Usuario: <span class="text-gray-700">${mov.idUsuario || ''}</span></span>
+                        </div>
+                        <div class="text-xs text-gray-600">${mov.fecha ? new Date(mov.fecha).toLocaleString() : ''}</div>
+                        <div class="text-xs text-gray-600 italic">${mov.motivo || ''}</div>
+                    </div>`
+                ).join('');
+            }
+        } catch (err) {
+            document.getElementById('movimientosHistorialList').innerHTML = `<div class="text-red-500">Error al cargar movimientos.</div>`;
+        }
+    }
+
+    async handleMovimientoProducto(e, producto, tipoSimple) {
+        e.preventDefault();
+        let tipo, cantidad, motivo, estado, estadoOrigen, estadoDestino;
+        cantidad = parseInt(document.getElementById('movimientoCantidad').value, 10);
+        motivo = document.getElementById('movimientoMotivo').value;
+        let cantidadError = document.getElementById('cantidadError');
+
+        if (tipoSimple === 'INGRESO' || tipoSimple === 'REBAJA') {
+            estado = document.getElementById('movimientoEstado').value;
+            if (!estado || isNaN(cantidad)) {
+                window.showToast('Debes seleccionar un estado y cantidad válida.', 'error');
+                return;
+            }
+            const disponible = producto[`cantidad${estado.charAt(0).toUpperCase() + estado.slice(1)}`] ?? 0;
+            if (tipoSimple === 'REBAJA' && Math.abs(cantidad) > disponible) {
+                cantidadError.textContent = 'No puedes rebajar más cantidad de la que hay disponible.';
+                cantidadError.classList.remove('hidden');
+                return;
+            }
+            cantidadError.classList.add('hidden');
+            tipo = `ajuste_${estado}`;
+            if (tipoSimple === 'REBAJA') cantidad = cantidad * -1;
+        } else if (tipoSimple === 'TRANSFERENCIA') {
+            estadoOrigen = document.getElementById('movimientoEstadoOrigen').value;
+            estadoDestino = document.getElementById('movimientoEstadoDestino').value;
+            if (!estadoOrigen || !estadoDestino || estadoOrigen === estadoDestino || isNaN(cantidad)) {
+                window.showToast('Selecciona ambos estados distintos y una cantidad válida.', 'error');
+                return;
+            }
+            const disponibleOrigen = producto[`cantidad${estadoOrigen.charAt(0).toUpperCase() + estadoOrigen.slice(1)}`] ?? 0;
+            if (cantidad > disponibleOrigen) {
+                cantidadError.textContent = 'No puedes transferir más cantidad de la que hay en el origen.';
+                cantidadError.classList.remove('hidden');
+                return;
+            }
+            cantidadError.classList.add('hidden');
+            tipo = `${estadoOrigen}_a_${estadoDestino}`;
+        }
+
+        try {
+            await fetch('/api/movimientos', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    productoId: producto.id,
+                    tipo,
+                    cantidad,
+                    motivo,
+                    tipoSimple,
+                    idUsuario: window.currentUserId
+                })
+            });
             window.showToast('Movimiento registrado correctamente.', 'success');
             this.cerrarModalMovimientos();
             await this.loadProductos();
@@ -228,13 +500,18 @@ class ProductosManager {
     }
 
     cerrarModalMovimientos() {
-        document.getElementById('modalMovimientosProducto').classList.add('hidden');
+        const modal = document.getElementById('modalMovimientosProducto');
+        modal.classList.add('hidden'); // fuerza oculto
         document.getElementById('movimientosProductoTitle').textContent = '';
         document.getElementById('movimientosProductoBody').innerHTML = '';
-    }
 
-    // ... resto del código igual ...
-    // (no se han modificado las funciones existentes)
+        // ✅ Restaura el ancho del diálogo por defecto (no toques el overlay)
+        const dialog = document.getElementById('movimientosDialog');
+        if (dialog) {
+            dialog.classList.remove('max-w-3xl');
+            dialog.classList.add('max-w-lg');
+        }
+    }
 
     filterProductos() {
         const searchTerm = document.getElementById('productoSearchInput')?.value || '';
@@ -256,8 +533,6 @@ class ProductosManager {
         document.getElementById('modalProducto').classList.remove('hidden');
         document.getElementById('productoNombre').disabled = false;
     }
-
-    // Sólo los métodos relevantes para mostrar cantidades en los modales
 
     async verProducto(id) {
         const producto = this.productos.find(p => String(p.id) === String(id));
@@ -298,54 +573,7 @@ class ProductosManager {
             return;
         }
         this.renderMovimientosModal(producto);
-        document.getElementById('modalMovimientosProducto').classList.remove('hidden');
-    }
-
-    renderMovimientosModal(producto) {
-        document.getElementById('movimientosProductoTitle').textContent = `Movimientos de "${producto.nombre}"`;
-        document.getElementById('movimientosProductoBody').innerHTML = `
-        <div class="mb-6">
-            <h4 class="font-semibold text-gray-700 mb-2">Cantidades actuales</h4>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-                <div class="bg-gray-100 rounded px-3 py-1"><strong>Disponible:</strong> ${producto.cantidadDisponible ?? 0}</div>
-                <div class="bg-gray-100 rounded px-3 py-1"><strong>Almacén:</strong> ${producto.cantidadAlmacen ?? 0}</div>
-                <div class="bg-gray-100 rounded px-3 py-1"><strong>Reservada:</strong> ${producto.cantidadReservada ?? 0}</div>
-                <div class="bg-gray-100 rounded px-3 py-1"><strong>Dañada:</strong> ${producto.cantidadDanada ?? 0}</div>
-                <div class="bg-gray-100 rounded px-3 py-1"><strong>Devuelta:</strong> ${producto.cantidadDevuelta ?? 0}</div>
-            </div>
-        </div>
-        <form id="formMovimientoProducto">
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-1 font-medium">Tipo de movimiento</label>
-                <select id="movimientoTipo" name="tipo" class="border rounded px-3 py-2 w-full">
-                    <option value="">Seleccione...</option>
-                    <option value="almacen_a_disponible">Almacén → Disponible</option>
-                    <option value="disponible_a_almacen">Disponible → Almacén</option>
-                    <option value="danada_a_disponible">Dañada → Disponible</option>
-                    <option value="disponible_a_danada">Disponible → Dañada</option>
-                    <option value="ajuste_disponible">Ajuste (Disponible)</option>
-                    <option value="ajuste_almacen">Ajuste (Almacén)</option>
-                    <option value="ajuste_danada">Ajuste (Dañada)</option>
-                </select>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-1 font-medium">Cantidad</label>
-                <input type="number" id="movimientoCantidad" name="cantidad" min="1" class="border rounded px-3 py-2 w-full" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-1 font-medium">Motivo u observación</label>
-                <textarea id="movimientoObservacion" name="motivo" class="border rounded px-3 py-2 w-full"></textarea>
-            </div>
-            <div class="flex gap-2 justify-end">
-                <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Registrar movimiento</button>
-            </div>
-        </form>
-        <div id="movimientosProductoHistorial" class="mt-6">
-            <!-- Aquí puedes renderizar historial de movimientos (si tienes backend para esto) -->
-        </div>
-    `;
-        document.getElementById('formMovimientoProducto').onsubmit = (e) => this.handleMovimientoProducto(e, producto);
+        document.getElementById('modalMovimientosProducto').classList.remove('hidden'); // SOLO aquí
     }
 
     async editProducto(id) {
@@ -497,6 +725,7 @@ class ProductosManager {
 
     hideLoading() {}
 }
+
 const productosManager = new ProductosManager();
 window.productosManager = productosManager;
 window.tableViewManager = productosManager.tableViewManager;
@@ -504,45 +733,3 @@ window.cerrarModalProducto = () => productosManager.cerrarModalProducto();
 window.cerrarModalVerProducto = () => productosManager.cerrarModalVerProducto();
 window.editarProductoDesdeDetalle = () => productosManager.editarProductoDesdeDetalle();
 window.cerrarModalMovimientos = () => productosManager.cerrarModalMovimientos();
-
-function showError(fieldId, message) {
-    const errorEl = document.getElementById(fieldId + 'Error');
-    if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.classList.remove('hidden');
-    }
-}
-function clearError(fieldId) {
-    const errorEl = document.getElementById(fieldId + 'Error');
-    if (errorEl) {
-        errorEl.textContent = '';
-        errorEl.classList.add('hidden');
-    }
-}
-function validateFormProducto(data) {
-    let valid = true;
-    ['productoNombre', 'productoTipo', 'productoPrecioVenta', 'productoPrecioCompra'].forEach(field => clearError(field));
-    if (!data.nombre) {
-        showError('productoNombre', 'El nombre es obligatorio');
-        valid = false;
-    }
-    if (!data.tipo) {
-        showError('productoTipo', 'El tipo es obligatorio');
-        valid = false;
-    }
-    if (data.precioVenta == null || data.precioVenta === '') {
-        showError('productoPrecioVenta', 'El precio de venta es obligatorio');
-        valid = false;
-    } else if (isNaN(data.precioVenta) || data.precioVenta < 0) {
-        showError('productoPrecioVenta', 'El precio de venta debe ser mayor o igual a 0');
-        valid = false;
-    }
-    if (data.precioCompra == null || data.precioCompra === '') {
-        showError('productoPrecioCompra', 'El precio de compra es obligatorio');
-        valid = false;
-    } else if (isNaN(data.precioCompra) || data.precioCompra < 0) {
-        showError('productoPrecioCompra', 'El precio de compra debe ser mayor o igual a 0');
-        valid = false;
-    }
-    return valid;
-}

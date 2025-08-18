@@ -1,6 +1,6 @@
-/* Contabilidad Module Styles */
+ /* Contabilidad Module Styles */
 
-/* Transaction Cards */
+    /* Transaction Cards */
 .transaction-card {
     transition: all 0.3s ease;
     border-left: 4px solid;
@@ -86,15 +86,15 @@
     .transaction-card {
         margin-bottom: 1rem;
     }
-    
+
     .stats-card {
         margin-bottom: 1rem;
     }
-    
+
     .filter-dropdown {
         max-height: none;
     }
-    
+
     .filter-dropdown.active {
         max-height: none;
     }
@@ -104,7 +104,7 @@
     .transaction-card {
         padding: 1rem;
     }
-    
+
     .stats-card {
         padding: 1rem;
     }
@@ -115,7 +115,7 @@
     .transaction-card {
         min-height: 280px;
     }
-    
+
     .stats-card {
         min-height: 140px;
     }
@@ -222,7 +222,14 @@
     --brand-brown-light: #7b5222;
     --brand-cream: #f6fcfa;
 }
-
+ .stats-card.color-ventas {
+     --color-1: #f59e0b;
+     --color-2: #f7e7ce;
+ }
+ .stats-card.color-compras {
+     --color-1: #10b981;
+     --color-2: #d2b48c;
+ }
 /* State Colors */
 .state-pendiente { color: #f59e0b; }
 .state-confirmada { color: #3b82f6; }
