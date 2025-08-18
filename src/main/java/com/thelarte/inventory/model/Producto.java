@@ -19,6 +19,7 @@ public class Producto {
     private BigDecimal precioCompra;
     private BigDecimal precioVenta;
     private String fotoURL;
+    private boolean eliminado = false;
     @Column(name = "estado")
     @Enumerated(EnumType.STRING)
     private EstadoProducto estado;
@@ -203,6 +204,13 @@ public class Producto {
 
     public void setCantidadDevuelta(Integer cantidadDevuelta) {
         this.cantidadDevuelta = cantidadDevuelta;
+    }
+
+    public boolean isEliminado() {
+        return eliminado;
+    }
+    public void setEliminado(boolean eliminado) {
+        this.eliminado = eliminado;
     }
 
     @PreUpdate

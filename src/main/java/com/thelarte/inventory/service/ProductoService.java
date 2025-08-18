@@ -25,13 +25,14 @@ public class ProductoService implements IProductoService {
     }
 
     /**
-     * Lista todos los productos
+     * Lista todos los productos que NO han sido eliminados lógicamente
      * @return Lista de DTOs de productos
      */
     @Override
     @Transactional(readOnly = true)
     public List<ProductoDTO> listarTodos() {
         return productoRepository.findAll().stream()
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -39,24 +40,26 @@ public class ProductoService implements IProductoService {
     /**
      * Busca un producto por su ID
      * @param id ID del producto
-     * @return Optional con el DTO si existe
+     * @return Optional con el DTO si existe y NO está eliminado
      */
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductoDTO> buscarPorId(Long id) {
         return productoRepository.findById(id)
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto);
     }
 
     /**
      * Busca un producto por su nombre
      * @param nombre Nombre del producto
-     * @return Optional con el DTO si existe
+     * @return Optional con el DTO si existe y NO está eliminado
      */
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductoDTO> buscarPorNombre(String nombre) {
         return productoRepository.findByNombre(nombre)
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto);
     }
 
@@ -96,15 +99,21 @@ public class ProductoService implements IProductoService {
         producto.setNombre(productoDTO.getNombre());
         producto.setTipo(productoDTO.getTipo());
         producto.setDescripcion(productoDTO.getDescripcion());
-        producto.setItbis(productoDTO.getItbis());
+        // --- ARREGLO PARA ITBIS ---
+        producto.setItbis(productoDTO.getItbis() == null ? 0f : productoDTO.getItbis());
+
         producto.setPrecioCompra(productoDTO.getPrecioCompra());
         producto.setPrecioVenta(productoDTO.getPrecioVenta());
         producto.setFotoURL(productoDTO.getFotoUrl());
-        producto.setCantidadDisponible(productoDTO.getCantidadDisponible());
-        producto.setCantidadReservada(productoDTO.getCantidadReservada());
-        producto.setCantidadDanada(productoDTO.getCantidadDanada());
-        producto.setCantidadDevuelta(productoDTO.getCantidadDevuelta());
-        producto.setCantidadAlmacen(productoDTO.getCantidadAlmacen());
+
+        // --- ARREGLO: ASIGNA 0 SI VIENE NULL EN CANTIDADES ---
+        producto.setCantidadDisponible(productoDTO.getCantidadDisponible() == null ? 0 : productoDTO.getCantidadDisponible());
+        producto.setCantidadReservada(productoDTO.getCantidadReservada() == null ? 0 : productoDTO.getCantidadReservada());
+        producto.setCantidadDanada(productoDTO.getCantidadDanada() == null ? 0 : productoDTO.getCantidadDanada());
+        producto.setCantidadDevuelta(productoDTO.getCantidadDevuelta() == null ? 0 : productoDTO.getCantidadDevuelta());
+        producto.setCantidadAlmacen(productoDTO.getCantidadAlmacen() == null ? 0 : productoDTO.getCantidadAlmacen());
+        producto.setEliminado(productoDTO.isEliminado());
+
 
         producto = productoRepository.save(producto);
 
@@ -112,20 +121,19 @@ public class ProductoService implements IProductoService {
     }
 
     /**
-     * Elimina un producto por su ID
+     * Elimina un producto por su ID (borrado lógico)
      * @param id ID del producto a eliminar
      */
     @Override
     public void eliminar(Long id) {
-        if (productoRepository.existsById(id)) {
-            productoRepository.deleteById(id);
-        } else {
-            throw new EntityNotFoundException("No se encontró el producto con ID: " + id);
-        }
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el producto con ID: " + id));
+        producto.setEliminado(true);
+        productoRepository.save(producto);
     }
 
     /**
-     * Lista productos por tipo
+     * Lista productos por tipo (solo los que NO están eliminados)
      * @param tipo Tipo para filtrar
      * @return Lista de productos del tipo especificado
      */
@@ -133,6 +141,7 @@ public class ProductoService implements IProductoService {
     @Transactional(readOnly = true)
     public List<ProductoDTO> listarPorTipo(String tipo) {
         return productoRepository.findByTipo(tipo).stream()
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -151,25 +160,30 @@ public class ProductoService implements IProductoService {
                 p.getCantidadDisponible(),
                 p.getCantidadDanada(),
                 p.getCantidadDevuelta(),
-                p.getCantidadAlmacen()
+                p.getCantidadAlmacen(),
+                p.isEliminado() // <-- nuevo campo en el DTO
         );
     }
 
     @Transactional(readOnly = true)
     public Producto getProductoById(Long id) {
         return productoRepository.findById(id)
+                .filter(p -> !p.isEliminado())
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
     }
 
     @Transactional(readOnly = true)
     public Producto getProductoByCodigo(String codigo) {
         return productoRepository.findByCodigo(codigo)
+                .filter(p -> !p.isEliminado())
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con código: " + codigo));
     }
 
     @Transactional(readOnly = true)
     public List<Producto> getProductosDisponibles(String busqueda, String categoria, int page, int size) {
-        List<Producto> productos = productoRepository.findAll();
+        List<Producto> productos = productoRepository.findAll().stream()
+                .filter(p -> !p.isEliminado())
+                .collect(Collectors.toList());
 
         if (busqueda != null && !busqueda.isEmpty()) {
             productos = productos.stream()

@@ -18,6 +18,8 @@ public class ProductoDTO {
     private Integer cantidadDanada;
     private Integer cantidadDevuelta;
     private Integer cantidadAlmacen;
+    private boolean eliminado = false;
+
 
     public ProductoDTO() {}
 
@@ -34,7 +36,8 @@ public class ProductoDTO {
             Integer cantidadDisponible,
             Integer cantidadDanada,
             Integer cantidadDevuelta,
-            Integer cantidadAlmacen
+            Integer cantidadAlmacen,
+            boolean eliminado
     ) {
         this.id = id;
         this.codigo = codigo;
@@ -49,6 +52,7 @@ public class ProductoDTO {
         this.cantidadDanada = cantidadDanada;
         this.cantidadDevuelta = cantidadDevuelta;
         this.cantidadAlmacen = cantidadAlmacen;
+        this.eliminado = eliminado;
     }
 
     public Long getId() { return id; }
@@ -95,4 +99,11 @@ public class ProductoDTO {
 
     public Integer getCantidadDevuelta() { return cantidadDevuelta; }
     public void setCantidadDevuelta(Integer cantidadDevuelta) { this.cantidadDevuelta = cantidadDevuelta; }
+
+    public boolean isEliminado() {
+        return eliminado;
+    }
+    public void setEliminado(boolean eliminado) {
+        this.eliminado = eliminado;
+    }
 }

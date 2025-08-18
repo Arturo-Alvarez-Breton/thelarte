@@ -44,6 +44,7 @@ function validateFormProducto(data) {
     return valid;
 }
 
+
 class ProductosManager {
     constructor() {
         this.productoService = new ProductoService();
@@ -112,6 +113,7 @@ class ProductosManager {
         this.init();
     }
 
+
     async init() {
         this.setupEventListeners();
         await this.loadProductos();
@@ -142,14 +144,16 @@ class ProductosManager {
         });
         document.getElementById('productoFoto')?.addEventListener('change', (e) => this.previewFoto(e));
     }
-
     async loadProductos() {
         this.showLoading();
         try {
             const allProductos = await this.productoService.getProductos();
+            // FILTRA SOLO LOS QUE NO ESTÉN ELIMINADOS
+            const productosNoEliminados = allProductos.filter(p => !p.eliminado);
+
             const searchValue = (document.getElementById('productoSearchInput')?.value || '').trim().toLowerCase();
             const tipoValue = (document.getElementById('productoTipoFilter')?.value || '').trim().toLowerCase();
-            let filtered = allProductos;
+            let filtered = productosNoEliminados;
             if (tipoValue) {
                 filtered = filtered.filter(p => p.tipo && p.tipo.toLowerCase() === tipoValue);
             }
@@ -160,8 +164,8 @@ class ProductosManager {
                 );
             }
             this.filteredProductos = filtered;
-            this.productos = allProductos;
-            this.tableViewManager.setData(allProductos);
+            this.productos = productosNoEliminados;
+            this.tableViewManager.setData(productosNoEliminados);
             this.renderProductos();
         } catch (error) {
             this.productos = [];
@@ -172,7 +176,6 @@ class ProductosManager {
             this.hideLoading();
         }
     }
-
     renderProductos() {
         const container = document.getElementById('productosListContainer');
         if (!container) return;
@@ -605,19 +608,31 @@ class ProductosManager {
     async handleSubmitProducto(e) {
         e.preventDefault();
         const formData = new FormData(e.target);
+
+        // ENVÍA TODOS LOS CAMPOS QUE ESPERA EL DTO DEL BACKEND
         const productoData = {
             nombre: formData.get('nombre'),
             tipo: formData.get('tipo'),
             descripcion: formData.get('descripcion'),
             precioVenta: formData.get('precioVenta') ? parseFloat(formData.get('precioVenta')) : null,
             precioCompra: formData.get('precioCompra') ? parseFloat(formData.get('precioCompra')) : null,
+            cantidadDisponible: this.currentProducto?.cantidadDisponible ?? 0,
+            cantidadReservada: this.currentProducto?.cantidadReservada ?? 0,
+            cantidadDanada: this.currentProducto?.cantidadDanada ?? 0,
+            cantidadDevuelta: this.currentProducto?.cantidadDevuelta ?? 0,
+            cantidadAlmacen: this.currentProducto?.cantidadAlmacen ?? 0,
         };
+
+        // Si en tu formulario tienes inputs para esas cantidades, puedes obtenerlas con formData.get(...)
+        // Si NO, las tomas del producto actual (edición) o pones 0 si es nuevo.
+
         const fotoInput = document.getElementById('productoFoto');
         if (fotoInput && fotoInput.files.length > 0) {
             productoData.fotoBase64 = await this.getBase64(fotoInput.files[0]);
         } else if (this.currentProducto && this.currentProducto.fotoUrl) {
             productoData.fotoBase64 = this.currentProducto.fotoUrl;
         }
+
         if (!validateFormProducto(productoData)) {
             return;
         }
