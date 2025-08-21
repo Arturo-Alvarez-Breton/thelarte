@@ -37,9 +37,14 @@
         @media (min-width: 1280px) {
             #clientesListContainer {
                 justify-items: center;
+                gap: 1rem;
             }
         }
-
+        @media (min-width: 1080px) {
+            #clientesListContainer {
+                gap: 0.75rem !important; /* gap-3 = 0.75rem */
+            }
+        }
         @media (min-width: 1536px) {
             #clientesListContainer {
                 gap: 2rem;
@@ -181,7 +186,7 @@
                 <input type="text" id="clientSearchInput" placeholder="Buscar clientes..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
             </div>
-            <div id="clientesListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-5">
+            <div id="clientesListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
                 <!-- Clientes se cargarán aquí -->
             </div>
             <div id="clientesPagination" class="flex justify-center mt-6"></div>
