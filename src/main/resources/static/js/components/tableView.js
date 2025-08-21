@@ -99,37 +99,35 @@ class TableViewManager {
     setData(data) {
         this.data = data;
         this.filteredData = [...data];
-        this.updatePagination();
+        this.totalItems = data.length;
+        this.totalPages = Math.ceil(this.totalItems / this.pageSize);
         if (this.isTableView) {
             this.renderTable();
         }
     }
 
-    filterData(searchTerm = '', additionalFilters = {}) {
-        let filtered = [...this.data];
-
-        if (searchTerm) {
-            filtered = filtered.filter(item =>
-                this.config.searchFields.some(field => {
-                    const value = this.getNestedValue(item, field);
-                    return value && value.toString().toLowerCase().includes(searchTerm.toLowerCase());
-                })
-            );
+    updateColumns(newColumns) {
+        this.config.columns = newColumns;
+        if (this.isTableView) {
+            this.renderTable();
         }
+    }
 
-        // Apply additional filters
-        Object.entries(additionalFilters).forEach(([key, value]) => {
-            if (value) {
-                filtered = filtered.filter(item => {
-                    const itemValue = this.getNestedValue(item, key);
-                    return itemValue && itemValue.toString().toLowerCase() === value.toLowerCase();
+    filterData(searchTerm) {
+        if (!searchTerm) {
+            this.filteredData = [...this.data];
+        } else {
+            const term = searchTerm.toLowerCase();
+            this.filteredData = this.data.filter(item => {
+                return this.config.searchFields.some(field => {
+                    const value = item[field];
+                    return value && value.toString().toLowerCase().includes(term);
                 });
-            }
-        });
-
-        this.filteredData = filtered;
+            });
+        }
+        this.totalItems = this.filteredData.length;
+        this.totalPages = Math.ceil(this.totalItems / this.pageSize);
         this.currentPage = 0;
-        this.updatePagination();
         if (this.isTableView) {
             this.renderTable();
         }
@@ -150,17 +148,23 @@ class TableViewManager {
     renderTable() {
         this.renderTableHeader();
         this.renderTableBody();
-        this.renderPagination();
+        this.renderTablePagination();
     }
 
     renderTableHeader() {
         const thead = document.getElementById('tableHead');
+        const headerRow = this.config.columns.map(col => `
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                ${col.header}
+            </th>
+        `).join('');
+
         thead.innerHTML = `
             <tr>
-                ${this.config.columns.map(col => 
-                    `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${col.header}</th>`
-                ).join('')}
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                ${headerRow}
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                </th>
             </tr>
         `;
     }
@@ -174,10 +178,10 @@ class TableViewManager {
         if (pageData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="${this.config.columns.length + 1}" class="px-6 py-12 text-center text-gray-500">
-                        <div class="flex flex-col items-center">
-                            <i class="${this.config.emptyIcon || 'fas fa-inbox'} text-4xl mb-2"></i>
-                            <p>No hay datos para mostrar</p>
+                    <td colspan="${this.config.columns.length + 1}" class="px-6 py-4 text-center text-gray-500">
+                        <div class="flex flex-col items-center py-8">
+                            <i class="${this.config.emptyIcon} text-4xl text-gray-300 mb-4"></i>
+                            <p>No hay datos disponibles</p>
                         </div>
                     </td>
                 </tr>
@@ -185,104 +189,84 @@ class TableViewManager {
             return;
         }
 
-        tbody.innerHTML = pageData.map(item => `
-            <tr class="hover:bg-gray-50">
-                ${this.config.columns.map(col => {
-                    const value = this.getNestedValue(item, col.field);
-                    const formattedValue = col.formatter ? col.formatter(value, item) : (value || 'N/A');
-                    return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formattedValue}</td>`;
-                }).join('')}
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div class="flex space-x-2">
-                        ${this.config.actions.map(action => 
-                            `<button 
-                                onclick="${action.handler}('${this.getNestedValue(item, this.config.idField)}')"
-                                class="${action.className}"
-                                title="${action.title}"
-                            >
-                                <i class="${action.icon}"></i>
-                            </button>`
-                        ).join('')}
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = pageData.map(item => {
+            const cells = this.config.columns.map(col => {
+                let value = item[col.field];
+                if (col.formatter) {
+                    // Pass both value and complete item to formatter
+                    value = col.formatter(value, item);
+                }
+                return `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${value || 'N/A'}</td>`;
+            }).join('');
+
+            const actions = this.config.actions.map(action => `
+                <button 
+                    onclick="${action.handler}('${item[this.config.idField]}')"
+                    class="mr-2 p-1 ${action.className}"
+                    title="${action.title}"
+                >
+                    <i class="${action.icon}"></i>
+                </button>
+            `).join('');
+
+            return `
+                <tr class="hover:bg-gray-50">
+                    ${cells}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        ${actions}
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
-    renderPagination() {
-        const startItem = this.currentPage * this.pageSize + 1;
-        const endItem = Math.min((this.currentPage + 1) * this.pageSize, this.totalItems);
+    renderTablePagination() {
+        if (this.totalPages <= 1) {
+            this.paginationContainer.innerHTML = '';
+            return;
+        }
+
+        const prevDisabled = this.currentPage === 0;
+        const nextDisabled = this.currentPage === this.totalPages - 1;
 
         this.paginationContainer.innerHTML = `
-            <div class="flex items-center text-sm text-gray-700">
-                <span>Mostrando ${startItem} a ${endItem} de ${this.totalItems} resultados</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <button 
-                    onclick="tableViewManager.goToPage(${this.currentPage - 1})" 
-                    ${this.currentPage === 0 ? 'disabled' : ''}
-                    class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Anterior
-                </button>
-                ${this.renderPageNumbers()}
-                <button 
-                    onclick="tableViewManager.goToPage(${this.currentPage + 1})" 
-                    ${this.currentPage >= this.totalPages - 1 ? 'disabled' : ''}
-                    class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Siguiente
-                </button>
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Mostrando ${this.currentPage * this.pageSize + 1} a ${Math.min((this.currentPage + 1) * this.pageSize, this.totalItems)} de ${this.totalItems} resultados
+                </div>
+                <div class="flex space-x-1">
+                    <button 
+                        ${prevDisabled ? 'disabled' : ''}
+                        onclick="tableViewManager.prevPage()"
+                        class="px-3 py-1 border border-gray-300 rounded-md text-sm ${prevDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}"
+                    >
+                        Anterior
+                    </button>
+                    <span class="px-3 py-1 text-sm">
+                        Página ${this.currentPage + 1} de ${this.totalPages}
+                    </span>
+                    <button 
+                        ${nextDisabled ? 'disabled' : ''}
+                        onclick="tableViewManager.nextPage()"
+                        class="px-3 py-1 border border-gray-300 rounded-md text-sm ${nextDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}"
+                    >
+                        Siguiente
+                    </button>
+                </div>
             </div>
         `;
     }
 
-    renderPageNumbers() {
-        const maxVisible = 5;
-        let startPage = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-        let endPage = Math.min(this.totalPages - 1, startPage + maxVisible - 1);
-
-        if (endPage - startPage < maxVisible - 1) {
-            startPage = Math.max(0, endPage - maxVisible + 1);
+    prevPage() {
+        if (this.currentPage > 0) {
+            this.currentPage--;
+            this.renderTable();
         }
-
-        let html = '';
-
-        if (startPage > 0) {
-            html += `<button onclick="tableViewManager.goToPage(0)" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">1</button>`;
-            if (startPage > 1) {
-                html += `<span class="px-2 py-1 text-gray-500">...</span>`;
-            }
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            html += `
-                <button 
-                    onclick="tableViewManager.goToPage(${i})" 
-                    class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium ${
-                        i === this.currentPage 
-                            ? 'bg-brand-brown text-white border-brand-brown' 
-                            : 'text-gray-700 bg-white hover:bg-gray-50'
-                    }"
-                >
-                    ${i + 1}
-                </button>
-            `;
-        }
-
-        if (endPage < this.totalPages - 1) {
-            if (endPage < this.totalPages - 2) {
-                html += `<span class="px-2 py-1 text-gray-500">...</span>`;
-            }
-            html += `<button onclick="tableViewManager.goToPage(${this.totalPages - 1})" class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">${this.totalPages}</button>`;
-        }
-
-        return html;
     }
 
-    goToPage(page) {
-        if (page >= 0 && page < this.totalPages) {
-            this.currentPage = page;
+    nextPage() {
+        if (this.currentPage < this.totalPages - 1) {
+            this.currentPage++;
             this.renderTable();
         }
     }
