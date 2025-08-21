@@ -250,8 +250,11 @@ class ClientesManager {
                            this.renderDesktopButtons(cliente);
 
         return `
-            <div class="cliente-card flex flex-col h-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[280px] max-w-[320px] mx-auto">
-                <div class="flex-1 flex flex-col p-4">
+            <div class="cliente-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[220px] 
+                sm:min-h-[240px] md:min-h-[260px] lg:min-h-[280px] xl:min-h-[300px] 
+                ${this.isMobile ? 'max-w-full' : 'max-w-[420px] xl:max-w-[480px]'}
+                ">
+                <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-5">
                     <div class="flex items-start justify-between mb-3">
                         <h3 class="text-lg font-semibold text-gray-900 truncate max-w-[70%]">
                             ${cliente.nombre} ${cliente.apellido}
