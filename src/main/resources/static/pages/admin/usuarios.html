@@ -22,9 +22,61 @@
             }
         }
     </script>
+    <style>
+        /* User card hover effects and desktop optimizations */
+        .usuario-card {
+            transition: all 0.3s ease;
+            max-width: 480px;
+        }
+        .usuario-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        @media (min-width: 1280px) {
+            #usuariosListContainer {
+                justify-items: center;
+                gap: 1rem;
+            }
+        }
+        @media (min-width: 1080px) {
+            #usuariosListContainer {
+                gap: 0.75rem !important;
+            }
+        }
+        @media (min-width: 1536px) {
+            #usuariosListContainer {
+                gap: 2rem;
+            }
+            .usuario-card {
+                max-width: 420px;
+            }
+        }
+        @media (min-width: 1920px) {
+            #usuariosListContainer {
+                gap: 1.5rem;
+            }
+            .usuario-card {
+                max-width: 480px;
+            }
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="flex h-screen bg-gray-100">
-<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+<body class="flex h-screen bg-gray-100 overflow-x-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
     <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
     <nav class="flex-1">
         <ul class="space-y-2">
@@ -91,37 +143,47 @@
         </a>
     </div>
 </aside>
-<div class="flex-1 flex flex-col">
-    <header class="bg-white shadow p-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Usuarios</h1>
-            <p class="text-sm text-gray-600">Consulta y gestiona información de usuarios.</p>
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <header class="bg-white shadow p-2 md:p-4 flex justify-between items-center">
+        <!-- Mobile hamburger menu -->
+        <div class="flex items-center">
+            <button id="hamburgerBtn" class="lg:hidden mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div>
+                <h1 class="text-lg md:text-2xl font-bold text-gray-800">Usuarios</h1>
+                <p class="text-xs md:text-sm text-gray-600 hidden sm:block">Consulta y gestiona información de usuarios.</p>
+            </div>
         </div>
         <div id="cont-quick-actions" class="flex space-x-2">
-            <div class="text-gray-600 text-sm">
-                <i class="fas fa-pencil mr-2"></i>Modo Administrador
+            <div class="text-gray-600 text-xs md:text-sm">
+                <i class="fas fa-pencil mr-2 hidden sm:inline"></i>
+                <span class="hidden sm:inline">Modo </span>Administrador
             </div>
         </div>
     </header>
-    <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
-        <section class="p-4 bg-white rounded-lg shadow">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-700">Listado de Usuarios</h2>
-                <button id="nuevoUsuarioBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
-                    <i class="fas fa-plus mr-2"></i>Nuevo Usuario
+    <main id="cont-main-content" class="flex-1 p-2 md:p-4 overflow-auto">
+        <section class="p-3 md:p-4 bg-white rounded-lg shadow">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Usuarios</h2>
+                <button id="nuevoUsuarioBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base w-full sm:w-auto justify-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    <span class="sm:inline">Nuevo Usuario</span>
                 </button>
             </div>
             <div class="mb-4">
-                <input type="text" id="usuarioSearchInput" placeholder="Buscar usuarios..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                <input type="text" id="usuarioSearchInput" placeholder="Buscar usuarios..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
             </div>
-            <div id="usuariosListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div id="usuariosListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
                 <!-- Usuarios se cargarán aquí -->
             </div>
+            <div id="usuariosPagination" class="flex justify-center mt-6"></div>
         </section>
     </main>
 </div>
 <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
         <span class="visually-hidden">Cargando...</span>
     </div>
 </div>
