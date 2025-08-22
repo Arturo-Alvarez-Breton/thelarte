@@ -1,22 +1,150 @@
 // src/main/resources/static/js/contabilidad/transacciones.js
 
 import { TransaccionService } from '../services/transaccionService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class TransaccionesManager {
     constructor() {
         this.transaccionService = new TransaccionService();
         this.transactions = [];
         this.filteredTransactions = [];
-        this.currentPage = 0; // 0-indexed for API
-        this.transactionsPerPage = 10; // Default size for API
-        this.currentView = 'list'; // Default view for transactions page
-        this.filtersVisible = false;
+        this.currentPage = 0;
+        this.transactionsPerPage = 25; // Changed to match client page
+        this.totalPages = 0;
+        this.totalItems = 0;
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+        // Initialize table view manager with responsive columns
+        this.tableViewManager = new TableViewManager('#transaccionesListContainer', {
+            columns: this.getResponsiveColumns(),
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'transaccionesManager.viewTransactionDetails',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-print',
+                    handler: 'transaccionesManager.imprimirFactura',
+                    className: 'text-blue-600 hover:text-blue-700',
+                    title: 'Imprimir factura'
+                }
+            ],
+            searchFields: ['numeroFactura', 'cliente.nombre', 'cliente.apellido', 'cliente.cedula', 'proveedor.nombre', 'tipoTransaccion', 'estado'],
+            idField: 'id',
+            emptyIcon: 'fas fa-exchange-alt'
+        });
 
         this.init();
     }
 
+    getResponsiveColumns() {
+        const isVerticalScreen = window.innerHeight > window.innerWidth;
+
+        if (isVerticalScreen || this.isMobile) {
+            // Mobile: only show essential info
+            return [
+                {
+                    header: 'Transacción',
+                    field: 'tipoTransaccion',
+                    formatter: (value, item) => `
+                        <div class="font-medium">${this.formatTransactionType(value)}</div>
+                        <div class="text-xs text-gray-500">#${item.numeroFactura || item.id}</div>
+                    `
+                },
+                {
+                    header: 'Total',
+                    field: 'total',
+                    formatter: (value) => `<span class="font-bold text-brand-brown">${this.formatCurrency(value)}</span>`
+                }
+            ];
+        } else if (this.isTablet) {
+            // Tablet: show more info
+            return [
+                {
+                    header: 'Factura #',
+                    field: 'numeroFactura',
+                    formatter: (value, item) => value || `#${item.id}`
+                },
+                {
+                    header: 'Tipo',
+                    field: 'tipoTransaccion',
+                    formatter: (value) => this.formatTransactionType(value)
+                },
+                {
+                    header: 'Cliente/Proveedor',
+                    field: 'cliente',
+                    formatter: (value, item) => {
+                        if (item.tipoTransaccion === 'COMPRA' && item.proveedor) {
+                            return item.proveedor.nombre;
+                        }
+                        return value ? `${value.nombre} ${value.apellido}` : 'Consumidor Final';
+                    }
+                },
+                {
+                    header: 'Estado',
+                    field: 'estado',
+                    formatter: (value) => {
+                        const color = this.getStateColor(value);
+                        return `<span class="px-2 py-1 text-xs font-medium rounded-full bg-${color}-100 text-${color}-800">${value}</span>`;
+                    }
+                },
+                {
+                    header: 'Total',
+                    field: 'total',
+                    formatter: (value) => `<span class="font-bold text-brand-brown">${this.formatCurrency(value)}</span>`
+                }
+            ];
+        } else {
+            // Desktop: show all info
+            return [
+                {
+                    header: 'Factura #',
+                    field: 'numeroFactura',
+                    formatter: (value, item) => value || `#${item.id}`
+                },
+                {
+                    header: 'Tipo',
+                    field: 'tipoTransaccion',
+                    formatter: (value) => this.formatTransactionType(value)
+                },
+                {
+                    header: 'Cliente/Proveedor',
+                    field: 'cliente',
+                    formatter: (value, item) => {
+                        if (item.tipoTransaccion === 'COMPRA' && item.proveedor) {
+                            return item.proveedor.nombre;
+                        }
+                        return value ? `${value.nombre} ${value.apellido}` : 'Consumidor Final';
+                    }
+                },
+                {
+                    header: 'Fecha',
+                    field: 'fecha',
+                    formatter: (value) => this.formatDate(value)
+                },
+                {
+                    header: 'Estado',
+                    field: 'estado',
+                    formatter: (value) => {
+                        const color = this.getStateColor(value);
+                        return `<span class="px-2 py-1 text-xs font-medium rounded-full bg-${color}-100 text-${color}-800">${value}</span>`;
+                    }
+                },
+                {
+                    header: 'Total',
+                    field: 'total',
+                    formatter: (value) => `<span class="font-bold text-brand-brown">${this.formatCurrency(value)}</span>`
+                }
+            ];
+        }
+    }
+
     async init() {
         this.setupEventListeners();
+        this.setupResponsiveHandlers();
         this.checkUrlFilters();
         await this.loadTransactions();
         this.updateTransactionCount();
@@ -123,6 +251,10 @@ class TransaccionesManager {
             };
             this.transactions = await this.transaccionService.obtenerTransacciones(filters);
             this.filteredTransactions = [...this.transactions];
+
+            // Update table view with all data
+            this.tableViewManager.setData(this.transactions);
+
             this.renderTransactions();
             this.updateTransactionCount();
         } catch (error) {
@@ -130,6 +262,7 @@ class TransaccionesManager {
             // Show empty state instead of error for no data scenarios
             this.transactions = [];
             this.filteredTransactions = [];
+            this.tableViewManager.setData([]);
             this.renderTransactions();
         } finally {
             this.hideLoading();
@@ -151,23 +284,23 @@ class TransaccionesManager {
             }
             
             container.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-exchange-alt text-3xl text-gray-400"></i>
+                <div class="text-center py-8 md:py-12 col-span-full">
+                    <div class="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exchange-alt text-2xl md:text-3xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin transacciones</h3>
-                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-2">Sin transacciones</h3>
+                    <p class="text-gray-600 mb-4 md:mb-6 text-sm md:text-base px-4">${emptyMessage}</p>
                     ${!searchTerm && !tipoFilter && !estadoFilter ? `
-                        <div class="space-x-2">
-                            <button onclick="window.openTransactionWizard('VENTA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <div class="flex flex-col sm:flex-row gap-2 justify-center">
+                            <button onclick="window.openTransactionWizard('VENTA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown text-sm md:text-base">
                                 <i class="fas fa-plus mr-2"></i>Nueva Venta
                             </button>
-                            <button onclick="window.openTransactionWizard('COMPRA')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                            <button onclick="window.openTransactionWizard('COMPRA')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm md:text-base">
                                 <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
                             </button>
                         </div>
                     ` : `
-                        <button onclick="transaccionesManager.clearFilters()" class="text-brand-brown hover:text-brand-light-brown">
+                        <button onclick="transaccionesManager.clearFilters()" class="text-brand-brown hover:text-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-times mr-2"></i>Limpiar filtros
                         </button>
                     `}
@@ -176,30 +309,169 @@ class TransaccionesManager {
             return;
         }
 
-        const cardsHtml = this.filteredTransactions.map(transaction => {
-            const stateColor = this.getStateColor(transaction.estado);
-            const isEditable = ['PENDIENTE', 'CONFIRMADA'].includes(transaction.estado);
-            const clientName = transaction.cliente ? `${transaction.cliente.nombre} ${transaction.cliente.apellido}` : 'Consumidor Final';
+        container.innerHTML = this.filteredTransactions.map(transaction => this.renderTransactionCard(transaction)).join('');
+    }
 
-            return `
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-semibold">${this.formatTransactionType(transaction.tipoTransaccion)} #${transaction.numeroFactura || transaction.id}</h3>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
+    renderTransactionCard(transaction) {
+        const stateColor = this.getStateColor(transaction.estado);
+        const clientName = transaction.cliente ? `${transaction.cliente.nombre} ${transaction.cliente.apellido}` :
+                          transaction.proveedor ? transaction.proveedor.nombre : 'Consumidor Final';
+
+        // Adaptive button rendering based on screen size
+        const buttonsHtml = this.isMobile ? this.renderMobileButtons(transaction) :
+                           this.isTablet ? this.renderTabletButtons(transaction) :
+                           this.renderDesktopButtons(transaction);
+
+        return `
+            <div class="transaction-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[220px] 
+                sm:min-h-[240px] md:min-h-[260px] lg:min-h-[280px] xl:min-h-[300px] 
+                ${this.isMobile ? 'max-w-full' : 'max-w-[420px] xl:max-w-[480px]'}
+                ">
+                <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-5">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-semibold text-gray-900 truncate">
+                                ${this.formatTransactionType(transaction.tipoTransaccion)}
+                            </h3>
+                            <p class="text-sm text-gray-500">   ${transaction.numeroFactura || transaction.id}</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800 ml-2 whitespace-nowrap">
                             ${transaction.estado}
                         </span>
                     </div>
-                    <p class="text-gray-600">Cliente: ${clientName}</p>
-                    <p class="text-gray-600">Fecha: ${this.formatDate(transaction.fecha)}</p>
-                    <p class="text-lg font-bold text-brand-brown mt-2">Total: ${this.formatCurrency(transaction.total)}</p>
-                    <div class="mt-4 flex space-x-2">
-                        <button onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
+                    <div class="flex-1 flex flex-col gap-2 mt-1">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </span>
+                            <span class="truncate">${clientName}</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-calendar text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${this.formatDate(transaction.fecha)}</span>
+                        </div>
+                        ${transaction.metodoPago ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-credit-card text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${transaction.metodoPago}</span>
+                        </div>
+                        ` : ''}
+                        <div class="flex items-center text-lg font-bold text-brand-brown mt-2">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-dollar-sign text-brand-brown text-sm"></i>
+                            </span>
+                            <span>${this.formatCurrency(transaction.total)}</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100">
+                        ${buttonsHtml}
                     </div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `;
+    }
 
-        container.innerHTML = cardsHtml;
+    renderMobileButtons(transaction) {
+        return `
+            <div class="space-y-2">
+                <div class="grid grid-cols-1 gap-2">
+                    <button 
+                        onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" 
+                        class="flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                        title="Ver detalles"
+                        type="button"
+                    >
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver Detalles</span>
+                    </button>
+                    <button 
+                        onclick="transaccionesManager.imprimirFactura(${transaction.id})"
+                        class="flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        title="Imprimir factura"
+                        type="button"
+                    >
+                        <i class="fas fa-print text-xs"></i>
+                        <!--<span>Imprimir</span>-->
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTabletButtons(transaction) {
+        return `
+            <div class="flex flex-wrap gap-1.5 justify-center">
+                <button 
+                    onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" 
+                    class="flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+                <button 
+                    onclick="transaccionesManager.imprimirFactura(${transaction.id})"
+                    class="flex items-center gap-1 bg-blue-600 text-white px-2.5 py-1.5 rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
+                    title="Imprimir factura"
+                    type="button"
+                >
+                    <i class="fas fa-print"></i>
+                    <span>Print</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderDesktopButtons(transaction) {
+        return `
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" 
+                    class="flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Detalles</span>
+                </button>
+                <button 
+                    onclick="transaccionesManager.imprimirFactura(${transaction.id})"
+                    class="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Imprimir factura"
+                    type="button"
+                >
+                    <i class="fas fa-print"></i>
+                    <!--<span>Imprimir</span>-->
+                </button>
+            </div>
+        `;
+    }
+
+    filterTransactions() {
+        const searchTerm = document.getElementById('transaccionSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
+        this.currentPage = 0;
+        this.loadTransactions();
+    }
+
+    setupResponsiveHandlers() {
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth < 768;
+            const newIsTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+            if (newIsMobile !== this.isMobile || newIsTablet !== this.isTablet) {
+                this.isMobile = newIsMobile;
+                this.isTablet = newIsTablet;
+                this.tableViewManager.updateColumns(this.getResponsiveColumns());
+                // Re-render transactions if view changed significantly
+                this.renderTransactions();
+            }
+        });
     }
 
     renderPagination() {
@@ -223,11 +495,6 @@ class TransaccionesManager {
 
     changePage(page) {
         this.currentPage = page;
-        this.loadTransactions();
-    }
-
-    filterTransactions() {
-        this.currentPage = 0; // Reset to first page on filter change
         this.loadTransactions();
     }
 
@@ -458,7 +725,7 @@ class TransaccionesManager {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
 
-    imprimirFactura() {
+    imprimirFactura(id) {
         window.showToast('Funcionalidad de impresión en desarrollo.', 'info');
         // Implement actual printing logic here
     }
@@ -467,8 +734,6 @@ class TransaccionesManager {
         window.showToast(`Editar transacción ${id} - Funcionalidad en desarrollo.`, 'info');
         // Implement edit logic, possibly opening the wizard in edit mode
     }
-
-    // Método deleteTransaction eliminado - no se permite eliminar transacciones
 }
 
 // Global instance
@@ -476,5 +741,6 @@ const transaccionesManager = new TransaccionesManager();
 
 // Expose functions to global scope for HTML onclick attributes
 window.transaccionesManager = transaccionesManager;
+window.tableViewManager = transaccionesManager.tableViewManager;
 window.cerrarModalVerTransaccion = () => transaccionesManager.cerrarModalVerTransaccion();
-window.imprimirFactura = () => transaccionesManager.imprimirFactura();
+window.imprimirFactura = (id) => transaccionesManager.imprimirFactura(id);
