@@ -23,214 +23,225 @@
     </script>
 </head>
 <body class="flex h-screen bg-gray-100">
-    <aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
-        <div class="text-2xl font-bold text-center">Thelarte</div>
-        <nav class="flex-1">
-            <ul>
-                <!-- Dashboard eliminado -->
-                <li>
-                    <a href="/pages/contabilidad/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-home flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Inicio Contabilidad</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
-                        <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Transacciones</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-box-open flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Productos</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-users flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Clientes</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Suplidores</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Reportes</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="/pages/contabilidad/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                        <i class="fas fa-cog flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
-                        <span class="ml-3">Configuración</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-        <div class="mt-auto">
-            <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                <span class="ml-3">Cerrar Sesión</span>
-            </a>
-        </div>
-    </aside>
-
-    <div class="flex-1 flex flex-col">
-        <header class="bg-white shadow p-4 flex justify-between items-center">
-            <div>
-                <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Transacciones</h1>
-                <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta de transacciones y registro de operaciones de caja</p>
-            </div>
-            <div id="cont-quick-actions" class="flex space-x-2">
-                <!-- Botones de acción rápida específicos de la página -->
-                <button id='btnVenta' data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-plus mr-2"></i>Nueva Venta
-                </button>
-                <button id='btnCompra' data-action="open-wizard" data-type="COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
-                </button>
-                <button id='btnDevolucion'data-action="open-wizard" data-type="DEVOLUCION" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-undo mr-2"></i>Devolución
-                </button>
-            </div>
-        </header>
-
-        <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
-            <!-- El contenido específico de cada página se inyectará aquí -->
-            <section class="p-4 bg-white rounded-lg shadow">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Lista de Transacciones</h2>
-                <div class="mb-4 flex flex-wrap gap-4">
-                    <input type="text" id="transaccionSearchInput" placeholder="Buscar transacciones..." 
-                           class="flex-1 min-w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    <select id="transaccionTipoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <option value="">Todos los tipos</option>
-                        <option value="VENTA">Ventas</option>
-                        <option value="COMPRA">Compras</option>
-                        <option value="DEVVENTA">Devoluciones de Ventas</option>
-                        <option value="DEVCOMPRA">Devoluciones de Compras</option>
-                    </select>
-                    <select id="transaccionEstadoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <option value="">Todos los estados</option>
-                        <option value="PENDIENTE">Pendiente</option>
-                        <option value="COMPLETADA">Completada</option>
-                        <option value="CANCELADA">Cancelada</option>
-                    </select>
-                </div>
-                <div id="transaccionesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Las transacciones se cargarán aquí -->
-                </div>
-                <div id="paginacion" class="mt-6 flex justify-center"></div>
-            </section>
-        </main>
+<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+    <div class="text-2xl font-bold text-center">Thelarte</div>
+    <nav class="flex-1">
+        <ul>
+            <li>
+                <a href="/pages/contabilidad/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-home flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Inicio Contabilidad</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-users flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Clientes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-truck flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Suplidores</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-chart-line flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Reportes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/contabilidad/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-cog flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Configuración</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
     </div>
+</aside>
 
-    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
-            <span class="visually-hidden">Cargando...</span>
+<div class="flex-1 flex flex-col">
+    <header class="bg-white shadow p-4 flex justify-between items-center">
+        <div>
+            <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Transacciones</h1>
+            <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta de transacciones y registro de operaciones de caja</p>
         </div>
-    </div>
-    <!-- Modal Ver Transacción -->
-    <div id="modalVerTransaccion" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
-                <div class="bg-brand-brown text-white p-6">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xl font-bold">Detalles de Transacción</h3>
-                        <button onclick="cerrarModalVerTransaccion()" class="text-white hover:text-gray-300">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="p-6 max-h-96 overflow-y-auto" id="detallesTransaccion">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-                
-                <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                    <button onclick="imprimirFactura()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-print mr-2"></i>
-                        Imprimir
+        <div id="cont-quick-actions" class="flex space-x-2">
+            <button id='btnVenta' data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                <i class="fas fa-plus mr-2"></i> Nueva Venta
+            </button>
+            <button id='btnCompra' data-action="open-wizard" data-type="COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                <i class="fas fa-shopping-cart mr-2"></i> Nueva Compra
+            </button>
+            <button id='btnDevolucionVenta' data-action="open-wizard" data-type="DEVOLUCION_VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                <i class="fas fa-undo mr-2"></i> Devolución de Venta
+            </button>
+            <button id='btnDevolucionCompra' data-action="open-wizard" data-type="DEVOLUCION_COMPRA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
+                <i class="fas fa-undo-alt mr-2"></i> Devolución de Compra
+            </button>
+        </div>
+    </header>
+
+    <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
+        <section class="p-4 bg-white rounded-lg shadow">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
+                <h2 class="text-xl font-semibold text-gray-700">Lista de Transacciones</h2>
+                <div class="flex items-center gap-3">
+                    <span class="text-gray-700 font-medium">Vista:</span>
+                    <button id="btnVistaTarjetas" class="px-4 py-2 border rounded-lg flex items-center gap-2 bg-brand-brown text-white hover:bg-brand-light-brown focus:outline-none">
+                        <i class="fas fa-th-large"></i> Tarjetas
                     </button>
-                    <button onclick="cerrarModalVerTransaccion()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                        Cerrar
+                    <button id="btnVistaTabla" class="px-4 py-2 border rounded-lg flex items-center gap-2 bg-white text-brand-brown hover:bg-brand-beige focus:outline-none">
+                        <i class="fas fa-table"></i> Tabla
                     </button>
                 </div>
             </div>
+            <div class="mb-4 flex flex-wrap gap-4">
+                <input type="text" id="transaccionSearchInput" placeholder="Buscar transacciones..."
+                       class="flex-1 min-w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                <select id="transaccionTipoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Todos los tipos</option>
+                    <option value="VENTA">Ventas</option>
+                    <option value="COMPRA">Compras</option>
+                    <option value="DEVOLUCION_VENTA">Devoluciones de Ventas</option>
+                    <option value="DEVOLUCION_COMPRA">Devoluciones de Compras</option>
+                </select>
+                <select id="transaccionEstadoFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Todos los estados</option>
+                    <option value="PENDIENTE">Pendiente</option>
+                    <option value="COMPLETADA">Completada</option>
+                    <option value="CANCELADA">Cancelada</option>
+                    <option value="DEVUELTA">Devuelta</option>
+                    <option value="PARCIALMENTE_DEVUELTA">Parcialmente devuelta</option>
+                </select>
+            </div>
+            <div id="transaccionesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Las transacciones se cargarán aquí (tarjetas por defecto) -->
+            </div>
+            <div id="transaccionesTableContainer" class="hidden mt-4">
+                <!-- Aquí se cargará la tabla de transacciones -->
+            </div>
+            <div id="paginacion" class="mt-6 flex justify-center"></div>
+        </section>
+    </main>
+</div>
+
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+<!-- Modal Ver Transacción -->
+<div id="modalVerTransaccion" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Detalles de Transacción</h3>
+                    <button onclick="cerrarModalVerTransaccion()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6 max-h-96 overflow-y-auto" id="detallesTransaccion">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button onclick="imprimirFactura()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-print mr-2"></i>
+                    Imprimir
+                </button>
+                <button onclick="cerrarModalVerTransaccion()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Transaction Creation Wizard Modal -->
-    <div id="transactionWizard" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
-                <!-- Wizard Header -->
-                <div class="bg-brand-brown text-white p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-xl font-bold">Crear Nueva Transacción</h3>
-                            <p class="text-brand-beige opacity-90" id="wizardSubtitle">Selecciona el tipo de transacción</p>
-                        </div>
-                        <button onclick="closeTransactionWizard()" class="text-white hover:text-gray-300">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
+<!-- Transaction Creation Wizard Modal -->
+<div id="transactionWizard" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold">Crear Nueva Transacción</h3>
+                        <p class="text-brand-beige opacity-90" id="wizardSubtitle">Selecciona el tipo de transacción</p>
                     </div>
-                    
-                    <!-- Progress Steps -->
-                    <div class="flex items-center mt-6 space-x-4">
-                        <div class="wizard-step active flex items-center">
-                            <div class="w-8 h-8 bg-white text-brand-brown rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                            <span class="ml-2 text-sm">Tipo</span>
-                        </div>
-                        <div class="wizard-step flex items-center">
-                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                            <span class="ml-2 text-sm">Detalles</span>
-                        </div>
-                        <div class="wizard-step flex items-center">
-                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                            <span class="ml-2 text-sm">Productos</span>
-                        </div>
-                        <div class="wizard-step flex items-center">
-                            <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                            <span class="ml-2 text-sm">Confirmación</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Wizard Content -->
-                <div class="p-6 custom-scrollbar overflow-y-auto" style="max-height: 60vh;" id="wizardContent">
-                    <!-- Content will be loaded dynamically -->
-                </div>
-                
-                <!-- Wizard Footer -->
-                <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-                    <button id="wizardPrevBtn" onclick="wizardPrevStep()" class="px-4 py-2 text-gray-600 hover:text-gray-800 hidden">
-                        <i class="fas fa-arrow-left mr-1"></i>
-                        Anterior
+                    <button onclick="closeTransactionWizard()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
                     </button>
-                    <div class="flex space-x-3">
-                        <button onclick="closeTransactionWizard()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                            Cancelar
-                        </button>
-                        <button id="wizardNextBtn" onclick="wizardNextStep()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown">
-                            Siguiente
-                            <i class="fas fa-arrow-right ml-1"></i>
-                        </button>
+                </div>
+                <div class="flex items-center mt-6 space-x-4">
+                    <div class="wizard-step active flex items-center">
+                        <div class="w-8 h-8 bg-white text-brand-brown rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                        <span class="ml-2 text-sm">Tipo</span>
                     </div>
+                    <div class="wizard-step flex items-center">
+                        <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                        <span class="ml-2 text-sm">Detalles</span>
+                    </div>
+                    <div class="wizard-step flex items-center">
+                        <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                        <span class="ml-2 text-sm">Productos</span>
+                    </div>
+                    <div class="wizard-step flex items-center">
+                        <div class="w-8 h-8 bg-brand-light-brown text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                        <span class="ml-2 text-sm">Confirmación</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 custom-scrollbar overflow-y-auto" style="max-height: 60vh;" id="wizardContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                <button id="wizardPrevBtn" onclick="wizardPrevStep()" class="px-4 py-2 text-gray-600 hover:text-gray-800 hidden">
+                    <i class="fas fa-arrow-left mr-1"></i>
+                    Anterior
+                </button>
+                <div class="flex space-x-3">
+                    <button onclick="closeTransactionWizard()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button id="wizardNextBtn" onclick="wizardNextStep()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown">
+                        Siguiente
+                        <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="/js/components/sidebar.js" type="module"></script>
-    <script src="/js/components/header.js" type="module"></script>
-    <script src="/js/contabilidad/main.js" type="module"></script>
-    <script src="/js/components/notifications.js" type="module"></script>
-    <script src="/js/components/transactionWizard.js" type="module"></script>
-    <script src="/js/services/transaccionService.js" type="module"></script>
-    <script src="/js/contabilidad/transacciones.js" type="module"></script>
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/contabilidad/main.js" type="module"></script>
+<script src="/js/components/notifications.js" type="module"></script>
+<script src="/js/components/transactionWizard.js" type="module"></script>
+<script src="/js/services/transaccionService.js" type="module"></script>
+<script src="/js/contabilidad/transacciones.js" type="module"></script>
 </body>
 </html>

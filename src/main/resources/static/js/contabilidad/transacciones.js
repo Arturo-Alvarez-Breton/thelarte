@@ -5,10 +5,11 @@ class TransaccionesManager {
     constructor() {
         this.transaccionService = new TransaccionService();
         this.transactions = [];
+        this.filteredTransactions = [];
         this.currentPage = 0;
         this.transactionsPerPage = 9;
         this.filtersVisible = false;
-
+        this.vista = 'tarjetas'; // 'tarjetas' o 'tabla'
         this.init();
     }
 
@@ -17,6 +18,53 @@ class TransaccionesManager {
         this.checkUrlFilters();
         await this.loadTransactions();
         this.updateTransactionCount();
+    }
+
+    setupEventListeners() {
+        document.getElementById('transaccionTipoFilter')?.addEventListener('change', () => this.filterTransactions());
+        document.getElementById('transaccionEstadoFilter')?.addEventListener('change', () => this.filterTransactions());
+        document.getElementById('transaccionSearchInput')?.addEventListener('input', () => this.filterTransactions());
+        document.querySelectorAll('[data-action="open-wizard"]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const type = e.target.getAttribute('data-type') || e.target.closest('[data-type]')?.getAttribute('data-type');
+                if (type && window.openTransactionWizard) window.openTransactionWizard(type);
+            });
+        });
+        document.getElementById('btnVistaTarjetas')?.addEventListener('click', () => this.setVista('tarjetas'));
+        document.getElementById('btnVistaTabla')?.addEventListener('click', () => this.setVista('tabla'));
+    }
+
+    setVista(vista) {
+        this.vista = vista;
+        this.renderVista();
+    }
+
+    renderVista() {
+        if (this.vista === 'tarjetas') {
+            document.getElementById('transaccionesListContainer').classList.remove('hidden');
+            document.getElementById('transaccionesTableContainer').classList.add('hidden');
+            this.renderTransactions();
+            this.renderPagination();
+        } else {
+            document.getElementById('transaccionesListContainer').classList.add('hidden');
+            document.getElementById('transaccionesTableContainer').classList.remove('hidden');
+            this.renderTableTransactions();
+            this.renderTablePagination();
+        }
+    }
+
+    async loadTransactions() {
+        this.showLoading();
+        try {
+            this.transactions = await this.transaccionService.obtenerTransacciones({});
+            this.filterTransactions();
+        } catch (error) {
+            console.error('Error loading transactions:', error);
+            this.transactions = [];
+            this.filterTransactions();
+        } finally {
+            this.hideLoading();
+        }
     }
 
     checkUrlFilters() {
@@ -30,6 +78,18 @@ class TransaccionesManager {
         }
     }
 
+    async cambiarEstadoTransaccion(id, nuevoEstado) {
+        try {
+            await this.transaccionService.cambiarEstadoTransaccion(id, nuevoEstado);
+            await this.loadTransactions();
+            const transaction = await this.transaccionService.obtenerTransaccionPorId(id);
+            this.renderTransactionDetailsModal(transaction);
+            window.showToast(`Estado cambiado a: ${nuevoEstado}`, 'success');
+        } catch (error) {
+            console.error('Error changing transaction state:', error);
+            window.showToast('Error al cambiar el estado de la transacción.', 'error');
+        }
+    }
     showClientFilter(clienteNombre, cedula) {
         const container = document.querySelector('.container');
         if (container) {
@@ -71,48 +131,47 @@ class TransaccionesManager {
         this.filterTransactions();
     }
 
-    setupEventListeners() {
-        document.getElementById('transaccionTipoFilter')?.addEventListener('change', () => this.filterTransactions());
-        document.getElementById('transaccionEstadoFilter')?.addEventListener('change', () => this.filterTransactions());
-        document.getElementById('transaccionSearchInput')?.addEventListener('keyup', () => this.filterTransactions());
-        document.querySelectorAll('[data-action="open-wizard"]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const type = e.target.getAttribute('data-type') || e.target.closest('[data-type]')?.getAttribute('data-type');
-                if (type && window.openTransactionWizard) window.openTransactionWizard(type);
-            });
-        });
-    }
+    filterTransactions() {
+        const tipo = document.getElementById('transaccionTipoFilter')?.value || '';
+        const estado = document.getElementById('transaccionEstadoFilter')?.value || '';
+        const busqueda = document.getElementById('transaccionSearchInput')?.value?.toLowerCase() || '';
+        this.currentPage = 0;
 
-    async loadTransactions() {
-        this.showLoading();
-        try {
-            const filters = {
-                tipo: document.getElementById('transaccionTipoFilter')?.value || null,
-                estado: document.getElementById('transaccionEstadoFilter')?.value || null,
-                busqueda: document.getElementById('transaccionSearchInput')?.value || null
-            };
-            this.transactions = await this.transaccionService.obtenerTransacciones(filters);
-            this.renderTransactions();
-            this.renderPagination();
-            this.updateTransactionCount();
-        } catch (error) {
-            console.error('Error loading transactions:', error);
-            this.transactions = [];
-            this.renderTransactions();
-            this.renderPagination();
-        } finally {
-            this.hideLoading();
-        }
+        this.filteredTransactions = this.transactions.filter(t => {
+            let matchesTipo = tipo ? (t.tipo && t.tipo.toUpperCase() === tipo.toUpperCase()) : true;
+            let matchesEstado = estado ? (t.estado && t.estado.toUpperCase() === estado.toUpperCase()) : true;
+
+            let matchesBusqueda = true;
+            if (busqueda) {
+                let cliente = t.cliente ? `${t.cliente.nombre || ''} ${t.cliente.apellido || ''}` : '';
+                let proveedor = t.proveedor ? `${t.proveedor.nombre || ''}` : '';
+                let contraparte = t.contraparteNombre || '';
+                let numFactura = t.numeroFactura || '';
+                let id = String(t.id || '');
+                let total = String(t.total || '').replace(/[\D]+/g, '');
+                matchesBusqueda = (
+                    cliente.toLowerCase().includes(busqueda) ||
+                    proveedor.toLowerCase().includes(busqueda) ||
+                    contraparte.toLowerCase().includes(busqueda) ||
+                    numFactura.toLowerCase().includes(busqueda) ||
+                    id.includes(busqueda) ||
+                    total.includes(busqueda)
+                );
+            }
+            return matchesTipo && matchesEstado && matchesBusqueda;
+        });
+        this.renderVista();
+        this.updateTransactionCount();
     }
 
     getFilteredTransactions() {
-        return [...this.transactions];
+        return [...this.filteredTransactions];
     }
 
+    // --- Render Cards ---
     renderTransactions() {
         const container = document.getElementById('transaccionesListContainer');
         if (!container) return;
-
         const filtered = this.getFilteredTransactions();
         const start = this.currentPage * this.transactionsPerPage;
         const end = start + this.transactionsPerPage;
@@ -133,56 +192,136 @@ class TransaccionesManager {
                     </div>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">Sin transacciones</h3>
                     <p class="text-gray-600 mb-6">${emptyMessage}</p>
-                    ${!searchTerm && !tipoFilter && !estadoFilter ? `
-                        <div class="space-x-2">
-                            <button onclick="window.openTransactionWizard('VENTA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                                <i class="fas fa-plus mr-2"></i>Nueva Venta
-                            </button>
-                            <button onclick="window.openTransactionWizard('COMPRA')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
-                                <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
-                            </button>
-                        </div>
-                    ` : `
-                        <button onclick="transaccionesManager.clearFilters()" class="text-brand-brown hover:text-brand-light-brown">
-                            <i class="fas fa-times mr-2"></i>Limpiar filtros
-                        </button>
-                    `}
+                    <button onclick="window.openTransactionWizard('VENTA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center gap-2">
+                        <i class="fas fa-plus mr-2"></i>Nueva Venta
+                    </button>
+                    <button onclick="window.openTransactionWizard('COMPRA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center gap-2">
+                        <i class="fas fa-shopping-cart mr-2"></i>Nueva Compra
+                    </button>
+                    <button onclick="window.openTransactionWizard('DEVOLUCION_VENTA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center gap-2">
+                        <i class="fas fa-undo mr-2"></i>Devolución Venta
+                    </button>
+                    <button onclick="window.openTransactionWizard('DEVOLUCION_COMPRA')" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center gap-2">
+                        <i class="fas fa-undo-alt mr-2"></i>Devolución Compra
+                    </button>
                 </div>
             `;
             return;
         }
 
-        const cardsHtml = toShow.map(transaction => {
+        container.innerHTML = toShow.map(transaction => {
             const stateColor = this.getStateColor(transaction.estado);
-            const clientName = transaction.cliente ? `${transaction.cliente.nombre} ${transaction.cliente.apellido}` : 'Consumidor Final';
-            return `
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-semibold">${this.formatTransactionType(transaction.tipo)} #${transaction.numeroFactura || transaction.id}</h3>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
-                            ${transaction.estado}
-                        </span>
-                    </div>
-                    <p class="text-gray-600">Cliente: ${clientName}</p>
-                    <p class="text-gray-600">Fecha: ${this.formatDate(transaction.fecha)}</p>
-                    <p class="text-lg font-bold text-brand-brown mt-2">Total: ${this.formatCurrency(transaction.total)}</p>
-                    <div class="mt-4 flex space-x-2">
-                        <button onclick="transaccionesManager.viewTransactionDetails(${transaction.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
-                        <a href="#" 
-                           data-action="eliminar" 
-                           data-id="${transaction.id}" 
-                           class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                           <i class="fas fa-trash mr-2"></i>Eliminar
-                        </a>
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const clientName =
+                (transaction.cliente && transaction.cliente.nombre)
+                    ? `${transaction.cliente.nombre}${transaction.cliente.apellido ? ' ' + transaction.cliente.apellido : ''}`
+                    : (transaction.contraparteNombre
+                        ? transaction.contraparteNombre
+                        : 'Consumidor Final');
 
-        container.innerHTML = cardsHtml;
+            return `
+            <div class="bg-white rounded-lg shadow-md p-4 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-lg font-semibold">${this.formatTransactionType(transaction.tipo)} #${transaction.numeroFactura || transaction.id}</h3>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
+                        ${transaction.estado}
+                    </span>
+                </div>
+                <p class="text-gray-600">Cliente: ${clientName}</p>
+                <p class="text-gray-600">Fecha: ${this.formatDate(transaction.fecha)}</p>
+                <p class="text-lg font-bold text-brand-brown mt-2">Total: ${this.formatCurrency(transaction.total)}</p>
+                <div class="mt-4 flex flex-wrap gap-2 items-center justify-between">
+                    <button onclick="transaccionesManager.viewTransactionDetails(${transaction.id})"
+                            class="flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm"
+                    >
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <button onclick="transaccionesManager.eliminarTransaccion(${transaction.id})"
+                            class="flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                    >
+                        <i class="fas fa-trash-alt"></i> 
+                    </button>
+                </div>
+            </div>
+        `;
+        }).join('');
     }
 
+    // --- Render Table + Pagination ---
+    renderTableTransactions() {
+        const container = document.getElementById('transaccionesTableContainer');
+        if (!container) return;
+        const filtered = this.getFilteredTransactions();
+        const start = this.currentPage * this.transactionsPerPage;
+        const end = start + this.transactionsPerPage;
+        const toShow = filtered.slice(start, end);
+
+        if (toShow.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exchange-alt text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin transacciones</h3>
+                    <p class="text-gray-600 mb-6">No se encontraron transacciones.</p>
+                </div>
+            `;
+            return;
+        }
+        container.innerHTML = `
+            <table class="min-w-full divide-y divide-gray-200 bg-white rounded-lg shadow-md">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left font-bold">Factura #</th>
+                        <th class="px-4 py-2 text-left font-bold">Tipo</th>
+                        <th class="px-4 py-2 text-left font-bold">Cliente</th>
+                        <th class="px-4 py-2 text-left font-bold">Fecha</th>
+                        <th class="px-4 py-2 text-left font-bold">Total</th>
+                        <th class="px-4 py-2 text-left font-bold">Estado</th>
+                        <th class="px-4 py-2 text-left font-bold">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${toShow.map(transaction => {
+            const stateColor = this.getStateColor(transaction.estado);
+            const clientName =
+                (transaction.cliente && transaction.cliente.nombre)
+                    ? `${transaction.cliente.nombre}${transaction.cliente.apellido ? ' ' + transaction.cliente.apellido : ''}`
+                    : (transaction.contraparteNombre
+                        ? transaction.contraparteNombre
+                        : 'Consumidor Final');
+            return `
+                        <tr>
+                            <td class="px-4 py-2">${transaction.numeroFactura || transaction.id}</td>
+                            <td class="px-4 py-2">${this.formatTransactionType(transaction.tipo)}</td>
+                            <td class="px-4 py-2">${clientName}</td>
+                            <td class="px-4 py-2">${this.formatDate(transaction.fecha)}</td>
+                            <td class="px-4 py-2">${this.formatCurrency(transaction.total)}</td>
+                            <td class="px-4 py-2">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">${transaction.estado}</span>
+                            </td>
+                            <td class="px-4 py-2 flex flex-wrap gap-2">
+                                <button onclick="transaccionesManager.viewTransactionDetails(${transaction.id})"
+                                        class="flex items-center gap-2 bg-brand-brown text-white px-2 py-1 rounded hover:bg-brand-light-brown transition-colors shadow-sm"
+                                >
+                                    <i class="fas fa-eye"></i> Detalles
+                                </button>
+                                <button onclick="transaccionesManager.eliminarTransaccion(${transaction.id})"
+                                        class="flex items-center gap-2 bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors shadow-sm"
+                                >
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        `;
+        }).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    // Paginación para tarjetas (por defecto)
     renderPagination() {
+        if (this.vista !== 'tarjetas') return;
         const filtered = this.getFilteredTransactions();
         const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
         const paginationContainer = document.getElementById('paginacion');
@@ -204,15 +343,33 @@ class TransaccionesManager {
         paginationContainer.innerHTML = paginationHtml;
     }
 
-    changePage(page) {
-        this.currentPage = page;
-        this.renderTransactions();
-        this.renderPagination();
+    // Paginación para tabla
+    renderTablePagination() {
+        if (this.vista !== 'tabla') return;
+        const filtered = this.getFilteredTransactions();
+        const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
+        const paginationContainer = document.getElementById('paginacion');
+        if (!paginationContainer) return;
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        let paginationHtml = '<div class="flex justify-center space-x-2 my-4">';
+        for (let i = 0; i < totalPages; i++) {
+            paginationHtml += `
+            <button onclick="transaccionesManager.changePage(${i})" 
+                    class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
+                ${i + 1}
+            </button>
+        `;
+        }
+        paginationHtml += '</div>';
+        paginationContainer.innerHTML = paginationHtml;
     }
 
-    filterTransactions() {
-        this.currentPage = 0;
-        this.loadTransactions();
+    changePage(page) {
+        this.currentPage = page;
+        this.renderVista();
     }
 
     clearFilters() {
@@ -241,7 +398,6 @@ class TransaccionesManager {
             `;
         }
     }
-
     hideLoading() {}
 
     showError(message) {
@@ -277,8 +433,11 @@ class TransaccionesManager {
     }
     getStateColor(state) {
         const colors = {
-            'PENDIENTE': 'yellow', 'CONFIRMADA': 'blue', 'COMPLETADA': 'green', 'CANCELADA': 'red',
-            'FACTURADA': 'purple', 'RECIBIDA': 'indigo', 'PAGADA': 'green', 'ENTREGADA': 'teal', 'COBRADA': 'emerald'
+            'PENDIENTE': 'yellow', 'CONFIRMADA': 'blue', 'PROCESANDO': 'orange',
+            'COMPLETADA': 'green', 'CANCELADA': 'red',
+            'FACTURADA': 'purple', 'RECIBIDA': 'indigo', 'PAGADA': 'green',
+            'ENTREGADA': 'teal', 'COBRADA': 'emerald',
+            'DEVUELTA': 'emerald', 'PARCIALMENTE_DEVUELTA': 'yellow'
         };
         return colors[state] || 'gray';
     }
@@ -329,7 +488,7 @@ class TransaccionesManager {
             </div>
         </div>
     `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
-        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA'];
+        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA','DEVUELTA','PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
             <div class="flex items-center space-x-2">
                 <label class="font-bold">Estado:</label>
@@ -369,30 +528,12 @@ class TransaccionesManager {
         `;
     }
 
-    async cambiarEstadoTransaccion(id, nuevoEstado) {
-        try {
-            const transaction = this.transactions.find(t => t.id === id);
-            if (transaction) {
-                transaction.estado = nuevoEstado;
-                this.renderTransactions();
-                window.showToast(`Estado cambiado a: ${nuevoEstado}`, 'success');
-            }
-        } catch (error) {
-            console.error('Error changing transaction state:', error);
-            window.showToast('Error al cambiar el estado de la transacción.', 'error');
-        }
-    }
-
     cerrarModalVerTransaccion() {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
 
     imprimirFactura() {
         window.showToast('Funcionalidad de impresión en desarrollo.', 'info');
-    }
-
-    editTransaction(id) {
-        window.showToast(`Editar transacción ${id} - Funcionalidad en desarrollo.`, 'info');
     }
 
     async eliminarTransaccion(id) {
@@ -407,7 +548,6 @@ class TransaccionesManager {
             }
         }
     }
-
 }
 
 // --- GLOBAL INSTANCE & EXPORTS ---

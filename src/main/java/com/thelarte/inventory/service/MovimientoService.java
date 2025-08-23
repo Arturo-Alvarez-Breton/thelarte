@@ -21,19 +21,37 @@ public class MovimientoService {
     private ProductoRepository productoRepository;
 
     private Movimiento.TipoMovimientoSimple resolveTipoSimple(String tipo, int cantidad) {
-        // Puedes ajustar el mapeo según tu lógica
         switch (tipo) {
             case "ajuste_disponible":
             case "ajuste_almacen":
             case "ajuste_danada":
+            case "ajuste_devuelta":
+            case "ajuste_reservada":
                 return cantidad >= 0 ? Movimiento.TipoMovimientoSimple.INGRESO : Movimiento.TipoMovimientoSimple.REBAJA;
-            case "almacen_a_disponible":
-            case "danada_a_disponible":
+            // Todas las transferencias posibles entre estados
             case "disponible_a_almacen":
             case "disponible_a_danada":
+            case "disponible_a_devuelta":
+            case "disponible_a_reservada":
+            case "almacen_a_disponible":
+            case "almacen_a_danada":
+            case "almacen_a_devuelta":
+            case "almacen_a_reservada":
+            case "danada_a_disponible":
+            case "danada_a_almacen":
+            case "danada_a_devuelta":
+            case "danada_a_reservada":
+            case "devuelta_a_disponible":
+            case "devuelta_a_almacen":
+            case "devuelta_a_danada":
+            case "devuelta_a_reservada":
+            case "reservada_a_disponible":
+            case "reservada_a_almacen":
+            case "reservada_a_danada":
+            case "reservada_a_devuelta":
                 return Movimiento.TipoMovimientoSimple.TRANSFERENCIA;
             default:
-                return Movimiento.TipoMovimientoSimple.TRANSFERENCIA; // fallback
+                return Movimiento.TipoMovimientoSimple.TRANSFERENCIA;
         }
     }
 
@@ -41,51 +59,155 @@ public class MovimientoService {
         Producto producto = productoRepository.findById(dto.getProductoId())
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        // Lógica de actualización (igual que antes)
         switch (dto.getTipo()) {
+            // AJUSTES directos
             case "ajuste_disponible":
+                producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
+                break;
             case "ajuste_almacen":
+                producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
+                break;
             case "ajuste_danada":
-                if ("ajuste_disponible".equals(dto.getTipo())) {
-                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
-                } else if ("ajuste_almacen".equals(dto.getTipo())) {
-                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
-                } else if ("ajuste_danada".equals(dto.getTipo())) {
-                    producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
-                }
+                producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
                 break;
-            case "almacen_a_disponible":
-                if (producto.getCantidadAlmacen() >= dto.getCantidad()) {
-                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() - dto.getCantidad());
-                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
-                } else {
-                    throw new RuntimeException("No hay suficiente cantidad en almacén");
-                }
+            case "ajuste_devuelta":
+                producto.setCantidadDevuelta(producto.getCantidadDevuelta() + dto.getCantidad());
                 break;
+            case "ajuste_reservada":
+                producto.setCantidadReservada(producto.getCantidadReservada() + dto.getCantidad());
+                break;
+
+            // TRANSFERENCIAS entre estados
+            // Disponible
             case "disponible_a_almacen":
                 if (producto.getCantidadDisponible() >= dto.getCantidad()) {
                     producto.setCantidadDisponible(producto.getCantidadDisponible() - dto.getCantidad());
                     producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
-                } else {
-                    throw new RuntimeException("No hay suficiente cantidad disponible");
-                }
-                break;
-            case "danada_a_disponible":
-                if (producto.getCantidadDanada() >= dto.getCantidad()) {
-                    producto.setCantidadDanada(producto.getCantidadDanada() - dto.getCantidad());
-                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
-                } else {
-                    throw new RuntimeException("No hay suficiente cantidad dañada");
-                }
+                } else throw new RuntimeException("No hay suficiente cantidad disponible");
                 break;
             case "disponible_a_danada":
                 if (producto.getCantidadDisponible() >= dto.getCantidad()) {
                     producto.setCantidadDisponible(producto.getCantidadDisponible() - dto.getCantidad());
                     producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
-                } else {
-                    throw new RuntimeException("No hay suficiente cantidad disponible");
-                }
+                } else throw new RuntimeException("No hay suficiente cantidad disponible");
                 break;
+            case "disponible_a_devuelta":
+                if (producto.getCantidadDisponible() >= dto.getCantidad()) {
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() - dto.getCantidad());
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad disponible");
+                break;
+            case "disponible_a_reservada":
+                if (producto.getCantidadDisponible() >= dto.getCantidad()) {
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() - dto.getCantidad());
+                    producto.setCantidadReservada(producto.getCantidadReservada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad disponible");
+                break;
+
+            // Almacen
+            case "almacen_a_disponible":
+                if (producto.getCantidadAlmacen() >= dto.getCantidad()) {
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() - dto.getCantidad());
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad en almacén");
+                break;
+            case "almacen_a_danada":
+                if (producto.getCantidadAlmacen() >= dto.getCantidad()) {
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() - dto.getCantidad());
+                    producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad en almacén");
+                break;
+            case "almacen_a_devuelta":
+                if (producto.getCantidadAlmacen() >= dto.getCantidad()) {
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() - dto.getCantidad());
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad en almacén");
+                break;
+            case "almacen_a_reservada":
+                if (producto.getCantidadAlmacen() >= dto.getCantidad()) {
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() - dto.getCantidad());
+                    producto.setCantidadReservada(producto.getCantidadReservada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad en almacén");
+                break;
+
+            // Danada
+            case "danada_a_disponible":
+                if (producto.getCantidadDanada() >= dto.getCantidad()) {
+                    producto.setCantidadDanada(producto.getCantidadDanada() - dto.getCantidad());
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad dañada");
+                break;
+            case "danada_a_almacen":
+                if (producto.getCantidadDanada() >= dto.getCantidad()) {
+                    producto.setCantidadDanada(producto.getCantidadDanada() - dto.getCantidad());
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad dañada");
+                break;
+            case "danada_a_devuelta":
+                if (producto.getCantidadDanada() >= dto.getCantidad()) {
+                    producto.setCantidadDanada(producto.getCantidadDanada() - dto.getCantidad());
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad dañada");
+                break;
+            case "danada_a_reservada":
+                if (producto.getCantidadDanada() >= dto.getCantidad()) {
+                    producto.setCantidadDanada(producto.getCantidadDanada() - dto.getCantidad());
+                    producto.setCantidadReservada(producto.getCantidadReservada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad dañada");
+                break;
+
+            // Devuelta
+            case "devuelta_a_disponible":
+                if (producto.getCantidadDevuelta() >= dto.getCantidad()) {
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() - dto.getCantidad());
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad devuelta");
+                break;
+            case "devuelta_a_almacen":
+                if (producto.getCantidadDevuelta() >= dto.getCantidad()) {
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() - dto.getCantidad());
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad devuelta");
+                break;
+            case "devuelta_a_danada":
+                if (producto.getCantidadDevuelta() >= dto.getCantidad()) {
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() - dto.getCantidad());
+                    producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad devuelta");
+                break;
+            case "devuelta_a_reservada":
+                if (producto.getCantidadDevuelta() >= dto.getCantidad()) {
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() - dto.getCantidad());
+                    producto.setCantidadReservada(producto.getCantidadReservada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad devuelta");
+                break;
+
+            // Reservada
+            case "reservada_a_disponible":
+                if (producto.getCantidadReservada() >= dto.getCantidad()) {
+                    producto.setCantidadReservada(producto.getCantidadReservada() - dto.getCantidad());
+                    producto.setCantidadDisponible(producto.getCantidadDisponible() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad reservada");
+                break;
+            case "reservada_a_almacen":
+                if (producto.getCantidadReservada() >= dto.getCantidad()) {
+                    producto.setCantidadReservada(producto.getCantidadReservada() - dto.getCantidad());
+                    producto.setCantidadAlmacen(producto.getCantidadAlmacen() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad reservada");
+                break;
+            case "reservada_a_danada":
+                if (producto.getCantidadReservada() >= dto.getCantidad()) {
+                    producto.setCantidadReservada(producto.getCantidadReservada() - dto.getCantidad());
+                    producto.setCantidadDanada(producto.getCantidadDanada() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad reservada");
+                break;
+            case "reservada_a_devuelta":
+                if (producto.getCantidadReservada() >= dto.getCantidad()) {
+                    producto.setCantidadReservada(producto.getCantidadReservada() - dto.getCantidad());
+                    producto.setCantidadDevuelta(producto.getCantidadDevuelta() + dto.getCantidad());
+                } else throw new RuntimeException("No hay suficiente cantidad reservada");
+                break;
+
             default:
                 throw new RuntimeException("Tipo de movimiento no soportado: " + dto.getTipo());
         }

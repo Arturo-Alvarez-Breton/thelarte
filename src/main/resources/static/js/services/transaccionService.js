@@ -1,15 +1,21 @@
-// src/main/resources/static/js/services/transaccionService.js
-
 export class TransaccionService {
     constructor() {
         this.baseUrl = '/api'; // Base URL for the API
+    }
+
+    // --- Helper para obtener el token ---
+    getAuthToken() {
+        return localStorage.getItem('authToken');
     }
 
     async obtenerTransacciones(filters = {}) {
         console.log('Fetching transactions with filters:', filters);
         try {
             const queryParams = new URLSearchParams(filters).toString();
-            const response = await fetch(`${this.baseUrl}/transacciones?${queryParams}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/transacciones?${queryParams}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -24,7 +30,10 @@ export class TransaccionService {
     async obtenerTransaccionPorId(id) {
         console.log('Fetching transaction by ID:', id);
         try {
-            const response = await fetch(`${this.baseUrl}/transacciones/${id}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/transacciones/${id}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 if (response.status === 404) return null; // Transaction not found
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -40,9 +49,13 @@ export class TransaccionService {
     async crearTransaccion(transactionData) {
         console.log('Creating transaction:', transactionData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/transacciones`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(transactionData)
             });
             if (!response.ok) {
@@ -59,9 +72,13 @@ export class TransaccionService {
     async actualizarTransaccion(id, transactionData) {
         console.log('Updating transaction:', id, transactionData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/transacciones/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(transactionData)
             });
             if (!response.ok) {
@@ -78,8 +95,10 @@ export class TransaccionService {
     async eliminarTransaccion(id) {
         console.log('Deleting transaction:', id);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/transacciones/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -94,7 +113,10 @@ export class TransaccionService {
     async getClienteByCedula(cedula) {
         console.log('Fetching client by cedula:', cedula);
         try {
-            const response = await fetch(`${this.baseUrl}/clientes/${cedula}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/clientes/${cedula}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 if (response.status === 404) return null; // Client not found
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -110,7 +132,10 @@ export class TransaccionService {
     async getProductoByCodigo(codigo) {
         console.log('Fetching product by code:', codigo);
         try {
-            const response = await fetch(`${this.baseUrl}/productos/codigo/${codigo}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/productos/codigo/${codigo}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 if (response.status === 404) return null; // Product not found
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -126,7 +151,10 @@ export class TransaccionService {
     async getDashboardData() {
         console.log('Fetching dashboard data');
         try {
-            const response = await fetch(`${this.baseUrl}/dashboard`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/dashboard`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -142,7 +170,10 @@ export class TransaccionService {
         console.log('Fetching daily sales report for:', fecha);
         try {
             const queryParams = fecha ? `?fecha=${fecha}` : '';
-            const response = await fetch(`${this.baseUrl}/reportes/ventas-dia${queryParams}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/reportes/ventas-dia${queryParams}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -162,7 +193,10 @@ export class TransaccionService {
                 ...(fechaHasta && { fechaHasta }),
                 ...(limite && { limite })
             }).toString();
-            const response = await fetch(`${this.baseUrl}/reportes/productos-mas-vendidos?${queryParams}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/reportes/productos-mas-vendidos?${queryParams}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -177,7 +211,10 @@ export class TransaccionService {
     async getConfiguracionCaja() {
         console.log('Fetching cash register configuration');
         try {
-            const response = await fetch(`${this.baseUrl}/configuracion`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/configuracion`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -192,9 +229,13 @@ export class TransaccionService {
     async actualizarConfiguracionCaja(configuracion) {
         console.log('Updating cash register configuration:', configuracion);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/configuracion`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(configuracion)
             });
             if (!response.ok) {
@@ -211,25 +252,27 @@ export class TransaccionService {
     async getClientes(busqueda = null, page = 0, size = 10) {
         console.log('Fetching clients with search:', busqueda);
         try {
-            // Use the direct cliente endpoint instead of cajero
-            const response = await fetch(`/api/clientes`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`/api/clientes`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const allClientes = await response.json();
-            
+
             // Apply search filter on frontend if needed
             let filteredClientes = allClientes;
             if (busqueda) {
                 const searchTerm = busqueda.toLowerCase();
-                filteredClientes = allClientes.filter(cliente => 
+                filteredClientes = allClientes.filter(cliente =>
                     cliente.nombre.toLowerCase().includes(searchTerm) ||
                     cliente.apellido.toLowerCase().includes(searchTerm) ||
                     cliente.cedula.toLowerCase().includes(searchTerm) ||
                     (cliente.email && cliente.email.toLowerCase().includes(searchTerm))
                 );
             }
-            
+
             return filteredClientes;
         } catch (error) {
             console.error('Error fetching clients:', error);
@@ -240,7 +283,10 @@ export class TransaccionService {
     async getClienteByCedula(cedula) {
         console.log('Fetching client by cedula:', cedula);
         try {
-            const response = await fetch(`/api/clientes/${cedula}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`/api/clientes/${cedula}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 if (response.status === 404) return null;
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -255,9 +301,13 @@ export class TransaccionService {
     async createCliente(clienteData) {
         console.log('Creating client:', clienteData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`/api/clientes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(clienteData)
             });
             if (!response.ok) {
@@ -274,9 +324,13 @@ export class TransaccionService {
     async updateCliente(cedula, clienteData) {
         console.log('Updating client:', cedula, clienteData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`/api/clientes/${cedula}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(clienteData)
             });
             if (!response.ok) {
@@ -293,8 +347,10 @@ export class TransaccionService {
     async deleteCliente(cedula) {
         console.log('Deleting client:', cedula);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`/api/clientes/${cedula}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
                 const errorText = await response.text();
@@ -311,9 +367,13 @@ export class TransaccionService {
     async createProducto(productoData) {
         console.log('Creating product:', productoData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/productos`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(productoData)
             });
             if (!response.ok) {
@@ -329,9 +389,13 @@ export class TransaccionService {
     async updateProducto(id, productoData) {
         console.log('Updating product:', id, productoData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/productos/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(productoData)
             });
             if (!response.ok) {
@@ -347,8 +411,10 @@ export class TransaccionService {
     async deleteProducto(id) {
         console.log('Deleting product:', id);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`${this.baseUrl}/productos/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -363,7 +429,10 @@ export class TransaccionService {
     async getUnidades() {
         console.log('Fetching units');
         try {
-            const response = await fetch(`${this.baseUrl}/unidades`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/unidades`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -383,7 +452,10 @@ export class TransaccionService {
             queryParams.append('page', page);
             queryParams.append('size', size);
 
-            const response = await fetch(`${this.baseUrl}/productos?${queryParams.toString()}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/productos?${queryParams.toString()}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -394,27 +466,79 @@ export class TransaccionService {
         }
     }
 
+    // En transaccionService.js
+    async createDevolucion(payload) {
+        try {
+            const authToken = this.getAuthToken();
+            const response = await fetch('/api/transacciones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Error al procesar la devolución');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en createDevolucion:', error);
+            throw error;
+        }
+    }
+
+    async getTransacciones(filters = {}) {
+        try {
+            let url = '/api/transacciones?';
+            if (filters.tipo) url += `tipo=${encodeURIComponent(filters.tipo)}&`;
+            if (filters.estado) url += `estado=${encodeURIComponent(filters.estado)}&`;
+            if (filters.busqueda) url += `busqueda=${encodeURIComponent(filters.busqueda)}&`;
+            if (url.endsWith('&')) url = url.slice(0, -1);
+
+            const authToken = this.getAuthToken();
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al obtener transacciones');
+            }
+
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Error en getTransacciones:', error);
+            window.showToast('Error cargando transacciones', 'error');
+            return [];
+        }
+    }
+
     // Suplidor Methods
     async getSuplidores(busqueda = null) {
         console.log('Fetching suppliers with search:', busqueda);
         try {
-            const response = await fetch('/api/suplidores');
+            const authToken = this.getAuthToken();
+            const response = await fetch('/api/suplidores', {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const allSuplidores = await response.json();
-            
-            // Apply search filter on frontend if needed
+
             let filteredSuplidores = allSuplidores;
             if (busqueda) {
                 const searchTerm = busqueda.toLowerCase();
-                filteredSuplidores = allSuplidores.filter(suplidor => 
+                filteredSuplidores = allSuplidores.filter(suplidor =>
                     suplidor.nombre.toLowerCase().includes(searchTerm) ||
                     (suplidor.rnc && suplidor.rnc.toLowerCase().includes(searchTerm)) ||
                     (suplidor.ciudad && suplidor.ciudad.toLowerCase().includes(searchTerm))
                 );
             }
-            
+
             return filteredSuplidores;
         } catch (error) {
             console.error('Error fetching suppliers:', error);
@@ -425,7 +549,10 @@ export class TransaccionService {
     async getSuplidorById(id) {
         console.log('Fetching supplier by ID:', id);
         try {
-            const response = await fetch(`/api/suplidores/${id}`);
+            const authToken = this.getAuthToken();
+            const response = await fetch(`/api/suplidores/${id}`, {
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
             if (!response.ok) {
                 if (response.status === 404) return null;
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -440,9 +567,13 @@ export class TransaccionService {
     async createSuplidor(suplidorData) {
         console.log('Creating supplier:', suplidorData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch('/api/suplidores', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(suplidorData)
             });
             if (!response.ok) {
@@ -459,9 +590,13 @@ export class TransaccionService {
     async updateSuplidor(id, suplidorData) {
         console.log('Updating supplier:', id, suplidorData);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`/api/suplidores/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                },
                 body: JSON.stringify(suplidorData)
             });
             if (!response.ok) {
@@ -478,8 +613,10 @@ export class TransaccionService {
     async deleteSuplidor(id, logico = true) {
         console.log('Deleting supplier:', id, 'logical:', logico);
         try {
+            const authToken = this.getAuthToken();
             const response = await fetch(`/api/suplidores/${id}?logico=${logico}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
                 const errorText = await response.text();
@@ -492,4 +629,21 @@ export class TransaccionService {
         }
     }
 
+    async cambiarEstadoTransaccion(id, nuevoEstado) {
+        // Cambia el estado en el backend usando el endpoint correcto
+        try {
+            const authToken = this.getAuthToken();
+            const response = await fetch(`${this.baseUrl}/transacciones/${id}/estado?estado=${encodeURIComponent(nuevoEstado)}`, {
+                method: "PUT",
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error changing transaction state:', error);
+            throw error;
+        }
+    }
 }

@@ -21,11 +21,10 @@ export class TransactionWizard {
             subtotal: 0,
             impuestos: 0,
             // === Devolución-specific fields ===
-            transaccionOrigen: null, // transacción seleccionada para devolución
-            productosADevolver: [],  // productos seleccionados a devolver
+            transaccionOrigen: null,
+            productosADevolver: [],
         };
         this.steps = [];
-        // Para devoluciones
         this.transacciones = [];
         this.transaccionesFiltradas = [];
 
@@ -132,7 +131,17 @@ export class TransactionWizard {
                         title: 'Confirmación de la Devolución',
                         content: this.getDevolucionStep4Content(),
                         onNext: () => this.finalizeDevolucion(),
-                        onLoad: () => this.loadDevolucionStep4Data()
+                        onLoad: () => {
+                            // Siempre refresca el resumen al entrar al paso 4
+                            if (this.wizardContent && typeof this.getDevolucionStep4Content === 'function') {
+                                this.wizardContent.innerHTML = this.getDevolucionStep4Content();
+                            }
+                            // Opcional: deshabilita el botón si faltan datos
+                            const btn = document.getElementById('wizardNextBtn');
+                            if (btn) {
+                                btn.disabled = !this.transactionData.transaccionOrigen || !this.transactionData.productosADevolver?.length;
+                            }
+                        }
                     }
                 ];
                 break;
@@ -243,7 +252,10 @@ export class TransactionWizard {
             this.wizardPrevBtn.classList.toggle('hidden', this.currentStep === 0);
         }
         if (this.wizardNextBtn) {
-            if (this.currentStep === this.steps.length - 1) {
+            // --- CORRECCIÓN: Si solo hay un paso y es el primero, muestra "Siguiente", nunca "Finalizar" ---
+            if (this.steps.length === 1 && this.currentStep === 0) {
+                this.wizardNextBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right ml-1"></i>';
+            } else if (this.currentStep === this.steps.length - 1) {
                 this.wizardNextBtn.innerHTML = 'Finalizar <i class="fas fa-check ml-1"></i>';
             } else {
                 this.wizardNextBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right ml-1"></i>';
@@ -414,7 +426,6 @@ export class TransactionWizard {
             window.showToast('Error al cargar clientes.', 'error');
         }
     }
-
     validateStep1() {
         const selectedType = document.querySelector('input[name="transactionType"]:checked');
         if (!selectedType) {
@@ -422,7 +433,17 @@ export class TransactionWizard {
             return false;
         }
         this.transactionData.tipoTransaccion = selectedType.value;
-        return true;
+        this.initStepsForType(selectedType.value);
+
+        // Si el tipo es devolución, avanza automáticamente al segundo paso
+        if (selectedType.value === 'DEVOLUCION_COMPRA' || selectedType.value === 'DEVOLUCION_VENTA') {
+            this.currentStep = 1;
+        } else {
+            this.currentStep = 0;
+        }
+
+        this.updateWizardUI();
+        return false;
     }
 
     // --- Step 2: Transaction Details ---
@@ -473,7 +494,8 @@ export class TransactionWizard {
         // Obtener transacciones para filtrar según tipo
         const tipo = this.transactionData.tipoTransaccion === 'DEVOLUCION_COMPRA' ? 'COMPRA' : 'VENTA';
         try {
-            this.transacciones = await this.transaccionService.getTransacciones();
+            // ¡Pasa el filtro de tipo!
+            this.transacciones = await this.transaccionService.getTransacciones({ tipo });
             this.transaccionesFiltradas = this.transacciones.filter(
                 t => t.tipo === tipo && t.estado !== 'CANCELADA'
             );
@@ -511,103 +533,9 @@ export class TransactionWizard {
         return true;
     }
 
-    getDevolucionStep3Content() {
-        return `
-            <div class="space-y-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Selecciona los productos a devolver:</label>
-                <div id="productosADevolverContainer">
-                    <div class="text-gray-500">Cargando productos...</div>
-                </div>
-            </div>
-        `;
-    }
-
-    async loadDevolucionStep3Data() {
-        const container = document.getElementById('productosADevolverContainer');
-        const trans = this.transactionData.transaccionOrigen;
-        if (!trans || !container) return;
-        // Mostrar líneas como checkbox
-        container.innerHTML = trans.lineas.map((linea, idx) => `
-            <div class="flex items-center mb-2">
-                <input type="checkbox" id="prodADevolver-${idx}" ${this.transactionData.productosADevolver.includes(idx) ? "checked" : ""} onchange="window.transactionWizard.toggleProductoADevolver(${idx})">
-                <label for="prodADevolver-${idx}" class="ml-2">${linea.nombreProducto || linea.productoNombre} (x${linea.cantidad})</label>
-            </div>
-        `).join('');
-    }
-
-    toggleProductoADevolver(idx) {
-        const productos = this.transactionData.productosADevolver;
-        if (productos.includes(idx)) {
-            this.transactionData.productosADevolver = productos.filter(i => i !== idx);
-        } else {
-            this.transactionData.productosADevolver = [...productos, idx];
-        }
-        this.updateWizardUI();
-    }
-
-    validateDevolucionStep3() {
-        if (!this.transactionData.productosADevolver.length) {
-            window.showToast('Selecciona al menos un producto a devolver', 'error');
-            return false;
-        }
-        return true;
-    }
-
-    getDevolucionStep4Content() {
-        const t = this.transactionData.transaccionOrigen;
-        const seleccionados = this.transactionData.productosADevolver.map(idx => t.lineas[idx]);
-        return `
-            <div>
-                <h4 class="font-bold mb-2">Resumen de la Devolución</h4>
-                <p><strong>Tipo:</strong> ${this.formatTransactionType(this.transactionData.tipoTransaccion)}</p>
-                <p><strong>Transacción Origen:</strong> #${t?.id} - ${t?.contraparteNombre}</p>
-                <div class="mt-2">
-                    <h5 class="font-semibold">Productos a Devolver:</h5>
-                    ${seleccionados.map(l =>
-            `<div>${l.nombreProducto || l.productoNombre} (x${l.cantidad})</div>`
-        ).join('')}
-                </div>
-                <div class="mt-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
-                    <textarea id="devolucionObservaciones" rows="2" class="w-full border rounded px-2 py-1">${this.transactionData.observaciones || ""}</textarea>
-                </div>
-            </div>
-        `;
-    }
 
     loadDevolucionStep4Data() {
         // Nada por ahora
-    }
-
-    async finalizeDevolucion() {
-        try {
-            const t = this.transactionData.transaccionOrigen;
-            const observaciones = document.getElementById('devolucionObservaciones')?.value || "";
-            const lineas = this.transactionData.productosADevolver.map(idx => {
-                const linea = { ...t.lineas[idx] };
-                return {
-                    productoId: linea.productoId,
-                    nombreProducto: linea.nombreProducto || linea.productoNombre,
-                    cantidad: linea.cantidad,
-                    precioUnitario: linea.precioUnitario,
-                    subtotalLinea: linea.cantidad * linea.precioUnitario,
-                };
-            });
-            // Puedes adaptar el payload como necesites
-            const payload = {
-                tipoTransaccion: this.transactionData.tipoTransaccion,
-                transaccionOrigenId: t.id,
-                contraparteId: t.clienteId || t.suplidorId,
-                observaciones,
-                lineas,
-            };
-            await this.transaccionService.createDevolucion(payload);
-            window.showToast('Devolución procesada exitosamente.', 'success');
-            this.close();
-            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
-        } catch (error) {
-            window.showToast('Error al procesar la devolución: ' + (error.message || error), 'error');
-        }
     }
 
 
@@ -701,8 +629,9 @@ export class TransactionWizard {
                 if (!line.productoId) {
                     const nuevoProducto = await this.transaccionService.createProducto({
                         nombre: line.nombreProducto,
-                        precioVenta: line.precioUnitario,
-                        // ...otros campos requeridos
+                        precioCompra: line.precioUnitario,
+                        precioVenta: 0, // <-- Envía 0 al crear el producto, el usuario lo modificará luego
+                        tipo: line.tipo || "MUEBLE"
                     });
                     if (nuevoProducto && nuevoProducto.id) {
                         line.productoId = nuevoProducto.id;
@@ -888,11 +817,14 @@ export class TransactionWizard {
             if (select) {
                 select.innerHTML = '<option value="">Seleccionar producto</option>';
                 productos.forEach(producto => {
-                    select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                    select.innerHTML += `<option value="${producto.id}">
+            ${producto.nombre} - ${this.formatCurrency(producto.precioCompra)}
+            (Tienda: ${producto.cantidadDisponible || 0} / Almacén: ${producto.cantidadAlmacen || 0} / Total: ${(producto.cantidadDisponible || 0) + (producto.cantidadAlmacen || 0)})
+        </option>`;
                 });
             }
 
-            // Setup search functionality
+// Setup search functionality
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.toLowerCase();
@@ -903,7 +835,10 @@ export class TransactionWizard {
 
                     select.innerHTML = '<option value="">Seleccionar producto</option>';
                     filteredProducts.forEach(producto => {
-                        select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                        select.innerHTML += `<option value="${producto.id}">
+                ${producto.nombre} - ${this.formatCurrency(producto.precioCompra)}
+                (Tienda: ${producto.cantidadDisponible || 0} / Almacén: ${producto.cantidadAlmacen || 0} / Total: ${(producto.cantidadDisponible || 0) + (producto.cantidadAlmacen || 0)})
+            </option>`;
                     });
                 });
             }
@@ -942,8 +877,13 @@ export class TransactionWizard {
                 return;
             }
 
-            if (cantidad > selectedProduct.cantidadDisponible) {
-                window.showToast('Cantidad excede la disponibilidad del producto.', 'error');
+            // --- NUEVO: stock total = disponible en tienda + almacen ---
+            const stockDisponible = Number(selectedProduct.cantidadDisponible) || 0;
+            const stockAlmacen = Number(selectedProduct.cantidadAlmacen) || 0;
+            const stockTotal = stockDisponible + stockAlmacen;
+
+            if (cantidad > stockTotal) {
+                window.showToast(`Cantidad excede el stock total (Tienda: ${stockDisponible}, Almacén: ${stockAlmacen})`, 'error');
                 return;
             }
 
@@ -961,9 +901,9 @@ export class TransactionWizard {
                     nombreProducto: selectedProduct.nombre,
                     codigoProducto: selectedProduct.codigo,
                     cantidad: cantidad,
-                    precioUnitario: selectedProduct.precioVenta,
+                    precioUnitario: selectedProduct.precioCompra,
                     descuento: 0,
-                    subtotalLinea: selectedProduct.precioVenta * cantidad,
+                    subtotalLinea: selectedProduct.precioCompra * cantidad,
                     categoria: selectedProduct.categoria
                 });
             }
@@ -1076,7 +1016,213 @@ export class TransactionWizard {
         this.transactionData.observaciones = document.getElementById('ventaObservaciones')?.value || '';
         return true;
     }
+    // PASO 3: Selección de productos a devolver con cantidad
+    getDevolucionStep3Content() {
+        const t = this.transactionData.transaccionOrigen;
+        let html = `
+        <div class="space-y-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Selecciona los productos a devolver:</label>
+            <div id="productosADevolverContainer">
+                <div class="text-gray-500">Cargando productos...</div>
+            </div>
+        </div>
+    `;
+        return html;
+    }
 
+// Modifica la estructura de productosADevolver para guardar objetos: [{ idx, cantidad }]
+    async loadDevolucionStep3Data() {
+        const container = document.getElementById('productosADevolverContainer');
+        const trans = this.transactionData.transaccionOrigen;
+        if (!trans || !container) return;
+
+        if (!Array.isArray(this.transactionData.productosADevolver)) this.transactionData.productosADevolver = [];
+
+        // Helpers
+        const isSelected = (idx) => this.transactionData.productosADevolver.some(obj => obj.idx === idx);
+        const getCantidad = (idx, max) => {
+            const found = this.transactionData.productosADevolver.find(obj => obj.idx === idx);
+            return found ? found.cantidad : 1;
+        };
+
+        container.innerHTML = trans.lineas.map((linea, idx) => {
+            const maxCantidad = linea.cantidad;
+            const checked = isSelected(idx) ? 'checked' : '';
+            const cantidad = getCantidad(idx, maxCantidad);
+
+            return `
+            <div class="flex items-center mb-2">
+                <input type="checkbox" id="prodADevolver-${idx}" ${checked} onchange="window.transactionWizard.toggleProductoADevolver(${idx})">
+                <label for="prodADevolver-${idx}" class="ml-2">${linea.nombreProducto || linea.productoNombre} (x${maxCantidad})</label>
+                <input type="number"
+                    min="1"
+                    max="${maxCantidad}"
+                    value="${cantidad}"
+                    id="cantidadADevolver-${idx}"
+                    style="width:60px;margin-left:10px;"
+                    ${!isSelected(idx) ? "disabled" : ""}
+                    onchange="window.transactionWizard.setCantidadADevolver(${idx}, this.value)">
+            </div>
+        `;
+        }).join('');
+    }
+
+// Actualiza la selección y pone cantidad=1 por defecto
+    toggleProductoADevolver(idx) {
+        const trans = this.transactionData.transaccionOrigen;
+        if (!trans) return;
+        let arr = this.transactionData.productosADevolver;
+        const foundIdx = arr.findIndex(obj => obj.idx === idx);
+        if (foundIdx > -1) {
+            // Quitar producto
+            arr.splice(foundIdx, 1);
+        } else {
+            // Agregar producto con cantidad 1 por defecto
+            arr.push({ idx, cantidad: 1 });
+        }
+        this.transactionData.productosADevolver = arr;
+        this.updateWizardUI();
+    }
+
+// Al modificar cantidad, solo si el producto está seleccionado
+    setCantidadADevolver(idx, val) {
+        let arr = this.transactionData.productosADevolver;
+        const found = arr.find(obj => obj.idx === idx);
+        const linea = this.transactionData.transaccionOrigen.lineas[idx];
+        if (found && linea) {
+            const maxCantidad = linea.cantidad;
+            const cantidad = Math.max(1, Math.min(Number(val), maxCantidad));
+            found.cantidad = cantidad;
+        }
+    }
+
+    validateDevolucionStep3() {
+        if (!this.transactionData.productosADevolver.length) {
+            window.showToast('Selecciona al menos un producto a devolver', 'error');
+            return false;
+        }
+        // Validación: no se puede devolver menos de 1 ni más de la cantidad original
+        for (let obj of this.transactionData.productosADevolver) {
+            const linea = this.transactionData.transaccionOrigen.lineas[obj.idx];
+            if (obj.cantidad < 1 || obj.cantidad > linea.cantidad) {
+                window.showToast(`Cantidad inválida para ${linea.nombreProducto || linea.productoNombre}`, 'error');
+                return false;
+            }
+        }
+        return true;
+    }
+    getDevolucionStep4Content() {
+        const t = this.transactionData.transaccionOrigen;
+        const seleccionados = Array.isArray(this.transactionData.productosADevolver) && t
+            ? this.transactionData.productosADevolver.map(obj => {
+                const linea = t.lineas[obj.idx];
+                return linea ? { ...linea, cantidad: obj.cantidad } : null;
+            }).filter(Boolean)
+            : [];
+
+        const origenStr = t
+            ? `#${t.id} - ${t.contraparteNombre || t.nombre || t.proveedorNombre || t.clienteNombre || "Sin nombre"}`
+            : '<span style="color:red">Debes seleccionar la transacción origen</span>';
+
+        return `
+        <div>
+            <h4 class="font-bold mb-2">Resumen de la Devolución</h4>
+            <p><strong>Tipo:</strong> ${this.formatTransactionType(this.transactionData.tipoTransaccion)}</p>
+            <p><strong>Transacción Origen:</strong> ${origenStr}</p>
+            <div class="mt-2">
+                <h5 class="font-semibold">Productos a Devolver:</h5>
+                ${seleccionados.length ?
+            seleccionados.map(l => `<div>${l.nombreProducto || l.productoNombre} (x${l.cantidad})</div>`).join('') :
+            '<span style="color:red">No hay productos seleccionados</span>'
+        }
+            </div>
+            <div class="mt-3">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
+                <textarea id="devolucionObservaciones" rows="2" class="w-full border rounded px-2 py-1">${this.transactionData.observaciones || ""}</textarea>
+            </div>
+        </div>
+    `;
+    }
+    async finalizeDevolucion() {
+        try {
+            const t = this.transactionData.transaccionOrigen;
+            const observaciones = document.getElementById('devolucionObservaciones')?.value || "";
+
+            // Genera las líneas asegurando productoId válido y nombreProducto siempre presente
+            const lineas = this.transactionData.productosADevolver.map(obj => {
+                const linea = t.lineas[obj.idx];
+
+                // ARREGLO: productoId siempre válido (>0)
+                if (!linea.productoId || linea.productoId <= 0) {
+                    window.showToast(`Producto inválido para devolución: ${linea.nombreProducto || linea.productoNombre || "Producto sin nombre"}`, 'error');
+                    throw new Error("Producto inválido");
+                }
+
+                // ARREGLO: nombreProducto nunca vacío
+                let nombreProducto = linea.nombreProducto || linea.productoNombre || linea.nombre || "";
+                if (!nombreProducto.trim()) {
+                    window.showToast('La línea de producto no tiene nombre válido.', 'error');
+                    throw new Error("Producto sin nombre");
+                }
+
+                return {
+                    productoId: linea.productoId,
+                    productoNombre: nombreProducto,
+                    cantidad: obj.cantidad,
+                    precioUnitario: linea.precioUnitario,
+                    subtotalLinea: obj.cantidad * linea.precioUnitario,
+                    // Puedes agregar otros campos si el backend lo espera
+                };
+            });
+
+            // Determina correctamente la contraparte
+            let contraparteId, tipoContraparte, contraparteNombre;
+            if (t.tipo === "COMPRA" || t.tipo === "DEVOLUCION_COMPRA") {
+                tipoContraparte = "SUPLIDOR";
+                contraparteId = t.proveedor?.id || t.contraparteId;
+                contraparteNombre = t.proveedor?.nombre || t.contraparteNombre || "Sin nombre";
+            } else if (t.tipo === "VENTA" || t.tipo === "DEVOLUCION_VENTA") {
+                tipoContraparte = "CLIENTE";
+                contraparteId = t.cliente?.id || t.contraparteId;
+                if (t.cliente?.nombre && t.cliente?.apellido) {
+                    contraparteNombre = `${t.cliente.nombre} ${t.cliente.apellido}`;
+                } else {
+                    contraparteNombre = t.cliente?.nombre || t.contraparteNombre || "Consumidor Final";
+                }
+            } else {
+                window.showToast('Tipo de transacción origen desconocido.', 'error');
+                throw new Error("Tipo de transacción origen desconocido");
+            }
+
+            if (!contraparteId) {
+                window.showToast('No se encontró el ID de la contraparte en la transacción origen.', 'error');
+                return;
+            }
+            if (!contraparteNombre) {
+                window.showToast('No se encontró el nombre de la contraparte en la transacción origen.', 'error');
+                return;
+            }
+
+            const payload = {
+                tipo: this.transactionData.tipoTransaccion,
+                transaccionOrigenId: t.id,
+                contraparteId,
+                tipoContraparte,
+                contraparteNombre,
+                observaciones,
+                lineas,
+            };
+
+            console.log("Payload de devolución FINAL:", payload);
+
+            await this.transaccionService.createDevolucion(payload);
+            window.showToast('Devolución procesada exitosamente.', 'success');
+            this.close();
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
+        } catch (error) {
+            window.showToast('Error al procesar la devolución: ' + (error.message || error), 'error');
+        }
+    }
     getVentaStep4Content() {
         const clienteInfo = this.transactionData.cliente ?
             `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` :
@@ -1297,6 +1443,17 @@ export class TransactionWizard {
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Producto *</label>
+                        <select id="compraTipoProducto" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                            <option value="MUEBLE">Mueble</option>
+                            <option value="MESA">Mesa</option>
+                            <option value="OTOMAN">Otoman</option>
+                            <option value="SILLA">Silla</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
                         <input type="number" id="compraCantidad" min="1" value="1" required
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
@@ -1346,7 +1503,7 @@ export class TransactionWizard {
         if (select) {
             select.innerHTML = '<option value="">Seleccionar producto</option>';
             productos.forEach(producto => {
-                select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioCompra)} (Stock: ${producto.cantidadDisponible})</option>`;
             });
         }
 
@@ -1360,7 +1517,7 @@ export class TransactionWizard {
                 );
                 select.innerHTML = '<option value="">Seleccionar producto</option>';
                 filtered.forEach(producto => {
-                    select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                    select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioCompra)} (Stock: ${producto.cantidadDisponible})</option>`;
                 });
             });
         }
@@ -1389,8 +1546,8 @@ export class TransactionWizard {
                     productoId: producto.id,
                     nombreProducto: producto.nombre,
                     cantidad: cantidad,
-                    precioUnitario: producto.precioVenta,
-                    subtotalLinea: producto.precioVenta * cantidad,
+                    precioUnitario: producto.precioCompra,
+                    subtotalLinea: producto.precioCompra * cantidad,
                     categoria: producto.categoria,
                 });
                 cantidadInput.value = 1;
@@ -1404,22 +1561,20 @@ export class TransactionWizard {
         // Inicializa totales
         this.updateCompraTotals();
     }
-
     addCompraProduct() {
         const nombre = document.getElementById('compraNombreProducto')?.value;
         const cantidad = parseInt(document.getElementById('compraCantidad')?.value);
         const precio = parseFloat(document.getElementById('compraPrecioUnitario')?.value);
+        const tipo = document.getElementById('compraTipoProducto')?.value || "MUEBLE";
 
         if (!nombre || !nombre.trim()) {
             window.showToast('El nombre del producto es requerido.', 'error');
             return;
         }
-
         if (!cantidad || cantidad <= 0) {
             window.showToast('La cantidad debe ser mayor a 0.', 'error');
             return;
         }
-
         if (!precio || precio <= 0) {
             window.showToast('El precio debe ser mayor a 0.', 'error');
             return;
@@ -1430,7 +1585,8 @@ export class TransactionWizard {
             nombreProducto: nombre.trim(),
             cantidad: cantidad,
             precioUnitario: precio,
-            subtotalLinea: subtotal
+            subtotalLinea: subtotal,
+            tipo: tipo // <<--- ¡GUARDA EL TIPO!
         };
 
         this.transactionData.lineas.push(lineaCompra);
@@ -1439,6 +1595,7 @@ export class TransactionWizard {
         document.getElementById('compraNombreProducto').value = '';
         document.getElementById('compraCantidad').value = '1';
         document.getElementById('compraPrecioUnitario').value = '';
+        document.getElementById('compraTipoProducto').value = 'MUEBLE';
 
         this.updateCompraProductsList();
         this.updateCompraTotals();
@@ -1561,3 +1718,5 @@ window.updateCompraProduct = (index, field, value) => window.transactionWizard.u
 // Para devoluciones
 window.selectTransaccionOrigen = (id) => window.transactionWizard.selectTransaccionOrigen(id);
 window.toggleProductoADevolver = (idx) => window.transactionWizard.toggleProductoADevolver(idx);
+// Agrega la función global para el input de cantidad
+window.setCantidadADevolver = (idx, val) => window.transactionWizard.setCantidadADevolver(idx, val);
