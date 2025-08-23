@@ -327,35 +327,44 @@ class SuplidoresManager {
             return;
         }
 
-        container.innerHTML = this.filteredSuplidores.map(s => `
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
-                    <i class='fas fa-truck text-brand-brown'></i> 
-                    ${s.nombre}
-                </h3>
-                <div class="space-y-2 text-sm text-gray-600 mb-4">
-                    <p><i class="fas fa-map-marker-alt w-4"></i> ${[s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A'}</p>
-                    <p><i class="fas fa-id-card w-4"></i> RNC: ${s.rNC || 'N/A'}</p>
-                    ${s.nCF ? `<p><i class="fas fa-file-alt w-4"></i> NCF: ${s.nCF}</p>` : ''}
-                    <p><i class="fas fa-envelope w-4"></i> ${s.email || 'N/A'}</p>
-                    ${s.telefonos && s.telefonos.length > 0 ?
-            `<p><i class="fas fa-phone w-4"></i> ${s.telefonos[0]}</p>` :
+        function truncate(str, max) {
+            if (!str) return '';
+            return str.length > max ? str.slice(0, max - 1) + '…' : str;
+        }
+
+        container.innerHTML = this.filteredSuplidores.map(s => {
+            const ubicacion = [s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A';
+            const ubicacionTrunc = truncate(ubicacion, 24);
+            const emailTrunc = truncate(s.email || 'N/A', 24);
+            return `
+                <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto">
+                    <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
+                        <i class='fas fa-truck text-brand-brown'></i> 
+                        ${truncate(s.nombre, 32)}
+                    </h3>
+                    <div class="space-y-2 text-sm text-gray-600 mb-4">
+                        <p title="${ubicacion}"><i class="fas fa-map-marker-alt w-4"></i> ${ubicacionTrunc}</p>
+                        <p title="${s.email || ''}"><i class="fas fa-envelope w-4"></i> ${emailTrunc}</p>
+                        ${s.telefonos && s.telefonos.length > 0 ?
+            `<p><i class="fas fa-phone w-4"></i> ${truncate(s.telefonos[0], 20)}</p>` :
             '<p><i class="fas fa-phone w-4"></i> Sin teléfono</p>'
         }
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-auto">
+                        <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
+                            <i class="fas fa-eye"></i> Detalles
+                        </button>
+                        <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button data-id="${s.id}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs">
+                            <i class="fas fa-trash-alt"></i> 
+                            <span>Eliminar</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
-                        <i class="fas fa-eye"></i> Detalles
-                    </button>
-                    <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button data-id="${s.id}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs">
-                        <i class="fas fa-trash-alt"></i> 
-                    </button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     filterSuplidores() {

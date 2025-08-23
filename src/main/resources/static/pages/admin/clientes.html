@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contabilidad - Clientes</title>
-    <link href="/css/contabilidad.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -22,9 +21,71 @@
             }
         }
     </script>
+    <style>
+        /* Client card hover effects and desktop optimizations */
+        .cliente-card {
+            transition: all 0.3s ease;
+            max-width: 480px;
+        }
+
+        .cliente-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* Ensure consistent grid layout across all screen sizes */
+        @media (min-width: 1280px) {
+            #clientesListContainer {
+                justify-items: center;
+                gap: 1rem;
+            }
+        }
+        @media (min-width: 1080px) {
+            #clientesListContainer {
+                gap: 0.75rem !important; /* gap-3 = 0.75rem */
+            }
+        }
+        @media (min-width: 1536px) {
+            #clientesListContainer {
+                gap: 2rem;
+            }
+            .cliente-card {
+                max-width: 420px;
+            }
+        }
+
+        /* Ultra-wide screen optimization */
+        @media (min-width: 1920px) {
+            #clientesListContainer {
+                gap: 1.5rem;
+            }
+            .cliente-card {
+                max-width: 480px;
+            }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="flex h-screen bg-gray-100">
-<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+<body class="flex h-screen bg-gray-100 overflow-x-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
     <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
     <nav class="flex-1">
         <ul class="space-y-2">
@@ -92,30 +153,40 @@
     </div>
 </aside>
 
-<div class="flex-1 flex flex-col">
-    <header class="bg-white shadow p-4 flex justify-between items-center">
-        <div>
-            <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Clientes</h1>
-            <p id="cont-header-subtitle" class="text-sm text-gray-600">Consulta y gestiona información de clientes y sus transacciones.</p>
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <header class="bg-white shadow p-2 md:p-4 flex justify-between items-center">
+        <!-- Mobile hamburger menu -->
+        <div class="flex items-center">
+            <button id="hamburgerBtn" class="lg:hidden mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div>
+                <h1 id="cont-header-title" class="text-lg md:text-2xl font-bold text-gray-800">Clientes</h1>
+                <p id="cont-header-subtitle" class="text-xs md:text-sm text-gray-600 hidden sm:block">Consulta y gestiona información de clientes y sus transacciones.</p>
+            </div>
         </div>
         <div id="cont-quick-actions" class="flex space-x-2">
-            <div class="text-gray-600 text-sm">
-                <i class="fas fa-pencil mr-2"></i>Modo Administrador
+            <div class="text-gray-600 text-xs md:text-sm">
+                <i class="fas fa-pencil mr-2 hidden sm:inline"></i>
+                <span class="hidden sm:inline">Modo </span>Administrador
             </div>
-        </div>    </header>
+        </div>
+    </header>
 
-    <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
-        <section class="p-4 bg-white rounded-lg shadow">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-700">Listado de Clientes</h2>
-                <button id="nuevoClienteBtn" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center">
-                    <i class="fas fa-plus mr-2"></i>Nuevo Cliente
+    <main id="cont-main-content" class="flex-1 p-2 md:p-4 overflow-auto">
+        <section class="p-3 md:p-4 bg-white rounded-lg shadow">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Clientes</h2>
+                <button id="nuevoClienteBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base w-full sm:w-auto justify-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    <span class="sm:inline">Nuevo Cliente</span>
                 </button>
             </div>
             <div class="mb-4">
-                <input type="text" id="clientSearchInput" placeholder="Buscar clientes..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                <input type="text" id="clientSearchInput" placeholder="Buscar clientes..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
             </div>
-            <div id="clientesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div id="clientesListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
                 <!-- Clientes se cargarán aquí -->
             </div>
             <div id="clientesPagination" class="flex justify-center mt-6"></div>
@@ -124,26 +195,26 @@
 </div>
 
 <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
         <span class="visually-hidden">Cargando...</span>
     </div>
 </div>
 
 <!-- Modal Nuevo/Editar Cliente -->
 <div id="modalCliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div class="bg-brand-brown text-white p-6">
+    <div class="flex items-center justify-center min-h-screen p-2 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="bg-brand-brown text-white p-4 md:p-6">
                 <div class="flex items-center justify-between">
-                    <h3 id="modalClienteTitle" class="text-xl font-bold">Nuevo Cliente</h3>
+                    <h3 id="modalClienteTitle" class="text-lg md:text-xl font-bold">Nuevo Cliente</h3>
                     <button onclick="cerrarModalCliente()" class="text-white hover:text-gray-300">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
             </div>
 
-            <form id="formCliente" class="p-6 space-y-4" novalidate>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form id="formCliente" class="p-4 md:p-6 space-y-4" novalidate>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                         <label for="clienteCedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
                         <input type="text" id="clienteCedula" name="cedula" required placeholder="XXX-XXXXXXX-X"
@@ -157,7 +228,7 @@
                         <p id="clienteNombreError" class="text-xs text-red-500 mt-1 hidden"></p>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                         <label for="clienteApellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
                         <input type="text" id="clienteApellido" name="apellido" required placeholder="Apellido"
@@ -177,7 +248,7 @@
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     <p id="clienteEmailError" class="text-xs text-red-500 mt-1 hidden"></p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                         <label for="clienteProvincia" class="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
                         <select id="clienteProvincia" name="provincia" required
@@ -195,11 +266,11 @@
                 </div>
             </form>
 
-            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                <button type="button" onclick="cerrarModalCliente()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+            <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
+                <button type="button" onclick="cerrarModalCliente()" class="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
                     Cancelar
                 </button>
-                <button type="submit" form="formCliente" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
+                <button type="submit" form="formCliente" class="w-full sm:w-auto px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
                     <i id="btnClienteIcon" class="fas fa-plus mr-2"></i>
                     <span id="btnClienteText">Crear Cliente</span>
                 </button>
@@ -210,27 +281,27 @@
 
 <!-- Modal Ver Cliente -->
 <div id="modalVerCliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div class="bg-brand-brown text-white p-6">
+    <div class="flex items-center justify-center min-h-screen p-2 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="bg-brand-brown text-white p-4 md:p-6">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold">Detalles del Cliente</h3>
+                    <h3 class="text-lg md:text-xl font-bold">Detalles del Cliente</h3>
                     <button onclick="cerrarModalVerCliente()" class="text-white hover:text-gray-300">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="p-6" id="detallesCliente">
+            <div class="p-4 md:p-6" id="detallesCliente">
                 <!-- Se llenará dinámicamente -->
             </div>
 
-            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                <button onclick="editarClienteDesdeDetalle()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
+                <button onclick="editarClienteDesdeDetalle()" class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-edit mr-2"></i>
                     Editar
                 </button>
-                <button onclick="cerrarModalVerCliente()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                <button onclick="cerrarModalVerCliente()" class="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
                     Cerrar
                 </button>
             </div>

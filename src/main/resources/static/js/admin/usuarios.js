@@ -8,37 +8,15 @@ class UsuariosManager {
         this.filteredUsuarios = [];
         this.currentUsuario = null;
         this.currentPage = 0;
-        this.usuariosPerPage = 12;
+        this.usuariosPerPage = 15; // Cambiado para consistencia con clientes
         this.totalPages = 1;
         this.totalUsuarios = 0;
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
         // Initialize table view manager
         this.tableViewManager = new TableViewManager('#usuariosListContainer', {
-            columns: [
-                { header: 'Usuario', field: 'username' },
-                {
-                    header: 'Roles',
-                    field: 'roles',
-                    formatter: (value) => Array.isArray(value) ? value.join(', ') : (value || 'N/A')
-                },
-                {
-                    header: 'Estado',
-                    field: 'active',
-                    formatter: (value) => value ?
-                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
-                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
-                },
-                {
-                    header: 'Empleado Relacionado',
-                    field: 'empleado.nombre',
-                    formatter: (value, item) => {
-                        if (item.empleado) {
-                            return `${item.empleado.nombre || ''} ${item.empleado.apellido || ''}`.trim() || 'N/A';
-                        }
-                        return 'N/A';
-                    }
-                }
-            ],
+            columns: this.getResponsiveColumns(),
             actions: [
                 {
                     icon: 'fas fa-eye',
@@ -69,6 +47,7 @@ class UsuariosManager {
 
     async init() {
         this.setupEventListeners();
+        this.setupResponsiveHandlers();
         await this.loadUsuarios();
     }
 
@@ -76,20 +55,91 @@ class UsuariosManager {
         document.getElementById('nuevoUsuarioBtn')?.addEventListener('click', () => this.newUsuario());
         document.getElementById('usuarioSearchInput')?.addEventListener('input', () => this.filterUsuarios());
         document.getElementById('formUsuario')?.addEventListener('submit', (e) => this.handleSubmitUsuario(e));
+
+        // Delegación de eventos para los botones de acción en la lista de usuarios
         document.getElementById('usuariosListContainer')?.addEventListener('click', (e) => {
-            if (e.target.classList.contains('ver-btn')) {
-                const username = e.target.dataset.username;
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const username = btn.getAttribute('data-username');
+            if (btn.classList.contains('ver-btn')) {
                 this.verUsuario(username);
-            }
-            if (e.target.classList.contains('edit-btn')) {
-                const username = e.target.dataset.username;
+            } else if (btn.classList.contains('edit-btn')) {
                 this.editUsuario(username);
-            }
-            if (e.target.classList.contains('delete-btn')) {
-                const username = e.target.dataset.username;
+            } else if (btn.classList.contains('delete-btn')) {
                 this.deleteUsuario(username);
             }
         });
+    }
+
+    setupResponsiveHandlers() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                this.closeMobileSidebar();
+            }
+        });
+    }
+
+    toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+
+        // Prevent body scroll when sidebar is open
+        document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+    }
+
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    handleWindowResize() {
+        const wasTablet = this.isTablet;
+        const wasMobile = this.isMobile;
+
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+        // Close mobile sidebar on desktop resize
+        if (window.innerWidth >= 1024) {
+            this.closeMobileSidebar();
+        }
+
+        // Update table columns based on screen orientation
+        this.tableViewManager.updateColumns(this.getResponsiveColumns());
+
+        // Re-render usuarios if breakpoint changed significantly
+        if ((wasMobile !== this.isMobile) || (wasTablet !== this.isTablet)) {
+            this.renderUsuarios();
+        }
     }
 
     async loadUsuarios() {
@@ -130,27 +180,62 @@ class UsuariosManager {
         }
     }
 
+    getResponsiveColumns() {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            return [
+                { header: 'Usuario', field: 'username' },
+                {
+                    header: 'Rol',
+                    field: 'roles',
+                    formatter: (value) => Array.isArray(value) ? value.join(', ') : (value || 'N/A')
+                }
+            ];
+        } else {
+            return [
+                { header: 'Usuario', field: 'username' },
+                {
+                    header: 'Roles',
+                    field: 'roles',
+                    formatter: (value) => Array.isArray(value) ? value.join(', ') : (value || 'N/A')
+                },
+                {
+                    header: 'Empleado Relacionado',
+                    field: 'empleado.nombre',
+                    formatter: (value, item) => {
+                        if (item.empleado) {
+                            return `${item.empleado.nombre || ''} ${item.empleado.apellido || ''}`.trim() || 'N/A';
+                        }
+                        return 'N/A';
+                    }
+                }
+            ];
+        }
+    }
+
     renderUsuarios() {
         const container = document.getElementById('usuariosListContainer');
         if (!container) return;
+
         if (this.filteredUsuarios.length === 0) {
             const searchTerm = document.getElementById('usuarioSearchInput')?.value;
             const emptyMessage = searchTerm ?
                 `No se encontraron usuarios que coincidan con "${searchTerm}".` :
                 'No hay usuarios registrados.';
+
             container.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fa-regular fa-user text-3xl text-gray-400"></i>
+                <div class="text-center py-8 md:py-12 col-span-full">
+                    <div class="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-regular fa-user text-2xl md:text-3xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin usuarios</h3>
-                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-2">Sin usuarios</h3>
+                    <p class="text-gray-600 mb-4 md:mb-6 text-sm md:text-base px-4">${emptyMessage}</p>
                     ${!searchTerm ? `
-                        <button onclick="usuariosManager.newUsuario()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <button onclick="usuariosManager.newUsuario()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-plus mr-2"></i>Agregar Primer Usuario
                         </button>
                     ` : `
-                        <button onclick="document.getElementById('usuarioSearchInput').value = ''; usuariosManager.filterUsuarios();" class="text-brand-brown hover:text-brand-light-brown">
+                        <button onclick="document.getElementById('usuarioSearchInput').value = ''; usuariosManager.filterUsuarios();" class="text-brand-brown hover:text-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-times mr-2"></i>Limpiar búsqueda
                         </button>
                     `}
@@ -158,23 +243,171 @@ class UsuariosManager {
             `;
             return;
         }
-        container.innerHTML = this.filteredUsuarios.map(u => `
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2"><i class='fa-regular fa-user text-brand-brown'></i> ${u.username}</h3>
-                <p class="text-gray-600">Rol: ${Array.isArray(u.roles) ? u.roles.join(', ') : (u.roles || 'N/A')}</p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <button data-username="${u.username}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
-                        <i class="fas fa-eye"></i> Detalles
+
+        container.innerHTML = this.filteredUsuarios.map(usuario => this.renderUsuarioCard(usuario)).join('');
+    }
+
+    renderUsuarioCard(usuario) {
+        // Adaptive button rendering based on screen size
+        const buttonsHtml = this.isMobile ? this.renderMobileButtons(usuario) :
+                           this.isTablet ? this.renderTabletButtons(usuario) :
+                           this.renderDesktopButtons(usuario);
+
+        const statusBadge = usuario.active !== undefined ?
+            (usuario.active ?
+                '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
+            ) : '';
+
+        return `
+            <div class="usuario-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[200px] 
+                sm:min-h-[220px] md:min-h-[240px] lg:min-h-[260px] xl:min-h-[280px] 
+                ${this.isMobile ? 'max-w-full' : 'max-w-[380px] xl:max-w-[450px]'}
+                ">
+                <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-5">
+                    <div class="flex items-start justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900 truncate max-w-[70%] flex items-center gap-2">
+                            <i class="fa-regular fa-user text-brand-brown flex-shrink-0"></i>
+                            ${usuario.username}
+                        </h3>
+                        ${statusBadge ? `<div class="flex-shrink-0">${statusBadge}</div>` : ''}
+                    </div>
+                    <div class="flex-1 flex flex-col gap-2 mt-1">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-user-tag text-gray-400"></i>
+                            </span>
+                            <span class="truncate font-medium">${Array.isArray(usuario.roles) ? usuario.roles.join(', ') : (usuario.roles || 'N/A')}</span>
+                        </div>
+                        ${!this.isMobile && usuario.empleado ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-briefcase text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${usuario.empleado.nombre || ''} ${usuario.empleado.apellido || ''}</span>
+                        </div>
+                        ` : ''}
+                        ${!this.isMobile && usuario.empleado && usuario.empleado.rol ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-id-badge text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${usuario.empleado.rol}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100">
+                        ${buttonsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderMobileButtons(usuario) {
+        return `
+            <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button 
+                        data-username="${usuario.username}" 
+                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                        title="Ver detalles"
+                        type="button"
+                    >
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver</span>
                     </button>
-                    <button data-username="${u.username}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Editar usuario">
-                        <i class="fas fa-edit"></i> Editar
+                    <button 
+                        data-username="${usuario.username}" 
+                        class="edit-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        title="Editar usuario"
+                        type="button"
+                    >
+                        <i class="fas fa-edit text-xs"></i>
+                        <span>Editar</span>
                     </button>
-                    <button data-username="${u.username}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm" title="Eliminar usuario">
-                        <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button 
+                        data-username="${usuario.username}" 
+                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        title="Eliminar usuario"
+                        type="button"
+                    >
+                        <i class="fas fa-trash-alt text-xs"></i>
+                        <span>Eliminar</span>
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+    }
+
+    renderTabletButtons(usuario) {
+        return `
+            <div class="flex flex-wrap gap-1.5 justify-center">
+                <button 
+                    data-username="${usuario.username}" 
+                    class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+                <button 
+                    data-username="${usuario.username}" 
+                    class="edit-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
+                    title="Editar usuario"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Edit</span>
+                </button>
+                <button 
+                    data-username="${usuario.username}" 
+                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
+                    title="Eliminar usuario"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Del</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderDesktopButtons(usuario) {
+        return `
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    data-username="${usuario.username}" 
+                    class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Detalles</span>
+                </button>
+                <button 
+                    data-username="${usuario.username}" 
+                    class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Editar usuario"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Editar</span>
+                </button>
+                <button 
+                    data-username="${usuario.username}" 
+                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Eliminar usuario"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Eliminar</span>
+                </button>
+            </div>
+        `;
     }
 
     renderPagination() {
@@ -185,17 +418,46 @@ class UsuariosManager {
             pagContainer.className = 'flex justify-center mt-6';
             document.getElementById('usuariosListContainer').after(pagContainer);
         }
+
         if (this.totalPages <= 1) {
             pagContainer.innerHTML = '';
             return;
         }
+
         let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
-        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
-        for (let i = 0; i < this.totalPages; i++) {
-            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+
+        // Previous button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+
+        // Page numbers - responsive display
+        if (this.isMobile) {
+            // Mobile: only show current page
+            html += `<span class="px-3 py-1 border-t border-b border-gray-300 bg-brand-brown text-white font-medium text-sm">${this.currentPage + 1} / ${this.totalPages}</span>`;
+        } else if (this.isTablet) {
+            // Tablet: show limited page numbers
+            const maxPages = 3;
+            let startPage = Math.max(0, this.currentPage - 1);
+            let endPage = Math.min(this.totalPages - 1, startPage + maxPages - 1);
+
+            if (endPage - startPage < maxPages - 1) {
+                startPage = Math.max(0, endPage - maxPages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="px-2 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
+        } else {
+            // Desktop: show all page numbers (up to reasonable limit)
+            const maxDisplayPages = Math.min(this.totalPages, 10);
+            for (let i = 0; i < maxDisplayPages; i++) {
+                html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
         }
-        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+
+        // Next button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
         html += '</nav>';
+
         pagContainer.innerHTML = html;
         pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
             btn.onclick = (e) => {
@@ -383,14 +645,36 @@ class UsuariosManager {
         }
     }
 
-    hideLoading() {}
+    hideLoading() {
+        // Content will replace the loading spinner, no need for explicit hiding
+    }
+
+    showError(message) {
+        const container = document.getElementById('usuariosListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button onclick="usuariosManager.loadUsuarios()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-refresh mr-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }
 }
+
 const usuariosManager = new UsuariosManager();
 window.usuariosManager = usuariosManager;
 
 // Make table view manager available globally
 window.tableViewManager = usuariosManager.tableViewManager;
 
+// Funciones globales para los event handlers de los modales
 window.cerrarModalUsuario = () => usuariosManager.cerrarModalUsuario();
 window.cerrarModalVerUsuario = () => usuariosManager.cerrarModalVerUsuario();
 window.editarUsuarioDesdeDetalle = () => usuariosManager.editarUsuarioDesdeDetalle();
@@ -402,6 +686,7 @@ function showError(fieldId, message) {
         errorEl.classList.remove('hidden');
     }
 }
+
 function clearError(fieldId) {
     const errorEl = document.getElementById(fieldId + 'Error');
     if (errorEl) {
@@ -409,24 +694,30 @@ function clearError(fieldId) {
         errorEl.classList.add('hidden');
     }
 }
-function validateFormUsuario(data, isEdit=false) {
+
+function validateFormUsuario(data, isEdit = false) {
     let valid = true;
     ['usuario', 'contrasena', 'rol'].forEach(field => clearError(field));
+
     if (!data.username) {
         showError('usuario', 'El nombre de usuario es obligatorio');
         valid = false;
     }
+
     if (!isEdit && (!data.password || data.password.length < 8)) {
         showError('contrasena', 'La contraseña es obligatoria y debe tener al menos 8 caracteres');
         valid = false;
     }
+
     if (isEdit && data.password && data.password.length < 8) {
         showError('contrasena', 'Si se proporciona, la contraseña debe tener al menos 8 caracteres');
         valid = false;
     }
+
     if (!data.roles || !data.roles[0]) {
         showError('rol', 'El rol es obligatorio');
         valid = false;
     }
+
     return valid;
 }

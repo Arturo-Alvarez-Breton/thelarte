@@ -7,30 +7,16 @@ class EmpleadosManager {
         this.empleados = [];
         this.filteredEmpleados = [];
         this.currentPage = 0;
-        this.empleadosPerPage = 15;
+        this.empleadosPerPage = 15; // Changed to match clients
         this.totalPages = 1;
         this.totalEmpleados = 0;
         this.currentEmpleado = null;
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
-        // Initialize table view manager
+        // Initialize table view manager with responsive columns
         this.tableViewManager = new TableViewManager('#empleadosListContainer', {
-            columns: [
-                { header: 'Cédula', field: 'cedula' },
-                { header: 'Nombre', field: 'nombre' },
-                { header: 'Apellido', field: 'apellido' },
-                { header: 'Teléfono', field: 'telefono' },
-                { header: 'Rol', field: 'rol' },
-                {
-                    header: 'Salario',
-                    field: 'salario',
-                    formatter: (value) => value != null ? `$${Number(value).toLocaleString('es-DO')}` : 'N/A'
-                },
-                {
-                    header: 'Comisión',
-                    field: 'comision',
-                    formatter: (value) => value != null ? `${value}%` : 'N/A'
-                }
-            ],
+            columns: this.getResponsiveColumns(),
             actions: [
                 {
                     icon: 'fas fa-eye',
@@ -59,8 +45,43 @@ class EmpleadosManager {
         this.init();
     }
 
+    getResponsiveColumns() {
+        const isVerticalScreen = window.innerHeight > window.innerWidth;
+
+        if (isVerticalScreen || this.isMobile) {
+            // Vertical screen or mobile: only show combined name and role
+            return [
+                {
+                    header: 'Empleado',
+                    field: 'nombre',
+                    formatter: (value, item) => `${item.nombre} ${item.apellido} - ${item.rol || 'N/A'}`
+                }
+            ];
+        } else {
+            // Horizontal screen: show all info
+            return [
+                { header: 'Cédula', field: 'cedula' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Apellido', field: 'apellido' },
+                { header: 'Teléfono', field: 'telefono' },
+                { header: 'Rol', field: 'rol' },
+                {
+                    header: 'Salario',
+                    field: 'salario',
+                    formatter: (value) => value != null ? `$${Number(value).toLocaleString('es-DO')}` : 'N/A'
+                },
+                {
+                    header: 'Comisión',
+                    field: 'comision',
+                    formatter: (value) => value != null ? `${value}%` : 'N/A'
+                }
+            ];
+        }
+    }
+
     async init() {
         this.setupEventListeners();
+        this.setupResponsiveHandlers();
         await this.loadEmpleados();
     }
 
@@ -84,6 +105,81 @@ class EmpleadosManager {
         });
         // Arreglo: Añade el event listener al botón del modal de detalles aquí (mejor que usar onclick)
         document.getElementById('btnEditarDesdeDetalle')?.addEventListener('click', () => this.editarEmpleadoDesdeDetalle());
+    }
+
+    setupResponsiveHandlers() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sidebar && !sidebar.classList.contains('-translate-x-full')) {
+                this.closeMobileSidebar();
+            }
+        });
+    }
+
+    toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+
+            // Prevent body scroll when sidebar is open
+            document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+        }
+    }
+
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        if (sidebar && overlay) {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+    }
+
+    handleWindowResize() {
+        const wasTablet = this.isTablet;
+        const wasMobile = this.isMobile;
+
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+        // Close mobile sidebar on desktop resize
+        if (window.innerWidth >= 1024) {
+            this.closeMobileSidebar();
+        }
+
+        // Update table columns based on screen orientation
+        this.tableViewManager.updateColumns(this.getResponsiveColumns());
+
+        // Re-render empleados if breakpoint changed significantly
+        if ((wasMobile !== this.isMobile) || (wasTablet !== this.isTablet)) {
+            this.renderEmpleados();
+        }
     }
 
     async loadEmpleados() {
@@ -130,6 +226,7 @@ class EmpleadosManager {
     renderEmpleados() {
         const container = document.getElementById('empleadosListContainer');
         if (!container) return;
+
         if (this.filteredEmpleados.length === 0) {
             const searchTerm = document.getElementById('empleadoSearchInput')?.value;
             const emptyMessage = searchTerm ?
@@ -137,18 +234,18 @@ class EmpleadosManager {
                 'No hay empleados registrados.';
 
             container.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-briefcase text-3xl text-gray-400"></i>
+                <div class="text-center py-8 md:py-12 col-span-full">
+                    <div class="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-briefcase text-2xl md:text-3xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin empleados</h3>
-                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-2">Sin empleados</h3>
+                    <p class="text-gray-600 mb-4 md:mb-6 text-sm md:text-base px-4">${emptyMessage}</p>
                     ${!searchTerm ? `
-                        <button onclick="empleadosManager.newEmpleado()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <button onclick="empleadosManager.newEmpleado()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-plus mr-2"></i>Agregar Primer Empleado
                         </button>
                     ` : `
-                        <button onclick="document.getElementById('empleadoSearchInput').value = ''; empleadosManager.filterEmpleados();" class="text-brand-brown hover:text-brand-light-brown">
+                        <button onclick="document.getElementById('empleadoSearchInput').value = ''; empleadosManager.filterEmpleados();" class="text-brand-brown hover:text-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-times mr-2"></i>Limpiar búsqueda
                         </button>
                     `}
@@ -157,27 +254,177 @@ class EmpleadosManager {
             return;
         }
 
-        container.innerHTML = this.filteredEmpleados.map(emp => `
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h3 class="text-lg font-semibold">${emp.nombre} ${emp.apellido}</h3>
-                <p class="text-gray-600">Cédula: ${emp.cedula}</p>
-                <p class="text-gray-600">Teléfono: ${emp.telefono || 'N/A'}</p>
-                <p class="text-gray-600">Rol: ${emp.rol || 'N/A'}</p>
-                <p class="text-gray-600">Salario: ${emp.salario != null ? '$' + emp.salario.toLocaleString() : 'N/A'}</p>
-                <p class="text-gray-600">Fecha de Contratación: ${emp.fechaContratacion || 'N/A'}</p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <button data-cedula="${emp.cedula}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm" title="Ver detalles">
-                        <i class="fas fa-eye"></i> Detalles
+        container.innerHTML = this.filteredEmpleados.map(emp => this.renderEmpleadoCard(emp)).join('');
+    }
+
+    renderEmpleadoCard(empleado) {
+        // Adaptive button rendering based on screen size
+        const buttonsHtml = this.isMobile ? this.renderMobileButtons(empleado) :
+                           this.isTablet ? this.renderTabletButtons(empleado) :
+                           this.renderDesktopButtons(empleado);
+
+        return `
+            <div class="empleado-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[220px] 
+                sm:min-h-[240px] md:min-h-[260px] lg:min-h-[280px] xl:min-h-[300px] 
+                ${this.isMobile ? 'max-w-full' : 'max-w-[420px] xl:max-w-[480px]'}
+                ">
+                <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-5">
+                    <div class="flex items-start justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900 truncate max-w-[70%]">
+                            ${empleado.nombre} ${empleado.apellido}
+                        </h3>
+                        <div class="px-2 py-1 bg-brand-accent text-brand-brown rounded-full text-xs font-medium">
+                            ${empleado.rol || 'N/A'}
+                        </div>
+                    </div>
+                    <div class="flex-1 flex flex-col gap-2 mt-1">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-id-card text-gray-400"></i>
+                            </span>
+                            <span class="truncate font-mono text-xs">${empleado.cedula}</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </span>
+                            <span class="truncate">${empleado.telefono || 'No disponible'}</span>
+                        </div>
+                        ${!this.isMobile ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${empleado.email || 'No disponible'}</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-dollar-sign text-gray-400"></i>
+                            </span>
+                            <span class="text-xs">${empleado.salario != null ? '$' + empleado.salario.toLocaleString() : 'N/A'}</span>
+                        </div>
+                        ${empleado.comision != null ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-percentage text-gray-400"></i>
+                            </span>
+                            <span class="text-xs">${empleado.comision}% comisión</span>
+                        </div>
+                        ` : ''}
+                        ` : ''}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100">
+                        ${buttonsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderMobileButtons(empleado) {
+        return `
+            <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button 
+                        data-cedula="${empleado.cedula}" 
+                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                        title="Ver detalles"
+                        type="button"
+                    >
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver</span>
                     </button>
-                    <button data-cedula="${emp.cedula}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm" title="Editar empleado">
-                        <i class="fas fa-edit"></i> Editar
+                    <button 
+                        data-cedula="${empleado.cedula}" 
+                        class="edit-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        title="Editar empleado"
+                        type="button"
+                    >
+                        <i class="fas fa-edit text-xs"></i>
+                        <span>Editar</span>
                     </button>
-                    <button data-cedula="${emp.cedula}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm" title="Eliminar empleado">
-                        <i class="fas fa-trash-alt"></i>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button 
+                        data-cedula="${empleado.cedula}" 
+                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        title="Eliminar empleado"
+                        type="button"
+                    >
+                        <i class="fas fa-trash-alt text-xs"></i>
+                        <span>Eliminar</span>
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+    }
+
+    renderTabletButtons(empleado) {
+        return `
+            <div class="flex flex-wrap gap-1.5 justify-center">
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="edit-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
+                    title="Editar empleado"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Edit</span>
+                </button>
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
+                    title="Eliminar empleado"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Del</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderDesktopButtons(empleado) {
+        return `
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Detalles</span>
+                </button>
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Editar empleado"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Editar</span>
+                </button>
+                <button 
+                    data-cedula="${empleado.cedula}" 
+                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Eliminar empleado"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Eliminar</span>
+                </button>
+            </div>
+        `;
     }
 
     renderPagination() {
@@ -188,17 +435,46 @@ class EmpleadosManager {
             pagContainer.className = 'flex justify-center mt-6';
             document.getElementById('empleadosListContainer').after(pagContainer);
         }
+
         if (this.totalPages <= 1) {
             pagContainer.innerHTML = '';
             return;
         }
+
         let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
-        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
-        for (let i = 0; i < this.totalPages; i++) {
-            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+
+        // Previous button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+
+        // Page numbers - responsive display
+        if (this.isMobile) {
+            // Mobile: only show current page
+            html += `<span class="px-3 py-1 border-t border-b border-gray-300 bg-brand-brown text-white font-medium text-sm">${this.currentPage + 1} / ${this.totalPages}</span>`;
+        } else if (this.isTablet) {
+            // Tablet: show limited page numbers
+            const maxPages = 3;
+            let startPage = Math.max(0, this.currentPage - 1);
+            let endPage = Math.min(this.totalPages - 1, startPage + maxPages - 1);
+
+            if (endPage - startPage < maxPages - 1) {
+                startPage = Math.max(0, endPage - maxPages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="px-2 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
+        } else {
+            // Desktop: show all page numbers (up to reasonable limit)
+            const maxDisplayPages = Math.min(this.totalPages, 10);
+            for (let i = 0; i < maxDisplayPages; i++) {
+                html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
         }
-        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+
+        // Next button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
         html += '</nav>';
+
         pagContainer.innerHTML = html;
         pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
             btn.onclick = (e) => {
@@ -528,3 +804,4 @@ function formatTelefono(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
+
