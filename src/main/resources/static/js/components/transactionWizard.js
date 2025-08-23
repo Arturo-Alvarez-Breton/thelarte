@@ -20,9 +20,13 @@ export class TransactionWizard {
             lineas: [],
             subtotal: 0,
             impuestos: 0,
-            total: 0
+            // === Devolución-specific fields ===
+            transaccionOrigen: null,
+            productosADevolver: [],
         };
         this.steps = [];
+        this.transacciones = [];
+        this.transaccionesFiltradas = [];
 
         this.initSteps();
         this.setupEventListeners();
@@ -40,7 +44,7 @@ export class TransactionWizard {
     }
 
     initStepsForType(type) {
-        switch(type) {
+        switch (type) {
             case 'VENTA':
                 this.steps = [
                     {
@@ -58,13 +62,20 @@ export class TransactionWizard {
                     {
                         title: 'Método de Pago',
                         content: this.getVentaStep3Content(),
-                        onNext: () => this.validateVentaStep3()
+                        onNext: () => this.validateVentaStep3(),
+                        onLoad: () => this.loadVentaStep3Data && this.loadVentaStep3Data() // Optional, in case you need listeners
                     },
                     {
                         title: 'Confirmación de Venta',
                         content: this.getVentaStep4Content(),
                         onNext: () => this.finalizeVenta(),
-                        onLoad: () => this.loadVentaStep4Data()
+                        onLoad: () => {
+                            // Siempre actualiza totales y renderiza el resumen al entrar al paso 4
+                            this.updateVentaTotals && this.updateVentaTotals();
+                            if (this.wizardContent && typeof this.getVentaStep4Content === 'function') {
+                                this.wizardContent.innerHTML = this.getVentaStep4Content();
+                            }
+                        }
                     }
                 ];
                 break;
@@ -86,37 +97,56 @@ export class TransactionWizard {
                         title: 'Confirmación de Compra',
                         content: this.getCompraStep3Content(),
                         onNext: () => this.finalizeCompra(),
-                        onLoad: () => this.loadCompraStep3Data()
+                        onLoad: () => {
+                            // Siempre actualiza totales y renderiza el resumen al entrar al paso 3 (confirmación)
+                            this.updateCompraTotals && this.updateCompraTotals();
+                            if (this.wizardContent && typeof this.getCompraStep3Content === 'function') {
+                                this.wizardContent.innerHTML = this.getCompraStep3Content();
+                            }
+                        }
+                    }
+                ];
+                break;
+            case 'DEVOLUCION_VENTA':
+            case 'DEVOLUCION_COMPRA':
+                this.steps = [
+                    {
+                        title: 'Tipo de Devolución',
+                        content: this.getDevolucionStep1Content(),
+                        onNext: () => this.validateDevolucionStep1()
+                    },
+                    {
+                        title: 'Selecciona la transacción origen',
+                        content: this.getDevolucionStep2Content(),
+                        onNext: () => this.validateDevolucionStep2(),
+                        onLoad: () => this.loadDevolucionStep2Data()
+                    },
+                    {
+                        title: 'Selecciona los productos a devolver',
+                        content: this.getDevolucionStep3Content(),
+                        onNext: () => this.validateDevolucionStep3(),
+                        onLoad: () => this.loadDevolucionStep3Data()
+                    },
+                    {
+                        title: 'Confirmación de la Devolución',
+                        content: this.getDevolucionStep4Content(),
+                        onNext: () => this.finalizeDevolucion(),
+                        onLoad: () => {
+                            // Siempre refresca el resumen al entrar al paso 4
+                            if (this.wizardContent && typeof this.getDevolucionStep4Content === 'function') {
+                                this.wizardContent.innerHTML = this.getDevolucionStep4Content();
+                            }
+                            // Opcional: deshabilita el botón si faltan datos
+                            const btn = document.getElementById('wizardNextBtn');
+                            if (btn) {
+                                btn.disabled = !this.transactionData.transaccionOrigen || !this.transactionData.productosADevolver?.length;
+                            }
+                        }
                     }
                 ];
                 break;
             default:
-                // Keep original flow for unspecified types
-                this.steps = [
-                    {
-                        title: 'Selecciona el tipo de transacción',
-                        content: this.getStep1Content(),
-                        onNext: () => this.validateStep1()
-                    },
-                    {
-                        title: 'Detalles de la Transacción',
-                        content: this.getStep2Content(),
-                        onNext: () => this.validateStep2(),
-                        onLoad: () => this.loadStep2Data()
-                    },
-                    {
-                        title: 'Añadir Productos',
-                        content: this.getStep3Content(),
-                        onNext: () => this.validateStep3(),
-                        onLoad: () => this.loadStep3Data()
-                    },
-                    {
-                        title: 'Confirmación',
-                        content: this.getStep4Content(),
-                        onNext: () => this.finalizeTransaction(),
-                        onLoad: () => this.loadStep4Data()
-                    }
-                ];
+                this.initSteps();
         }
     }
 
@@ -153,16 +183,18 @@ export class TransactionWizard {
             lineas: [],
             subtotal: 0,
             impuestos: 0,
-            total: 0
+            total: 0,
+            transaccionOrigen: null,
+            productosADevolver: [],
         };
-        
+
         // Initialize steps based on transaction type
         if (type) {
             this.initStepsForType(type);
         } else {
             this.initSteps();
         }
-        
+
         this.currentStep = 0;
         this.updateWizardUI();
         this.wizardModal.classList.remove('hidden');
@@ -220,7 +252,10 @@ export class TransactionWizard {
             this.wizardPrevBtn.classList.toggle('hidden', this.currentStep === 0);
         }
         if (this.wizardNextBtn) {
-            if (this.currentStep === this.steps.length - 1) {
+            // --- CORRECCIÓN: Si solo hay un paso y es el primero, muestra "Siguiente", nunca "Finalizar" ---
+            if (this.steps.length === 1 && this.currentStep === 0) {
+                this.wizardNextBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right ml-1"></i>';
+            } else if (this.currentStep === this.steps.length - 1) {
                 this.wizardNextBtn.innerHTML = 'Finalizar <i class="fas fa-check ml-1"></i>';
             } else {
                 this.wizardNextBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right ml-1"></i>';
@@ -235,14 +270,6 @@ export class TransactionWizard {
                 <label class="block text-gray-700 text-sm font-bold mb-2">Tipo de Transacción:</label>
                 <div class="flex flex-col space-y-2">
                     <label class="inline-flex items-center">
-                        <input type="radio" name="transactionType" value="VENTA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'VENTA' ? 'checked' : ''}>
-                        <span class="ml-2 text-gray-700">Venta</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="transactionType" value="COMPRA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'COMPRA' ? 'checked' : ''}>
-                        <span class="ml-2 text-gray-700">Compra</span>
-                    </label>
-                    <label class="inline-flex items-center">
                         <input type="radio" name="transactionType" value="DEVOLUCION_VENTA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'DEVOLUCION_VENTA' ? 'checked' : ''}>
                         <span class="ml-2 text-gray-700">Devolución de Venta</span>
                     </label>
@@ -254,7 +281,151 @@ export class TransactionWizard {
             </div>
         `;
     }
+    // src/main/resources/static/js/components/transactionWizard.js
 
+// ... (código anterior igual)
+
+    // =============== VENTA WIZARD METHODS ===============
+    getVentaStep1Content() {
+        return `
+    <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-brand-brown">Información del Cliente</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
+                <input type="text" id="ventaClienteSearch" placeholder="Buscar por nombre o cédula..." 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <select id="ventaClienteSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Consumidor Final</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <button type="button" id="btnNuevoCliente" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Nuevo Cliente
+            </button>
+        </div>
+        <!-- Formulario para nuevo cliente (oculto inicialmente) -->
+        <div id="nuevoClienteForm" class="hidden mt-4 border p-4 rounded-lg bg-gray-50">
+            <h4 class="text-md font-bold mb-2">Registrar Nuevo Cliente</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
+                    <input type="text" id="nuevoClienteCedula" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                    <input type="text" id="nuevoClienteNombre" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                    <input type="text" id="nuevoClienteApellido" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                    <input type="text" id="nuevoClienteTelefono" class="w-full px-3 py-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="nuevoClienteEmail" class="w-full px-3 py-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                    <input type="text" id="nuevoClienteDireccion" class="w-full px-3 py-2 border rounded">
+                </div>
+            </div>
+            <div class="mt-4 flex space-x-2">
+                <button type="button" id="guardarNuevoCliente" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Guardar Cliente</button>
+                <button type="button" id="cancelarNuevoCliente" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    `;
+    }
+
+    async loadVentaStep1Data() {
+        try {
+            const clientes = await this.transaccionService.getClientes();
+            const select = document.getElementById('ventaClienteSelect');
+            const searchInput = document.getElementById('ventaClienteSearch');
+            const btnNuevoCliente = document.getElementById('btnNuevoCliente');
+            const nuevoClienteForm = document.getElementById('nuevoClienteForm');
+            const guardarBtn = document.getElementById('guardarNuevoCliente');
+            const cancelarBtn = document.getElementById('cancelarNuevoCliente');
+
+            // Inicializa el select con todos los clientes
+            if (select) {
+                select.innerHTML = '<option value="">Consumidor Final</option>';
+                clientes.forEach(cliente => {
+                    select.innerHTML += `<option value="${cliente.cedula}">${cliente.nombre} ${cliente.apellido} (${cliente.cedula})</option>`;
+                });
+            }
+
+            // Filtro dinámico por input
+            if (searchInput && select) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const filtered = clientes.filter(cliente =>
+                        cliente.nombre.toLowerCase().includes(searchTerm) ||
+                        cliente.apellido.toLowerCase().includes(searchTerm) ||
+                        cliente.cedula.toLowerCase().includes(searchTerm)
+                    );
+                    select.innerHTML = '<option value="">Consumidor Final</option>';
+                    filtered.forEach(cliente => {
+                        select.innerHTML += `<option value="${cliente.cedula}">${cliente.nombre} ${cliente.apellido} (${cliente.cedula})</option>`;
+                    });
+                });
+            }
+
+            // Mostrar/ocultar formulario de nuevo cliente
+            if (btnNuevoCliente && nuevoClienteForm) {
+                btnNuevoCliente.onclick = () => nuevoClienteForm.classList.toggle('hidden');
+            }
+            if (cancelarBtn && nuevoClienteForm) {
+                cancelarBtn.onclick = () => nuevoClienteForm.classList.add('hidden');
+            }
+
+            // Guardar el nuevo cliente
+            if (guardarBtn && select && nuevoClienteForm) {
+                guardarBtn.onclick = async () => {
+                    const cedula = document.getElementById('nuevoClienteCedula').value.trim();
+                    const nombre = document.getElementById('nuevoClienteNombre').value.trim();
+                    const apellido = document.getElementById('nuevoClienteApellido').value.trim();
+                    const telefono = document.getElementById('nuevoClienteTelefono').value.trim();
+                    const email = document.getElementById('nuevoClienteEmail').value.trim();
+                    const direccion = document.getElementById('nuevoClienteDireccion').value.trim();
+
+                    if (!cedula || !nombre || !apellido || !telefono) {
+                        window.showToast('Completa los campos obligatorios (*) del cliente.', 'error');
+                        return;
+                    }
+
+                    try {
+                        const nuevoCliente = await this.transaccionService.createCliente({
+                            cedula, nombre, apellido, telefono, email, direccion
+                        });
+                        window.showToast('Cliente creado exitosamente.', 'success');
+                        // Añade el nuevo cliente al select y selecciónalo
+                        const option = document.createElement('option');
+                        option.value = nuevoCliente.cedula;
+                        option.textContent = `${nuevoCliente.nombre} ${nuevoCliente.apellido} (${nuevoCliente.cedula})`;
+                        select.appendChild(option);
+                        select.value = nuevoCliente.cedula;
+                        this.transactionData.cliente = nuevoCliente;
+                        nuevoClienteForm.classList.add('hidden');
+                    } catch (err) {
+                        window.showToast('Error al crear cliente: ' + (err.message || err), 'error');
+                    }
+                };
+            }
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            window.showToast('Error al cargar clientes.', 'error');
+        }
+    }
     validateStep1() {
         const selectedType = document.querySelector('input[name="transactionType"]:checked');
         if (!selectedType) {
@@ -262,341 +433,254 @@ export class TransactionWizard {
             return false;
         }
         this.transactionData.tipoTransaccion = selectedType.value;
-        return true;
+        this.initStepsForType(selectedType.value);
+
+        // Si el tipo es devolución, avanza automáticamente al segundo paso
+        if (selectedType.value === 'DEVOLUCION_COMPRA' || selectedType.value === 'DEVOLUCION_VENTA') {
+            this.currentStep = 1;
+        } else {
+            this.currentStep = 0;
+        }
+
+        this.updateWizardUI();
+        return false;
     }
 
     // --- Step 2: Transaction Details ---
-    getStep2Content() {
+// --- Step 3: Add Products ---
+// --- Step 4: Confirmation ---
+// ========== DEVOLUCIONES ==========
+
+    getDevolucionStep1Content() {
         return `
             <div class="space-y-4">
-                <div>
-                    <label for="clientSearch" class="block text-gray-700 text-sm font-bold mb-2">Cliente:</label>
-                    <div class="flex">
-                        <input type="text" id="clientSearch" placeholder="Buscar cliente por cédula o nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <button id="searchClientBtn" class="bg-brand-brown hover:bg-brand-light-brown text-white font-bold py-2 px-4 rounded ml-2">Buscar</button>
-                    </div>
-                    <div id="selectedClientInfo" class="mt-2 p-2 border rounded bg-gray-100 ${this.transactionData.cliente ? '' : 'hidden'}">
-                        ${this.transactionData.cliente ? `
-                            <p><strong>Nombre:</strong> ${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido}</p>
-                            <p><strong>Cédula:</strong> ${this.transactionData.cliente.cedula}</p>
-                        ` : ''}
-                    </div>
-                </div>
-                <div>
-                    <label for="paymentMethod" class="block text-gray-700 text-sm font-bold mb-2">Método de Pago:</label>
-                    <select id="paymentMethod" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="">Selecciona un método</option>
-                        <option value="EFECTIVO" ${this.transactionData.metodoPago === 'EFECTIVO' ? 'selected' : ''}>Efectivo</option>
-                        <option value="TARJETA" ${this.transactionData.metodoPago === 'TARJETA' ? 'selected' : ''}>Tarjeta</option>
-                        <option value="TRANSFERENCIA" ${this.transactionData.metodoPago === 'TRANSFERENCIA' ? 'selected' : ''}>Transferencia</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="observations" class="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
-                    <textarea id="observations" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">${this.transactionData.observaciones}</textarea>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Tipo de Devolución:</label>
+                <div class="flex flex-col space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="tipoDevolucion" value="DEVOLUCION_VENTA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'DEVOLUCION_VENTA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Devolución de Venta</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="tipoDevolucion" value="DEVOLUCION_COMPRA" class="form-radio text-brand-brown" ${this.transactionData.tipoTransaccion === 'DEVOLUCION_COMPRA' ? 'checked' : ''}>
+                        <span class="ml-2 text-gray-700">Devolución de Compra</span>
+                    </label>
                 </div>
             </div>
         `;
     }
 
-    async loadStep2Data() {
-        const searchClientBtn = document.getElementById('searchClientBtn');
-        const clientSearchInput = document.getElementById('clientSearch');
-        const selectedClientInfoDiv = document.getElementById('selectedClientInfo');
-        const paymentMethodSelect = document.getElementById('paymentMethod');
-        const observationsTextarea = document.getElementById('observations');
-
-        if (clientSearchInput) {
-            clientSearchInput.value = this.transactionData.cliente ? (this.transactionData.cliente.cedula || '') : '';
-        }
-        if (paymentMethodSelect) {
-            paymentMethodSelect.value = this.transactionData.metodoPago;
-        }
-        if (observationsTextarea) {
-            observationsTextarea.value = this.transactionData.observaciones;
-        }
-
-        if (searchClientBtn) {
-            searchClientBtn.onclick = async () => {
-                const searchTerm = clientSearchInput.value.trim();
-                if (searchTerm) {
-                    try {
-                        const client = await this.transaccionService.getClienteByCedula(searchTerm);
-                        if (client) {
-                            this.transactionData.cliente = client;
-                            selectedClientInfoDiv.innerHTML = `
-                                <p><strong>Nombre:</strong> ${client.nombre} ${client.apellido}</p>
-                                <p><strong>Cédula:</strong> ${client.cedula}</p>
-                            `;
-                            selectedClientInfoDiv.classList.remove('hidden');
-                            window.showToast('Cliente encontrado.', 'success');
-                        } else {
-                            this.transactionData.cliente = null;
-                            selectedClientInfoDiv.classList.add('hidden');
-                            window.showToast('Cliente no encontrado.', 'info');
-                        }
-                    } catch (error) {
-                        console.error('Error searching client:', error);
-                        window.showToast('Error al buscar cliente.', 'error');
-                        this.transactionData.cliente = null;
-                        selectedClientInfoDiv.classList.add('hidden');
-                    }
-                } else {
-                    this.transactionData.cliente = null;
-                    selectedClientInfoDiv.classList.add('hidden');
-                }
-            };
-        }
-    }
-
-    validateStep2() {
-        const paymentMethodSelect = document.getElementById('paymentMethod');
-        const observationsTextarea = document.getElementById('observations');
-
-        if (!paymentMethodSelect.value) {
-            window.showToast('Por favor, selecciona un método de pago.', 'error');
+    validateDevolucionStep1() {
+        const selectedType = document.querySelector('input[name="tipoDevolucion"]:checked');
+        if (!selectedType) {
+            window.showToast('Selecciona el tipo de devolución', 'error');
             return false;
         }
-
-        this.transactionData.metodoPago = paymentMethodSelect.value;
-        this.transactionData.observaciones = observationsTextarea.value;
+        this.transactionData.tipoTransaccion = selectedType.value;
         return true;
     }
 
-    // --- Step 3: Add Products ---
-    getStep3Content() {
+    getDevolucionStep2Content() {
         return `
             <div class="space-y-4">
-                <div>
-                    <label for="productSearch" class="block text-gray-700 text-sm font-bold mb-2">Producto:</label>
-                    <div class="flex">
-                        <input type="text" id="productSearch" placeholder="Buscar producto por código o nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <button id="searchProductBtn" class="bg-brand-brown hover:bg-brand-light-brown text-white font-bold py-2 px-4 rounded ml-2">Buscar</button>
-                    </div>
-                    <div id="foundProductInfo" class="mt-2 p-2 border rounded bg-gray-100 hidden"></div>
-                </div>
-                <div>
-                    <label for="productQuantity" class="block text-gray-700 text-sm font-bold mb-2">Cantidad:</label>
-                    <input type="number" id="productQuantity" value="1" min="1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                </div>
-                <button id="addProductBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Añadir Producto</button>
-                
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Productos en la Transacción:</h3>
-                    <div id="transactionProductsList" class="border rounded p-2">
-                        <!-- Products will be listed here -->
-                        ${this.transactionData.lineas.length > 0 ? this.transactionData.lineas.map((line, index) => `
-                            <div class="flex justify-between items-center p-2 border-b last:border-b-0">
-                                <span>${line.nombreProducto} (x${line.cantidad}) - ${this.formatCurrency(line.subtotalLinea)}</span>
-                                <button data-index="${index}" class="remove-product-btn text-red-500 hover:text-red-700">X</button>
-                            </div>
-                        `).join('') : '<p class="text-gray-500">No hay productos añadidos.</p>'}
-                    </div>
-                    <div class="mt-2 text-right">
-                        <p>Subtotal: <strong>${this.formatCurrency(this.transactionData.subtotal)}</strong></p>
-                        <p>Impuestos: <strong>${this.formatCurrency(this.transactionData.impuestos)}</strong></p>
-                        <p class="text-xl font-bold">Total: <strong>${this.formatCurrency(this.transactionData.total)}</strong></p>
-                    </div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Transacción origen:</label>
+                <div id="devolucionTransaccionesContainer">
+                    <div class="text-gray-500">Cargando transacciones...</div>
                 </div>
             </div>
         `;
     }
 
-    async loadStep3Data() {
-        const productSearchInput = document.getElementById('productSearch');
-        const searchProductBtn = document.getElementById('searchProductBtn');
-        const foundProductInfoDiv = document.getElementById('foundProductInfo');
-        const productQuantityInput = document.getElementById('productQuantity');
-        const addProductBtn = document.getElementById('addProductBtn');
-        const transactionProductsList = document.getElementById('transactionProductsList');
-
-        let selectedProduct = null;
-
-        const renderProductList = () => {
-            if (this.transactionData.lineas.length > 0) {
-                transactionProductsList.innerHTML = this.transactionData.lineas.map((line, index) => `
-                    <div class="flex justify-between items-center p-2 border-b last:border-b-0">
-                        <span>${line.nombreProducto} (x${line.cantidad}) - ${this.formatCurrency(line.subtotalLinea)}</span>
-                        <button data-index="${index}" class="remove-product-btn text-red-500 hover:text-red-700">X</button>
-                    </div>
-                `).join('');
-            } else {
-                transactionProductsList.innerHTML = '<p class="text-gray-500">No hay productos añadidos.</p>';
-            }
-            this.updateTotals();
-        };
-
-        if (searchProductBtn) {
-            searchProductBtn.onclick = async () => {
-                const searchTerm = productSearchInput.value.trim();
-                if (searchTerm) {
-                    try {
-                        const product = await this.transaccionService.getProductoByCodigo(searchTerm); // Assuming search by code
-                        if (product) {
-                            selectedProduct = product;
-                            foundProductInfoDiv.innerHTML = `
-                                <p><strong>Nombre:</strong> ${product.nombre}</p>
-                                <p><strong>Precio:</strong> ${this.formatCurrency(product.precioVenta)}</p>
-                                <p><strong>Disponible:</strong> ${product.cantidadDisponible}</p>
-                            `;
-                            foundProductInfoDiv.classList.remove('hidden');
-                            window.showToast('Producto encontrado.', 'success');
-                        } else {
-                            selectedProduct = null;
-                            foundProductInfoDiv.classList.add('hidden');
-                            window.showToast('Producto no encontrado.', 'info');
-                        }
-                    } catch (error) {
-                        console.error('Error searching product:', error);
-                        window.showToast('Error al buscar producto.', 'error');
-                        selectedProduct = null;
-                        foundProductInfoDiv.classList.add('hidden');
-                    }
-                } else {
-                    selectedProduct = null;
-                    foundProductInfoDiv.classList.add('hidden');
-                }
-            };
-        }
-
-        if (addProductBtn) {
-            addProductBtn.onclick = () => {
-                if (!selectedProduct) {
-                    window.showToast('Por favor, busca y selecciona un producto.', 'error');
-                    return;
-                }
-                const quantity = parseInt(productQuantityInput.value, 10);
-                if (isNaN(quantity) || quantity <= 0) {
-                    window.showToast('La cantidad debe ser un número positivo.', 'error');
-                    return;
-                }
-                if (quantity > selectedProduct.cantidadDisponible) {
-                    window.showToast('Cantidad excede la disponibilidad del producto.', 'error');
-                    return;
-                }
-
-                const existingLineIndex = this.transactionData.lineas.findIndex(line => line.productoId === selectedProduct.id);
-
-                if (existingLineIndex > -1) {
-                    // Update existing line
-                    const existingLine = this.transactionData.lineas[existingLineIndex];
-                    existingLine.cantidad += quantity;
-                    existingLine.subtotalLinea = existingLine.precioUnitario * existingLine.cantidad; // Simple calculation
-                } else {
-                    // Add new line
-                    this.transactionData.lineas.push({
-                        productoId: selectedProduct.id,
-                        nombreProducto: selectedProduct.nombre,
-                        codigoProducto: selectedProduct.codigo,
-                        cantidad: quantity,
-                        precioUnitario: selectedProduct.precioVenta,
-                        descuento: 0, // For now, no discount
-                        subtotalLinea: selectedProduct.precioVenta * quantity, // Simple calculation
-                        categoria: selectedProduct.categoria
-                    });
-                }
-                
-                productSearchInput.value = '';
-                productQuantityInput.value = 1;
-                foundProductInfoDiv.classList.add('hidden');
-                selectedProduct = null;
-                renderProductList();
-                window.showToast('Producto añadido.', 'success');
-            };
-        }
-
-        // Event listener for removing products
-        if (transactionProductsList) {
-            transactionProductsList.addEventListener('click', (event) => {
-                if (event.target.classList.contains('remove-product-btn')) {
-                    const index = parseInt(event.target.dataset.index, 10);
-                    this.transactionData.lineas.splice(index, 1);
-                    renderProductList();
-                    window.showToast('Producto eliminado.', 'info');
-                }
-            });
-        }
-
-        renderProductList(); // Initial render of products
-    }
-
-    validateStep3() {
-        if (this.transactionData.lineas.length === 0) {
-            window.showToast('Por favor, añade al menos un producto a la transacción.', 'error');
-            return false;
-        }
-        return true;
-    }
-
-    // --- Step 4: Confirmation ---
-    getStep4Content() {
-        return `
-            <div class="space-y-4">
-                <h3 class="text-xl font-bold text-gray-800">Resumen de la Transacción</h3>
-                <div class="p-4 border rounded bg-gray-50">
-                    <p><strong>Tipo:</strong> ${this.formatTransactionType(this.transactionData.tipoTransaccion)}</p>
-                    <p><strong>Cliente:</strong> ${this.transactionData.cliente ? `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` : 'Consumidor Final'}</p>
-                    <p><strong>Método de Pago:</strong> ${this.transactionData.metodoPago}</p>
-                    <p><strong>Observaciones:</strong> ${this.transactionData.observaciones || 'N/A'}</p>
-                </div>
-                
-                <h4 class="text-lg font-semibold text-gray-700 mt-4">Productos:</h4>
-                <div class="border rounded p-2">
-                    ${this.transactionData.lineas.length > 0 ? this.transactionData.lineas.map(line => `
-                        <div class="flex justify-between items-center p-1 border-b last:border-b-0">
-                            <span>${line.nombreProducto} (x${line.cantidad})</span>
-                            <span>${this.formatCurrency(line.subtotalLinea)}</span>
-                        </div>
-                    `).join('') : '<p class="text-gray-500">No hay productos.</p>'}
-                </div>
-
-                <div class="mt-4 text-right">
-                    <p>Subtotal: <strong>${this.formatCurrency(this.transactionData.subtotal)}</strong></p>
-                    <p>Impuestos: <strong>${this.formatCurrency(this.transactionData.impuestos)}</strong></p>
-                    <p class="text-2xl font-bold">Total: <strong>${this.formatCurrency(this.transactionData.total)}</strong></p>
-                </div>
-            </div>
-        `;
-    }
-
-    loadStep4Data() {
-        // Data is already in this.transactionData, just needs to be rendered by getStep4Content
-        this.updateTotals(); // Ensure totals are up-to-date before displaying
-    }
-
-    async finalizeTransaction() {
+    async loadDevolucionStep2Data() {
+        // Obtener transacciones para filtrar según tipo
+        const tipo = this.transactionData.tipoTransaccion === 'DEVOLUCION_COMPRA' ? 'COMPRA' : 'VENTA';
         try {
-            // Prepare data for API call
+            // ¡Pasa el filtro de tipo!
+            this.transacciones = await this.transaccionService.getTransacciones({ tipo });
+            this.transaccionesFiltradas = this.transacciones.filter(
+                t => t.tipo === tipo && t.estado !== 'CANCELADA'
+            );
+            const container = document.getElementById('devolucionTransaccionesContainer');
+            if (!container) return;
+            if (!this.transaccionesFiltradas.length) {
+                container.innerHTML = `<div class="text-gray-500">No hay transacciones para devolución.</div>`;
+                return;
+            }
+            container.innerHTML = this.transaccionesFiltradas.map((t, idx) => `
+                <div class="border rounded px-4 py-2 mb-2 cursor-pointer ${this.transactionData.transaccionOrigen && this.transactionData.transaccionOrigen.id === t.id ? "bg-brand-light-brown text-white" : ""}"
+                    onclick="window.transactionWizard.selectTransaccionOrigen(${t.id})">
+                    <strong>${t.contraparteNombre}</strong> #${t.id} - ${t.estado} <span class="ml-2 text-xs text-gray-500">${new Date(t.fecha).toLocaleDateString('es-DO')}</span>
+                    <br>
+                    <span class="text-sm text-gray-600">Total: ${this.formatCurrency(t.total)}</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            window.showToast('Error cargando transacciones.', 'error');
+        }
+    }
+
+    selectTransaccionOrigen(id) {
+        this.transactionData.transaccionOrigen = this.transaccionesFiltradas.find(t => t.id === id);
+        // Reset productos seleccionados si cambia la transacción
+        this.transactionData.productosADevolver = [];
+        this.updateWizardUI();
+    }
+
+    validateDevolucionStep2() {
+        if (!this.transactionData.transaccionOrigen) {
+            window.showToast('Selecciona una transacción origen', 'error');
+            return false;
+        }
+        return true;
+    }
+
+
+    loadDevolucionStep4Data() {
+        // Nada por ahora
+    }
+
+
+    async finalizeVenta() {
+        try {
+            this.updateTotals && this.updateTotals();
+            if (this.transactionData.cliente && !this.transactionData.cliente.cedula) {
+                const nuevoCliente = await this.transaccionService.createCliente(this.transactionData.cliente);
+                if (!nuevoCliente || !nuevoCliente.cedula) {
+                    window.showToast('No se pudo crear el cliente.', 'error');
+                    return false;
+                }
+                this.transactionData.cliente.cedula = nuevoCliente.cedula;
+            }
+            const cedulaLong = this.transactionData.cliente
+                ? cedulaToLong(this.transactionData.cliente.cedula)
+                : null;
+
+            // Validación extra para nombreProducto
+            const lineaInvalida = this.transactionData.lineas.find(
+                line => !(line.nombreProducto || line.nombre)
+            );
+            if (lineaInvalida) {
+                window.showToast('Hay un producto sin nombre. Corrige antes de continuar.', 'error');
+                return;
+            }
+
             const payload = {
-                tipoTransaccion: this.transactionData.tipoTransaccion,
+                tipo: 'VENTA',
                 cliente: this.transactionData.cliente ? {
                     cedula: this.transactionData.cliente.cedula,
                     nombre: this.transactionData.cliente.nombre,
                     apellido: this.transactionData.cliente.apellido
                 } : null,
+                proveedor: null,
                 metodoPago: this.transactionData.metodoPago,
                 observaciones: this.transactionData.observaciones,
                 lineas: this.transactionData.lineas.map(line => ({
                     productoId: line.productoId,
+                    productoNombre: line.nombreProducto || line.nombre, // ¡usa productoNombre!
                     cantidad: line.cantidad,
                     precioUnitario: line.precioUnitario,
-                    descuento: line.descuento,
-                    subtotalLinea: line.subtotalLinea
+                    subtotal: line.subtotalLinea,      // asegúrate que sea el monto correcto
+                    impuestoPorcentaje: line.impuestoPorcentaje ?? 0,
+                    impuestoMonto: line.impuestoMonto ?? 0,
+                    total: line.totalLinea ?? line.subtotalLinea,
+                    descuentoPorcentaje: line.descuentoPorcentaje ?? 0,
+                    descuentoMonto: line.descuentoMonto ?? 0,
+                    observaciones: line.observaciones ?? ""
+                })),
+                subtotal: this.transactionData.subtotal,
+                impuestos: this.transactionData.impuestos,
+                total: this.transactionData.total,
+                contraparteId: cedulaLong,
+                contraparteNombre: this.transactionData.cliente
+                    ? (this.transactionData.cliente.nombre + " " + this.transactionData.cliente.apellido)
+                    : null,
+                tipoContraparte: "CLIENTE",
+                vendedorId: 1,
+            };
+            console.log("Payload de venta:", JSON.stringify(payload, null, 2));
+            await this.transaccionService.crearTransaccion(payload);
+            window.showToast('Venta procesada exitosamente.', 'success');
+            this.close();
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
+        } catch (error) {
+            console.error('Error al procesar venta:', error);
+            window.showToast('Error al procesar la venta: ' + (error.message || error), 'error');
+        }
+    }
+    async finalizeCompra() {
+        try {
+            this.updateTotals && this.updateTotals();
+
+            // Validación extra: asegúrate que el proveedor y su nombre existen
+            if (!this.transactionData.proveedor || !this.transactionData.proveedor.nombre) {
+                window.showToast('El nombre del proveedor es obligatorio para la compra.', 'error');
+                return false;
+            }
+            // Si el proveedor no tiene id, es un nuevo suplidor, así que créalo
+            if (!this.transactionData.proveedor?.id) {
+                // Debes tener un método real para crear suplidor en tu transaccionService o uno extra
+                const nuevoSuplidor = await this.transaccionService.createSuplidor(this.transactionData.proveedor);
+                if (!nuevoSuplidor || !nuevoSuplidor.id) {
+                    window.showToast('No se pudo crear el proveedor.', 'error');
+                    return false;
+                }
+                this.transactionData.proveedor.id = nuevoSuplidor.id;
+            }
+            for (let line of this.transactionData.lineas) {
+                if (!line.productoId) {
+                    const nuevoProducto = await this.transaccionService.createProducto({
+                        nombre: line.nombreProducto,
+                        precioCompra: line.precioUnitario,
+                        precioVenta: 0, // <-- Envía 0 al crear el producto, el usuario lo modificará luego
+                        tipo: line.tipo || "MUEBLE"
+                    });
+                    if (nuevoProducto && nuevoProducto.id) {
+                        line.productoId = nuevoProducto.id;
+                        // puedes ajustar otros datos si lo deseas
+                    } else {
+                        window.showToast('No se pudo crear el producto.', 'error');
+                        return false;
+                    }
+                }
+            }
+
+            const payload = {
+                tipo: 'COMPRA', // Solo este campo, no tipoTransaccion
+                cliente: null,
+                proveedor: this.transactionData.proveedor ? {
+                    id: this.transactionData.proveedor.id,
+                    nombre: this.transactionData.proveedor.nombre,
+                    rnc: this.transactionData.proveedor.rnc,
+                    telefono: this.transactionData.proveedor.telefono,
+                    email: this.transactionData.proveedor.email
+                } : null,
+                contraparteId: this.transactionData.proveedor?.id,
+                contraparteNombre: this.transactionData.proveedor?.nombre, // ¡Este campo es obligatorio!
+                tipoContraparte: 'SUPLIDOR',
+                metodoPago: this.transactionData.metodoPago || 'EFECTIVO',
+                observaciones: this.transactionData.observaciones ||
+                    (this.transactionData.proveedor ? `Compra de proveedor: ${this.transactionData.proveedor.nombre}` : ''),
+                lineas: this.transactionData.lineas.map(line => ({
+                    productoId: line.productoId,
+                    productoNombre: line.nombreProducto,
+                    cantidad: line.cantidad,
+                    precioUnitario: line.precioUnitario,
+                    subtotal: line.subtotalLinea // nombre esperado por backend
                 })),
                 subtotal: this.transactionData.subtotal,
                 impuestos: this.transactionData.impuestos,
                 total: this.transactionData.total
             };
 
-            const result = await this.transaccionService.crearTransaccion(payload);
-            console.log('Transaction created:', result);
-            window.showToast('Transacción creada exitosamente.', 'success');
+            // Depuración: muestra el payload
+            console.log("Payload enviado:", JSON.stringify(payload, null, 2));
+
+            await this.transaccionService.crearTransaccion(payload);
+            window.showToast('Compra procesada exitosamente.', 'success');
             this.close();
-            // Optionally, refresh the main transaction list or redirect
-            // window.location.reload(); // Or a more targeted update
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
         } catch (error) {
-            console.error('Error finalizing transaction:', error);
-            window.showToast('Error al crear la transacción.', 'error');
+            console.error('Error al procesar compra:', error);
+            window.showToast('Error al procesar la compra: ' + (error.message || error), 'error');
         }
     }
 
@@ -651,42 +735,6 @@ export class TransactionWizard {
     }
 
     // =============== VENTA WIZARD METHODS ===============
-    getVentaStep1Content() {
-        return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Información del Cliente</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                        <select id="ventaClienteSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Consumidor Final</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button type="button" onclick="window.showNewClientModal()" class="mt-6 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-                            <i class="fas fa-plus mr-2"></i>Nuevo Cliente
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    async loadVentaStep1Data() {
-        try {
-            const clientes = await this.transaccionService.getClientes();
-            const select = document.getElementById('ventaClienteSelect');
-            if (select) {
-                select.innerHTML = '<option value="">Consumidor Final</option>';
-                clientes.forEach(cliente => {
-                    select.innerHTML += `<option value="${cliente.cedula}">${cliente.nombre} ${cliente.apellido} (${cliente.cedula})</option>`;
-                });
-            }
-        } catch (error) {
-            console.error('Error loading clients:', error);
-        }
-    }
-
     async validateVentaStep1() {
         // Cliente is optional for sales (can be "Consumidor Final")
         const clienteCedula = document.getElementById('ventaClienteSelect')?.value;
@@ -697,11 +745,11 @@ export class TransactionWizard {
                 if (cliente) {
                     this.transactionData.cliente = cliente;
                 } else {
-                    this.transactionData.cliente = { cedula: clienteCedula };
+                    this.transactionData.cliente = {cedula: clienteCedula};
                 }
             } catch (error) {
                 console.error('Error loading client:', error);
-                this.transactionData.cliente = { cedula: clienteCedula };
+                this.transactionData.cliente = {cedula: clienteCedula};
             }
         } else {
             this.transactionData.cliente = null;
@@ -765,30 +813,36 @@ export class TransactionWizard {
             const productos = await this.transaccionService.getProductosParaVenta();
             const select = document.getElementById('ventaProductoSelect');
             const searchInput = document.getElementById('ventaProductoSearch');
-            
+
             if (select) {
                 select.innerHTML = '<option value="">Seleccionar producto</option>';
                 productos.forEach(producto => {
-                    select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                    select.innerHTML += `<option value="${producto.id}">
+            ${producto.nombre} - ${this.formatCurrency(producto.precioCompra)}
+            (Tienda: ${producto.cantidadDisponible || 0} / Almacén: ${producto.cantidadAlmacen || 0} / Total: ${(producto.cantidadDisponible || 0) + (producto.cantidadAlmacen || 0)})
+        </option>`;
                 });
             }
-            
-            // Setup search functionality
+
+// Setup search functionality
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.toLowerCase();
-                    const filteredProducts = productos.filter(producto => 
+                    const filteredProducts = productos.filter(producto =>
                         producto.nombre.toLowerCase().includes(searchTerm) ||
                         producto.codigo.toLowerCase().includes(searchTerm)
                     );
-                    
+
                     select.innerHTML = '<option value="">Seleccionar producto</option>';
                     filteredProducts.forEach(producto => {
-                        select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioVenta)} (Stock: ${producto.cantidadDisponible})</option>`;
+                        select.innerHTML += `<option value="${producto.id}">
+                ${producto.nombre} - ${this.formatCurrency(producto.precioCompra)}
+                (Tienda: ${producto.cantidadDisponible || 0} / Almacén: ${producto.cantidadAlmacen || 0} / Total: ${(producto.cantidadDisponible || 0) + (producto.cantidadAlmacen || 0)})
+            </option>`;
                     });
                 });
             }
-            
+
             this.updateVentaProductsList();
             this.updateVentaTotals();
         } catch (error) {
@@ -800,7 +854,7 @@ export class TransactionWizard {
     async addVentaProduct() {
         const productSelect = document.getElementById('ventaProductoSelect');
         const cantidadInput = document.getElementById('ventaCantidad');
-        
+
         if (!productSelect.value || !cantidadInput.value) {
             window.showToast('Selecciona un producto y cantidad válida.', 'error');
             return;
@@ -817,14 +871,19 @@ export class TransactionWizard {
         try {
             const productos = await this.transaccionService.getProductosParaVenta();
             const selectedProduct = productos.find(p => p.id === productId);
-            
+
             if (!selectedProduct) {
                 window.showToast('Producto no encontrado.', 'error');
                 return;
             }
 
-            if (cantidad > selectedProduct.cantidadDisponible) {
-                window.showToast('Cantidad excede la disponibilidad del producto.', 'error');
+            // --- NUEVO: stock total = disponible en tienda + almacen ---
+            const stockDisponible = Number(selectedProduct.cantidadDisponible) || 0;
+            const stockAlmacen = Number(selectedProduct.cantidadAlmacen) || 0;
+            const stockTotal = stockDisponible + stockAlmacen;
+
+            if (cantidad > stockTotal) {
+                window.showToast(`Cantidad excede el stock total (Tienda: ${stockDisponible}, Almacén: ${stockAlmacen})`, 'error');
                 return;
             }
 
@@ -842,13 +901,13 @@ export class TransactionWizard {
                     nombreProducto: selectedProduct.nombre,
                     codigoProducto: selectedProduct.codigo,
                     cantidad: cantidad,
-                    precioUnitario: selectedProduct.precioVenta,
+                    precioUnitario: selectedProduct.precioCompra,
                     descuento: 0,
-                    subtotalLinea: selectedProduct.precioVenta * cantidad,
+                    subtotalLinea: selectedProduct.precioCompra * cantidad,
                     categoria: selectedProduct.categoria
                 });
             }
-            
+
             cantidadInput.value = 1;
             productSelect.value = '';
             this.updateVentaProductsList();
@@ -882,32 +941,25 @@ export class TransactionWizard {
             </div>
         `).join('');
     }
-
-    removeVentaProduct(index) {
-        this.transactionData.lineas.splice(index, 1);
-        this.updateVentaProductsList();
-        this.updateVentaTotals();
-    }
-
     updateVentaTotals() {
         let subtotal = 0;
         let impuestos = 0;
-        
+
         this.transactionData.lineas.forEach(line => {
             subtotal += line.subtotalLinea;
             // Assuming 18% ITBIS
             impuestos += line.subtotalLinea * 0.18;
         });
-        
+
         this.transactionData.subtotal = subtotal;
         this.transactionData.impuestos = impuestos;
         this.transactionData.total = subtotal + impuestos;
-        
+
         // Update display
         const subtotalElement = document.getElementById('ventaSubtotal');
         const impuestosElement = document.getElementById('ventaImpuestos');
         const totalElement = document.getElementById('ventaTotal');
-        
+
         if (subtotalElement) subtotalElement.textContent = this.formatCurrency(this.transactionData.subtotal);
         if (impuestosElement) impuestosElement.textContent = this.formatCurrency(this.transactionData.impuestos);
         if (totalElement) totalElement.textContent = this.formatCurrency(this.transactionData.total);
@@ -959,15 +1011,221 @@ export class TransactionWizard {
             window.showToast('Selecciona un método de pago.', 'error');
             return false;
         }
-        
+
         this.transactionData.metodoPago = metodoPago;
         this.transactionData.observaciones = document.getElementById('ventaObservaciones')?.value || '';
         return true;
     }
+    // PASO 3: Selección de productos a devolver con cantidad
+    getDevolucionStep3Content() {
+        const t = this.transactionData.transaccionOrigen;
+        let html = `
+        <div class="space-y-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Selecciona los productos a devolver:</label>
+            <div id="productosADevolverContainer">
+                <div class="text-gray-500">Cargando productos...</div>
+            </div>
+        </div>
+    `;
+        return html;
+    }
 
+// Modifica la estructura de productosADevolver para guardar objetos: [{ idx, cantidad }]
+    async loadDevolucionStep3Data() {
+        const container = document.getElementById('productosADevolverContainer');
+        const trans = this.transactionData.transaccionOrigen;
+        if (!trans || !container) return;
+
+        if (!Array.isArray(this.transactionData.productosADevolver)) this.transactionData.productosADevolver = [];
+
+        // Helpers
+        const isSelected = (idx) => this.transactionData.productosADevolver.some(obj => obj.idx === idx);
+        const getCantidad = (idx, max) => {
+            const found = this.transactionData.productosADevolver.find(obj => obj.idx === idx);
+            return found ? found.cantidad : 1;
+        };
+
+        container.innerHTML = trans.lineas.map((linea, idx) => {
+            const maxCantidad = linea.cantidad;
+            const checked = isSelected(idx) ? 'checked' : '';
+            const cantidad = getCantidad(idx, maxCantidad);
+
+            return `
+            <div class="flex items-center mb-2">
+                <input type="checkbox" id="prodADevolver-${idx}" ${checked} onchange="window.transactionWizard.toggleProductoADevolver(${idx})">
+                <label for="prodADevolver-${idx}" class="ml-2">${linea.nombreProducto || linea.productoNombre} (x${maxCantidad})</label>
+                <input type="number"
+                    min="1"
+                    max="${maxCantidad}"
+                    value="${cantidad}"
+                    id="cantidadADevolver-${idx}"
+                    style="width:60px;margin-left:10px;"
+                    ${!isSelected(idx) ? "disabled" : ""}
+                    onchange="window.transactionWizard.setCantidadADevolver(${idx}, this.value)">
+            </div>
+        `;
+        }).join('');
+    }
+
+// Actualiza la selección y pone cantidad=1 por defecto
+    toggleProductoADevolver(idx) {
+        const trans = this.transactionData.transaccionOrigen;
+        if (!trans) return;
+        let arr = this.transactionData.productosADevolver;
+        const foundIdx = arr.findIndex(obj => obj.idx === idx);
+        if (foundIdx > -1) {
+            // Quitar producto
+            arr.splice(foundIdx, 1);
+        } else {
+            // Agregar producto con cantidad 1 por defecto
+            arr.push({ idx, cantidad: 1 });
+        }
+        this.transactionData.productosADevolver = arr;
+        this.updateWizardUI();
+    }
+
+// Al modificar cantidad, solo si el producto está seleccionado
+    setCantidadADevolver(idx, val) {
+        let arr = this.transactionData.productosADevolver;
+        const found = arr.find(obj => obj.idx === idx);
+        const linea = this.transactionData.transaccionOrigen.lineas[idx];
+        if (found && linea) {
+            const maxCantidad = linea.cantidad;
+            const cantidad = Math.max(1, Math.min(Number(val), maxCantidad));
+            found.cantidad = cantidad;
+        }
+    }
+
+    validateDevolucionStep3() {
+        if (!this.transactionData.productosADevolver.length) {
+            window.showToast('Selecciona al menos un producto a devolver', 'error');
+            return false;
+        }
+        // Validación: no se puede devolver menos de 1 ni más de la cantidad original
+        for (let obj of this.transactionData.productosADevolver) {
+            const linea = this.transactionData.transaccionOrigen.lineas[obj.idx];
+            if (obj.cantidad < 1 || obj.cantidad > linea.cantidad) {
+                window.showToast(`Cantidad inválida para ${linea.nombreProducto || linea.productoNombre}`, 'error');
+                return false;
+            }
+        }
+        return true;
+    }
+    getDevolucionStep4Content() {
+        const t = this.transactionData.transaccionOrigen;
+        const seleccionados = Array.isArray(this.transactionData.productosADevolver) && t
+            ? this.transactionData.productosADevolver.map(obj => {
+                const linea = t.lineas[obj.idx];
+                return linea ? { ...linea, cantidad: obj.cantidad } : null;
+            }).filter(Boolean)
+            : [];
+
+        const origenStr = t
+            ? `#${t.id} - ${t.contraparteNombre || t.nombre || t.proveedorNombre || t.clienteNombre || "Sin nombre"}`
+            : '<span style="color:red">Debes seleccionar la transacción origen</span>';
+
+        return `
+        <div>
+            <h4 class="font-bold mb-2">Resumen de la Devolución</h4>
+            <p><strong>Tipo:</strong> ${this.formatTransactionType(this.transactionData.tipoTransaccion)}</p>
+            <p><strong>Transacción Origen:</strong> ${origenStr}</p>
+            <div class="mt-2">
+                <h5 class="font-semibold">Productos a Devolver:</h5>
+                ${seleccionados.length ?
+            seleccionados.map(l => `<div>${l.nombreProducto || l.productoNombre} (x${l.cantidad})</div>`).join('') :
+            '<span style="color:red">No hay productos seleccionados</span>'
+        }
+            </div>
+            <div class="mt-3">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
+                <textarea id="devolucionObservaciones" rows="2" class="w-full border rounded px-2 py-1">${this.transactionData.observaciones || ""}</textarea>
+            </div>
+        </div>
+    `;
+    }
+    async finalizeDevolucion() {
+        try {
+            const t = this.transactionData.transaccionOrigen;
+            const observaciones = document.getElementById('devolucionObservaciones')?.value || "";
+
+            // Genera las líneas asegurando productoId válido y nombreProducto siempre presente
+            const lineas = this.transactionData.productosADevolver.map(obj => {
+                const linea = t.lineas[obj.idx];
+
+                // ARREGLO: productoId siempre válido (>0)
+                if (!linea.productoId || linea.productoId <= 0) {
+                    window.showToast(`Producto inválido para devolución: ${linea.nombreProducto || linea.productoNombre || "Producto sin nombre"}`, 'error');
+                    throw new Error("Producto inválido");
+                }
+
+                // ARREGLO: nombreProducto nunca vacío
+                let nombreProducto = linea.nombreProducto || linea.productoNombre || linea.nombre || "";
+                if (!nombreProducto.trim()) {
+                    window.showToast('La línea de producto no tiene nombre válido.', 'error');
+                    throw new Error("Producto sin nombre");
+                }
+
+                return {
+                    productoId: linea.productoId,
+                    productoNombre: nombreProducto,
+                    cantidad: obj.cantidad,
+                    precioUnitario: linea.precioUnitario,
+                    subtotalLinea: obj.cantidad * linea.precioUnitario,
+                    // Puedes agregar otros campos si el backend lo espera
+                };
+            });
+
+            // Determina correctamente la contraparte
+            let contraparteId, tipoContraparte, contraparteNombre;
+            if (t.tipo === "COMPRA" || t.tipo === "DEVOLUCION_COMPRA") {
+                tipoContraparte = "SUPLIDOR";
+                contraparteId = t.proveedor?.id || t.contraparteId;
+                contraparteNombre = t.proveedor?.nombre || t.contraparteNombre || "Sin nombre";
+            } else if (t.tipo === "VENTA" || t.tipo === "DEVOLUCION_VENTA") {
+                tipoContraparte = "CLIENTE";
+                contraparteId = t.cliente?.id || t.contraparteId;
+                if (t.cliente?.nombre && t.cliente?.apellido) {
+                    contraparteNombre = `${t.cliente.nombre} ${t.cliente.apellido}`;
+                } else {
+                    contraparteNombre = t.cliente?.nombre || t.contraparteNombre || "Consumidor Final";
+                }
+            } else {
+                window.showToast('Tipo de transacción origen desconocido.', 'error');
+                throw new Error("Tipo de transacción origen desconocido");
+            }
+
+            if (!contraparteId) {
+                window.showToast('No se encontró el ID de la contraparte en la transacción origen.', 'error');
+                return;
+            }
+            if (!contraparteNombre) {
+                window.showToast('No se encontró el nombre de la contraparte en la transacción origen.', 'error');
+                return;
+            }
+
+            const payload = {
+                tipo: this.transactionData.tipoTransaccion,
+                transaccionOrigenId: t.id,
+                contraparteId,
+                tipoContraparte,
+                contraparteNombre,
+                observaciones,
+                lineas,
+            };
+
+            console.log("Payload de devolución FINAL:", payload);
+
+            await this.transaccionService.createDevolucion(payload);
+            window.showToast('Devolución procesada exitosamente.', 'success');
+            this.close();
+            if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
+        } catch (error) {
+            window.showToast('Error al procesar la devolución: ' + (error.message || error), 'error');
+        }
+    }
     getVentaStep4Content() {
-        const clienteInfo = this.transactionData.cliente ? 
-            `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` : 
+        const clienteInfo = this.transactionData.cliente ?
+            `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` :
             'Consumidor Final';
 
         return `
@@ -992,86 +1250,88 @@ export class TransactionWizard {
         `;
     }
 
-    loadVentaStep4Data() {
-        // Data already loaded, just display
-    }
 
-    async finalizeVenta() {
-        try {
-            window.showToast('Procesando venta...', 'info');
-            // Process the sale
-            const result = await this.transaccionService.crearTransaccion(this.transactionData);
-            window.showToast('Venta procesada exitosamente.', 'success');
-            this.close();
-            // Optionally reload transactions list if on transactions page
-            if (window.transaccionesManager) {
-                window.transaccionesManager.loadTransactions();
-            }
-        } catch (error) {
-            console.error('Error processing sale:', error);
-            window.showToast('Error al procesar la venta.', 'error');
-        }
-    }
 
     // =============== COMPRA WIZARD METHODS ===============
     getCompraStep1Content() {
         return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Información del Proveedor</h3>
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-brand-brown">Información del Proveedor</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Suplidor</label>
+                    <input type="text" id="compraSuplidorSearch" placeholder="Buscar por nombre o RNC/Cédula..." 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Suplidor</label>
+                    <select id="compraSuplidorSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <option value="">Seleccione un suplidor</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <button type="button" id="btnNuevoSuplidor" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                    <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
+                </button>
+            </div>
+            <div id="compraProveedorForm" class="hidden space-y-4 border-t pt-4 mt-4">
+                <p class="text-sm text-gray-600">Complete la información del proveedor para esta compra.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Suplidor</label>
-                        <select id="compraSuplidorSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Nuevo Suplidor</option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proveedor *</label>
+                        <input type="text" id="compraNombreProveedor" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
                     <div>
-                        <button type="button" id="btnNuevoSuplidor" class="mt-6 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-                            <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
-                        </button>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula</label>
+                        <input type="text" id="compraRncProveedor"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
-                </div>
-                
-                <div id="compraProveedorForm" class="hidden space-y-4 border-t pt-4 mt-4">
-                    <p class="text-sm text-gray-600">Complete la información del proveedor para esta compra.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proveedor *</label>
-                            <input type="text" id="compraNombreProveedor" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula</label>
-                            <input type="text" id="compraRncProveedor"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="tel" id="compraTelefonoProveedor"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="compraEmailProveedor"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                        <input type="tel" id="compraTelefonoProveedor"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="compraEmailProveedor"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
                 </div>
             </div>
-        `;
+        </div>
+    `;
     }
-
     async loadCompraStep1Data() {
         try {
             const suplidores = await this.transaccionService.getSuplidores();
             const select = document.getElementById('compraSuplidorSelect');
+            const searchInput = document.getElementById('compraSuplidorSearch');
             const form = document.getElementById('compraProveedorForm');
             const btnNuevoSuplidor = document.getElementById('btnNuevoSuplidor');
 
+            // Inicializa el select con todos los suplidores
             if (select) {
                 select.innerHTML = '<option value="">Seleccione un suplidor</option>';
                 suplidores.forEach(suplidor => {
                     select.innerHTML += `<option value="${suplidor.id}">${suplidor.nombre} (${suplidor.rnc || 'Sin RNC'})</option>`;
+                });
+            }
+
+            // Filtro dinámico por input
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const filtered = suplidores.filter(suplidor =>
+                        (suplidor.nombre && suplidor.nombre.toLowerCase().includes(searchTerm)) ||
+                        (suplidor.rnc && suplidor.rnc.toLowerCase().includes(searchTerm)) ||
+                        (suplidor.cedula && suplidor.cedula.toLowerCase().includes(searchTerm))
+                    );
+                    select.innerHTML = '<option value="">Seleccione un suplidor</option>';
+                    filtered.forEach(suplidor => {
+                        select.innerHTML += `<option value="${suplidor.id}">${suplidor.nombre} (${suplidor.rnc || 'Sin RNC'})</option>`;
+                    });
                 });
             }
 
@@ -1098,7 +1358,7 @@ export class TransactionWizard {
             this.transactionData.proveedor = {
                 id: suplidorSelect.value,
                 nombre: selectedOption.text,
-                rnc: '', 
+                rnc: '',
                 telefono: '',
                 email: ''
             };
@@ -1125,75 +1385,196 @@ export class TransactionWizard {
 
     getCompraStep2Content() {
         return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Productos a Comprar</h3>
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <p class="text-sm text-blue-700">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Registra los productos que vas a comprar. Estos se agregarán al inventario.
-                    </p>
-                </div>
-                
-                <div id="compraProductsForm" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border border-gray-200 rounded-lg">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto *</label>
-                            <input type="text" id="compraNombreProducto" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
-                            <input type="number" id="compraCantidad" min="1" value="1" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Precio Unitario *</label>
-                            <input type="number" id="compraPrecioUnitario" step="0.01" min="0" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
-                            <button type="button" onclick="addCompraProduct()" 
-                                    class="w-full bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                                <i class="fas fa-plus mr-2"></i>Agregar
-                            </button>
-                        </div>
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-brand-brown">Productos a Comprar</h3>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Registra los productos que vas a comprar. Estos se agregarán al inventario.
+                </p>
+            </div>
+            
+            <!-- BUSCADOR DE PRODUCTOS EXISTENTES -->
+            <div class="border border-gray-200 rounded-lg p-4 mb-2">
+                <h4 class="font-semibold text-brand-brown mb-2">Agregar producto existente</h4>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Producto</label>
+                        <input type="text" id="compraBuscarProductoExistente" placeholder="Nombre o código..."
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     </div>
-                </div>
-                
-                <div id="compraProductsList" class="space-y-2">
-                    <!-- Selected products will appear here -->
-                </div>
-                
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <div class="flex justify-between items-center text-lg">
-                        <span class="font-bold">Total de Compra:</span>
-                        <span id="compraTotal" class="font-bold text-brand-brown">${this.formatCurrency(0)}</span>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+                        <select id="compraProductoExistenteSelect"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                            <option value="">Seleccionar producto</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                        <input type="number" id="compraCantidadExistente" min="1" value="1"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+                        <button type="button" id="btnAgregarProductoExistente"
+                            class="w-full bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                            <i class="fas fa-plus mr-2"></i>Agregar
+                        </button>
                     </div>
                 </div>
             </div>
-        `;
+            
+            <!-- BOTÓN PARA FORMULARIO DE NUEVO PRODUCTO -->
+            <div class="mb-2">
+                <button type="button" id="btnToggleNuevoProducto"
+                    class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                    <i class="fas fa-plus mr-2"></i>Registrar nuevo producto
+                </button>
+            </div>
+            
+            <!-- FORMULARIO PARA NUEVO PRODUCTO (OCULTO INICIALMENTE) -->
+            <div id="compraProductsForm" class="space-y-4 border border-gray-200 rounded-lg p-4 hidden">
+                <h4 class="font-semibold text-brand-brown mb-2">Registrar producto nuevo</h4>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto *</label>
+                        <input type="text" id="compraNombreProducto" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Producto *</label>
+                        <select id="compraTipoProducto" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                            <option value="MUEBLE">Mueble</option>
+                            <option value="MESA">Mesa</option>
+                            <option value="OTOMAN">Otoman</option>
+                            <option value="SILLA">Silla</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
+                        <input type="number" id="compraCantidad" min="1" value="1" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Precio Unitario *</label>
+                        <input type="number" id="compraPrecioUnitario" step="0.01" min="0" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+                        <button type="button" onclick="addCompraProduct()" 
+                                class="w-full bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                            <i class="fas fa-plus mr-2"></i>Agregar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="compraProductsList" class="space-y-2">
+                <!-- Selected products will appear here -->
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="flex justify-between items-center text-lg">
+                    <span class="font-bold">Total de Compra:</span>
+                    <span id="compraTotal" class="font-bold text-brand-brown">${this.formatCurrency(0)}</span>
+                </div>
+            </div>
+        </div>
+    `;
     }
+    async loadCompraStep2Data() {
+        // Inicializa productos existentes
+        if (!this._productosParaCompra) {
+            this._productosParaCompra = await this.transaccionService.getProductosParaVenta();
+        }
+        const productos = this._productosParaCompra || [];
+        const select = document.getElementById('compraProductoExistenteSelect');
+        const searchInput = document.getElementById('compraBuscarProductoExistente');
+        const cantidadInput = document.getElementById('compraCantidadExistente');
+        const btnAgregar = document.getElementById('btnAgregarProductoExistente');
+        const btnToggleNuevo = document.getElementById('btnToggleNuevoProducto');
+        const formNuevo = document.getElementById('compraProductsForm');
 
-    loadCompraStep2Data() {
+        // Inicializa el select con todos los productos
+        if (select) {
+            select.innerHTML = '<option value="">Seleccionar producto</option>';
+            productos.forEach(producto => {
+                select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioCompra)} (Stock: ${producto.cantidadDisponible})</option>`;
+            });
+        }
+
+        // Filtro dinámico por input
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filtered = productos.filter(producto =>
+                    producto.nombre.toLowerCase().includes(searchTerm) ||
+                    producto.codigo.toLowerCase().includes(searchTerm)
+                );
+                select.innerHTML = '<option value="">Seleccionar producto</option>';
+                filtered.forEach(producto => {
+                    select.innerHTML += `<option value="${producto.id}">${producto.nombre} - ${this.formatCurrency(producto.precioCompra)} (Stock: ${producto.cantidadDisponible})</option>`;
+                });
+            });
+        }
+
+        // Toggle formulario para nuevo producto
+        if (btnToggleNuevo && formNuevo) {
+            btnToggleNuevo.onclick = () => formNuevo.classList.toggle('hidden');
+        }
+
+        // Evento para agregar producto EXISTENTE
+        if (btnAgregar) {
+            btnAgregar.onclick = () => {
+                const id = parseInt(select.value);
+                const cantidad = parseInt(cantidadInput.value);
+                if (!id || !cantidad || cantidad <= 0) {
+                    window.showToast('Selecciona un producto y cantidad válida.', 'error');
+                    return;
+                }
+                const producto = productos.find(p => p.id === id);
+                if (!producto) {
+                    window.showToast('Producto no encontrado.', 'error');
+                    return;
+                }
+                // Agrega a las líneas (puedes adaptar la lógica según tu modelo)
+                this.transactionData.lineas.push({
+                    productoId: producto.id,
+                    nombreProducto: producto.nombre,
+                    cantidad: cantidad,
+                    precioUnitario: producto.precioCompra,
+                    subtotalLinea: producto.precioCompra * cantidad,
+                    categoria: producto.categoria,
+                });
+                cantidadInput.value = 1;
+                select.value = '';
+                this.updateCompraProductsList();
+                this.updateCompraTotals();
+                window.showToast('Producto agregado exitosamente.', 'success');
+            };
+        }
+
+        // Inicializa totales
         this.updateCompraTotals();
     }
-
     addCompraProduct() {
         const nombre = document.getElementById('compraNombreProducto')?.value;
         const cantidad = parseInt(document.getElementById('compraCantidad')?.value);
         const precio = parseFloat(document.getElementById('compraPrecioUnitario')?.value);
-        
+        const tipo = document.getElementById('compraTipoProducto')?.value || "MUEBLE";
+
         if (!nombre || !nombre.trim()) {
             window.showToast('El nombre del producto es requerido.', 'error');
             return;
         }
-        
         if (!cantidad || cantidad <= 0) {
             window.showToast('La cantidad debe ser mayor a 0.', 'error');
             return;
         }
-        
         if (!precio || precio <= 0) {
             window.showToast('El precio debe ser mayor a 0.', 'error');
             return;
@@ -1204,16 +1585,18 @@ export class TransactionWizard {
             nombreProducto: nombre.trim(),
             cantidad: cantidad,
             precioUnitario: precio,
-            subtotalLinea: subtotal
+            subtotalLinea: subtotal,
+            tipo: tipo // <<--- ¡GUARDA EL TIPO!
         };
 
         this.transactionData.lineas.push(lineaCompra);
-        
+
         // Clear form
         document.getElementById('compraNombreProducto').value = '';
         document.getElementById('compraCantidad').value = '1';
         document.getElementById('compraPrecioUnitario').value = '';
-        
+        document.getElementById('compraTipoProducto').value = 'MUEBLE';
+
         this.updateCompraProductsList();
         this.updateCompraTotals();
         window.showToast('Producto agregado exitosamente.', 'success');
@@ -1267,7 +1650,7 @@ export class TransactionWizard {
         this.transactionData.subtotal = total;
         this.transactionData.impuestos = 0; // No taxes on purchases for this simple case
         this.transactionData.total = total;
-        
+
         const totalElement = document.getElementById('compraTotal');
         if (totalElement) {
             totalElement.textContent = this.formatCurrency(total);
@@ -1312,44 +1695,15 @@ export class TransactionWizard {
             </div>
         `;
     }
+}
 
-    loadCompraStep3Data() {
-        // Data already loaded, just display
-        console.log('=== DEBUG: Datos en el paso 3 ===');
-        console.log('Proveedor:', this.transactionData.proveedor);
-        console.log('Líneas:', this.transactionData.lineas);
-        console.log('Total:', this.transactionData.total);
-    }
-
-    async finalizeCompra() {
-        try {
-            window.showToast('Procesando compra...', 'info');
-            
-            // Prepare transaction data for COMPRA
-            const transactionData = {
-                tipoTransaccion: 'COMPRA',
-                cliente: null, // For purchases, cliente is null
-                proveedor: this.transactionData.proveedor,
-                metodoPago: 'EFECTIVO', // Default for purchases
-                observaciones: `Compra de proveedor: ${this.transactionData.proveedor.nombre}`,
-                lineas: this.transactionData.lineas,
-                subtotal: this.transactionData.subtotal,
-                impuestos: this.transactionData.impuestos,
-                total: this.transactionData.total
-            };
-            
-            console.log('Sending purchase data:', transactionData);
-            const result = await this.transaccionService.crearTransaccion(transactionData);
-            window.showToast('Compra procesada exitosamente.', 'success');
-            this.close();
-            if (window.transaccionesManager) {
-                window.transaccionesManager.loadTransactions();
-            }
-        } catch (error) {
-            console.error('Error processing purchase:', error);
-            window.showToast('Error al procesar la compra: ' + (error.message || error), 'error');
-        }
-    }
+function cedulaToLong(cedula) {
+    if (!cedula) return null;
+    // Quita cualquier caracter que no sea dígito
+    const soloNumeros = cedula.replace(/\D/g, '');
+    // Si está vacío, regresa null
+    if (!soloNumeros) return null;
+    return Number(soloNumeros);
 }
 
 // Make wizard globally accessible for HTML onclicks
@@ -1361,3 +1715,8 @@ window.wizardPrevStep = () => window.transactionWizard.prevStep();
 window.addCompraProduct = () => window.transactionWizard.addCompraProduct();
 window.removeCompraProduct = (index) => window.transactionWizard.removeCompraProduct(index);
 window.updateCompraProduct = (index, field, value) => window.transactionWizard.updateCompraProduct(index, field, value);
+// Para devoluciones
+window.selectTransaccionOrigen = (id) => window.transactionWizard.selectTransaccionOrigen(id);
+window.toggleProductoADevolver = (idx) => window.transactionWizard.toggleProductoADevolver(idx);
+// Agrega la función global para el input de cantidad
+window.setCantidadADevolver = (idx, val) => window.transactionWizard.setCantidadADevolver(idx, val);

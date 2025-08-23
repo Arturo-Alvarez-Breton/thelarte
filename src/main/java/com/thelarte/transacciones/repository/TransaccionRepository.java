@@ -51,17 +51,6 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     @Query("SELECT t FROM Transaccion t WHERE t.vendedorId = :vendedorId AND t.tipo = 'VENTA' AND t.deleted = false")
     List<Transaccion> findVentasPorVendedor(@Param("vendedorId") Long vendedorId);
 
-    @Query("SELECT t FROM Transaccion t WHERE t.contraparteId = :contraparteId AND t.tipo = 'DEVOLUCION' AND t.deleted = false")
-    List<Transaccion> findDevolucionesPorContraparte(@Param("contraparteId") Long contraparteId);
-
-    List<Transaccion> findByNumeroFactura(String numeroFactura);
-
-    List<Transaccion> findByNumeroOrdenCompra(String numeroOrdenCompra);
-
-    List<Transaccion> findByNumeroFacturaAndDeletedFalse(String numeroFactura);
-
-    List<Transaccion> findByNumeroOrdenCompraAndDeletedFalse(String numeroOrdenCompra);
-
     @Query("SELECT COUNT(t) FROM Transaccion t WHERE t.tipo = :tipo AND t.estado = :estado AND t.deleted = false")
     long countByTipoAndEstado(@Param("tipo") Transaccion.TipoTransaccion tipo, 
                              @Param("estado") Transaccion.EstadoTransaccion estado);

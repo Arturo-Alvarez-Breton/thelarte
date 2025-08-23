@@ -500,4 +500,32 @@ public class TransaccionController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         }
     }
+    // NUEVO: Marcar transacción como DEVUELTA o PARCIALMENTE_DEVUELTA
+    @PutMapping("/{id}/devuelta")
+    public ResponseEntity<TransaccionDTO> marcarComoDevuelta(
+            @PathVariable Long id,
+            @RequestBody List<LineaTransaccionDTO> productosDevueltos,
+            @RequestParam(required = false) String motivo
+    ) {
+        try {
+            Transaccion transaccionDevuelta = transaccionService.marcarComoDevueltaTotal(id, productosDevueltos, motivo);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionDevuelta), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PutMapping("/{id}/devuelta-parcial")
+    public ResponseEntity<TransaccionDTO> marcarComoDevueltaParcial(
+            @PathVariable Long id,
+            @RequestBody List<LineaTransaccionDTO> productosDevueltos,
+            @RequestParam(required = false) String motivo
+    ) {
+        try {
+            Transaccion transaccionParcial = transaccionService.marcarComoDevueltaParcial(id, productosDevueltos, motivo);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionParcial), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 }

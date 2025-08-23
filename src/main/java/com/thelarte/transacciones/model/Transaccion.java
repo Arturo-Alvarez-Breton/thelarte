@@ -363,7 +363,9 @@ public class Transaccion {
         RECIBIDA,    // Para compras: mercancía recibida
         PAGADA,      // Para compras: pago completado al suplidor
         ENTREGADA,   // Para ventas: producto entregado al cliente
-        COBRADA      // Para ventas: pago recibido del cliente
+        COBRADA,      // Para ventas: pago recibido del cliente
+        DEVUELTA,
+        PARCIALMENTE_DEVUELTA
     }
 
     public enum TipoContraparte {

@@ -2,13 +2,13 @@ package com.thelarte.inventory.service;
 
 import com.thelarte.inventory.model.Producto;
 import com.thelarte.inventory.dto.ProductoDTO;
-import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -25,37 +25,41 @@ public class ProductoService implements IProductoService {
     }
 
     /**
-     * Lista todos los productos
+     * Lista todos los productos que NO han sido eliminados lógicamente
      * @return Lista de DTOs de productos
      */
     @Override
     @Transactional(readOnly = true)
     public List<ProductoDTO> listarTodos() {
         return productoRepository.findAll().stream()
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
     /**
      * Busca un producto por su ID
      * @param id ID del producto
-     * @return Optional con el DTO si existe
+     * @return Optional con el DTO si existe y NO está eliminado
      */
     @Override
     @Transactional(readOnly = true)
-    public Optional<ProductoDTO>buscarPorId(Long id) {
+    public Optional<ProductoDTO> buscarPorId(Long id) {
         return productoRepository.findById(id)
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto);
     }
 
     /**
      * Busca un producto por su nombre
      * @param nombre Nombre del producto
-     * @return Optional con el DTO si existe
+     * @return Optional con el DTO si existe y NO está eliminado
      */
     @Override
     @Transactional(readOnly = true)
     public Optional<ProductoDTO> buscarPorNombre(String nombre) {
         return productoRepository.findByNombre(nombre)
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto);
     }
 
@@ -68,7 +72,8 @@ public class ProductoService implements IProductoService {
     public ProductoDTO guardar(ProductoDTO productoDTO) {
         Producto producto;
 
-        if (productoDTO.getId() == 0) {
+        // Cambia la condición a null o <= 0 para evitar problemas con id nulo
+        if (productoDTO.getId() == null || productoDTO.getId() <= 0) {
             // Es un nuevo producto
             producto = new Producto();
         } else {
@@ -77,13 +82,38 @@ public class ProductoService implements IProductoService {
                     .orElseThrow(() -> new EntityNotFoundException("No se encontró el producto con ID: " + productoDTO.getId()));
         }
 
+        // Validaciones adicionales (puedes agregar más si lo deseas)
+        if (productoDTO.getNombre() == null || productoDTO.getNombre().isBlank()) {
+            throw new IllegalArgumentException("El nombre del producto es obligatorio");
+        }
+        if (productoDTO.getTipo() == null || productoDTO.getTipo().isBlank()) {
+            throw new IllegalArgumentException("El tipo de producto es obligatorio");
+        }
+        if (productoDTO.getPrecioVenta() == null || productoDTO.getPrecioVenta().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El precio de venta debe ser mayor o igual a 0");
+        }
+        if (productoDTO.getPrecioCompra() == null || productoDTO.getPrecioCompra().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El precio de compra debe ser mayor o igual a 0");
+        }
+
         producto.setNombre(productoDTO.getNombre());
         producto.setTipo(productoDTO.getTipo());
         producto.setDescripcion(productoDTO.getDescripcion());
-        producto.setItbis(productoDTO.getItbis());
+        // --- ARREGLO PARA ITBIS ---
+        producto.setItbis(productoDTO.getItbis() == null ? 0f : productoDTO.getItbis());
+
         producto.setPrecioCompra(productoDTO.getPrecioCompra());
         producto.setPrecioVenta(productoDTO.getPrecioVenta());
         producto.setFotoURL(productoDTO.getFotoUrl());
+
+        // --- ARREGLO: ASIGNA 0 SI VIENE NULL EN CANTIDADES ---
+        producto.setCantidadDisponible(productoDTO.getCantidadDisponible() == null ? 0 : productoDTO.getCantidadDisponible());
+        producto.setCantidadReservada(productoDTO.getCantidadReservada() == null ? 0 : productoDTO.getCantidadReservada());
+        producto.setCantidadDanada(productoDTO.getCantidadDanada() == null ? 0 : productoDTO.getCantidadDanada());
+        producto.setCantidadDevuelta(productoDTO.getCantidadDevuelta() == null ? 0 : productoDTO.getCantidadDevuelta());
+        producto.setCantidadAlmacen(productoDTO.getCantidadAlmacen() == null ? 0 : productoDTO.getCantidadAlmacen());
+        producto.setEliminado(productoDTO.isEliminado());
+
 
         producto = productoRepository.save(producto);
 
@@ -91,20 +121,19 @@ public class ProductoService implements IProductoService {
     }
 
     /**
-     * Elimina un producto por su ID
+     * Elimina un producto por su ID (borrado lógico)
      * @param id ID del producto a eliminar
      */
     @Override
     public void eliminar(Long id) {
-        if (productoRepository.existsById(id)) {
-            productoRepository.deleteById(id);
-        } else {
-            throw new EntityNotFoundException("No se encontró el producto con ID: " + id);
-        }
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el producto con ID: " + id));
+        producto.setEliminado(true);
+        productoRepository.save(producto);
     }
 
     /**
-     * Lista productos por tipo
+     * Lista productos por tipo (solo los que NO están eliminados)
      * @param tipo Tipo para filtrar
      * @return Lista de productos del tipo especificado
      */
@@ -112,6 +141,7 @@ public class ProductoService implements IProductoService {
     @Transactional(readOnly = true)
     public List<ProductoDTO> listarPorTipo(String tipo) {
         return productoRepository.findByTipo(tipo).stream()
+                .filter(p -> !p.isEliminado())
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -127,51 +157,55 @@ public class ProductoService implements IProductoService {
                 p.getPrecioCompra(),
                 p.getPrecioVenta(),
                 p.getFotoURL(),
-                (int) p.getUnidades().stream()
-                    .filter(u -> u.getEstado() == com.thelarte.inventory.util.EstadoUnidad.DISPONIBLE)
-                    .count()
-
-        );//(long id, String codigo, String nombre, String tipo, String descripcion, String marca, float itbis, BigDecimal precioCompra,BigDecimal precioVenta, String fotoUrl) {
-
+                p.getCantidadDisponible(),
+                p.getCantidadDanada(),
+                p.getCantidadDevuelta(),
+                p.getCantidadAlmacen(),
+                p.isEliminado() // <-- nuevo campo en el DTO
+        );
     }
 
     @Transactional(readOnly = true)
     public Producto getProductoById(Long id) {
         return productoRepository.findById(id)
+                .filter(p -> !p.isEliminado())
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
     }
 
     @Transactional(readOnly = true)
     public Producto getProductoByCodigo(String codigo) {
         return productoRepository.findByCodigo(codigo)
+                .filter(p -> !p.isEliminado())
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con código: " + codigo));
     }
 
     @Transactional(readOnly = true)
     public List<Producto> getProductosDisponibles(String busqueda, String categoria, int page, int size) {
-        List<Producto> productos = productoRepository.findAll();
-        
+        List<Producto> productos = productoRepository.findAll().stream()
+                .filter(p -> !p.isEliminado())
+                .collect(Collectors.toList());
+
         if (busqueda != null && !busqueda.isEmpty()) {
             productos = productos.stream()
                     .filter(p -> p.getNombre().toLowerCase().contains(busqueda.toLowerCase()) ||
-                               (p.getCodigo() != null && p.getCodigo().toLowerCase().contains(busqueda.toLowerCase())))
+                            (p.getCodigo() != null && p.getCodigo().toLowerCase().contains(busqueda.toLowerCase())))
                     .collect(Collectors.toList());
         }
-        
+
         if (categoria != null && !categoria.isEmpty()) {
             productos = productos.stream()
                     .filter(p -> p.getTipo().equalsIgnoreCase(categoria))
                     .collect(Collectors.toList());
         }
-        
+
         // Aplicar paginación manual
         int fromIndex = page * size;
         int toIndex = Math.min(fromIndex + size, productos.size());
-        
+
         if (fromIndex > productos.size()) {
             return List.of();
         }
-        
+
         return productos.subList(fromIndex, toIndex);
     }
 }

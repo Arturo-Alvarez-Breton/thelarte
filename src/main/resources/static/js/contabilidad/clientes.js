@@ -1,6 +1,7 @@
 // src/main/resources/static/js/contabilidad/clientes.js
 
 import { TransaccionService } from '../services/transaccionService.js';
+import { TableViewManager } from '../components/tableView.js';
 
 class ClientesManager {
     constructor() {
@@ -8,7 +9,49 @@ class ClientesManager {
         this.clientes = [];
         this.filteredClientes = [];
         this.currentPage = 0;
-        this.clientesPerPage = 10;
+        this.clientesPerPage = 15;
+        this.totalPages = 1;
+        this.totalClientes = 0;
+
+        this.tableViewManager = new TableViewManager('#clientesListContainer', {
+            columns: [
+                { header: 'Cédula', field: 'cedula' },
+                { header: 'Nombre', field: 'nombre' },
+                { header: 'Apellido', field: 'apellido' },
+                { header: 'Teléfono', field: 'telefono' },
+                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
+                { header: 'Provincia', field: 'direccion', formatter: (value) => value || 'N/A' }
+            ],
+            actions: [
+                {
+                    icon: 'fas fa-eye',
+                    handler: 'clientesManager.verCliente',
+                    className: 'text-brand-brown hover:text-brand-light-brown',
+                    title: 'Ver detalles'
+                },
+                {
+                    icon: 'fas fa-exchange-alt',
+                    handler: 'clientesManager.verTransaccionesCliente',
+                    className: 'text-brand-accent hover:text-brand-brown',
+                    title: 'Ver transacciones'
+                },
+                {
+                    icon: 'fas fa-edit',
+                    handler: 'clientesManager.editCliente',
+                    className: 'text-green-600 hover:text-green-700',
+                    title: 'Editar'
+                },
+                {
+                    icon: 'fas fa-trash-alt',
+                    handler: 'clientesManager.eliminarCliente',
+                    className: 'text-red-600 hover:text-red-700',
+                    title: 'Eliminar'
+                }
+            ],
+            searchFields: ['cedula', 'nombre', 'apellido', 'telefono', 'email'],
+            idField: 'cedula',
+            emptyIcon: 'fas fa-users'
+        });
 
         this.init();
     }
@@ -22,25 +65,45 @@ class ClientesManager {
         document.getElementById('nuevoClienteBtn')?.addEventListener('click', () => this.newCliente());
         document.getElementById('clientSearchInput')?.addEventListener('keyup', () => this.filterClientes());
         document.getElementById('formCliente')?.addEventListener('submit', (e) => this.handleSubmitCliente(e));
+        document.getElementById('clientesListContainer')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.classList.contains('ver-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.verCliente(cedula);
+            } else if (btn.classList.contains('edit-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.editCliente(cedula);
+            } else if (btn.classList.contains('delete-btn')) {
+                const cedula = btn.dataset.cedula;
+                this.eliminarCliente(cedula);
+            }
+        });
     }
 
     async loadClientes() {
         this.showLoading();
         try {
-            const filters = {
-                busqueda: document.getElementById('clientSearchInput')?.value || null,
-                page: this.currentPage,
-                size: this.clientesPerPage
-            };
-            this.clientes = await this.transaccionService.getClientes(filters.busqueda, filters.page, filters.size);
+            const busqueda = document.getElementById('clientSearchInput')?.value || null;
+            const allClientes = await this.transaccionService.getClientes(busqueda);
+            this.totalClientes = allClientes.length;
+            this.totalPages = Math.ceil(this.totalClientes / this.clientesPerPage);
+            const start = this.currentPage * this.clientesPerPage;
+            const end = start + this.clientesPerPage;
+            this.clientes = allClientes.slice(start, end);
             this.filteredClientes = [...this.clientes];
+            this.tableViewManager.setData(allClientes);
             this.renderClientes();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading clients:', error);
-            // Show empty state instead of error for no data scenarios
             this.clientes = [];
             this.filteredClientes = [];
+            this.totalClientes = 0;
+            this.totalPages = 1;
+            this.tableViewManager.setData([]);
             this.renderClientes();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -49,13 +112,11 @@ class ClientesManager {
     renderClientes() {
         const container = document.getElementById('clientesListContainer');
         if (!container) return;
-
         if (this.filteredClientes.length === 0) {
             const searchTerm = document.getElementById('clientSearchInput')?.value;
-            const emptyMessage = searchTerm ? 
-                `No se encontraron clientes que coincidan con "${searchTerm}".` : 
+            const emptyMessage = searchTerm ?
+                `No se encontraron clientes que coincidan con "${searchTerm}".` :
                 'No hay clientes registrados.';
-            
             container.innerHTML = `
                 <div class="text-center py-12">
                     <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -83,15 +144,83 @@ class ClientesManager {
                 <p class="text-gray-600">Cédula: ${cliente.cedula}</p>
                 <p class="text-gray-600">Teléfono: ${cliente.telefono || 'N/A'}</p>
                 <p class="text-gray-600">Email: ${cliente.email || 'N/A'}</p>
-                <div class="mt-4 flex space-x-2">
-                    <button onclick="clientesManager.verCliente('${cliente.cedula}')" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Ver Detalles</button>
-                    <button onclick="clientesManager.verTransaccionesCliente('${cliente.cedula}')" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Ver Transacciones</button>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm"
+                        title="Ver detalles"
+                    >
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                    <a 
+                        href="/pages/contabilidad/transacciones.html?cedula=${cliente.cedula}"
+                        class="transacciones-btn flex items-center gap-2 bg-brand-accent text-brand-brown px-3 py-2 rounded-lg hover:bg-brand-brown hover:text-white transition-colors shadow-sm"
+                        title="Ver transacciones"
+                    >
+                        <i class="fas fa-exchange-alt"></i> Transacciones
+                    </a>
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                        title="Editar cliente"
+                    >
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button 
+                        data-cedula="${cliente.cedula}" 
+                        class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                        title="Eliminar cliente"
+                    >
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
             </div>
         `).join('');
     }
 
+    renderPagination() {
+        let pagContainer = document.getElementById('clientesPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'clientesPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('clientesListContainer').after(pagContainer);
+        }
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+        for (let i = 0; i < this.totalPages; i++) {
+            html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadClientes();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadClientes();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadClientes();
+                    }
+                }
+            };
+        });
+    }
+
     filterClientes() {
+        const searchTerm = document.getElementById('clientSearchInput')?.value || '';
+        this.tableViewManager.filterData(searchTerm);
         this.currentPage = 0;
         this.loadClientes();
     }
@@ -113,7 +242,6 @@ class ClientesManager {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
             }
-
             document.getElementById('detallesCliente').innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -142,7 +270,6 @@ class ClientesManager {
                     </div>
                 </div>
             `;
-            
             this.currentCliente = cliente;
             document.getElementById('modalVerCliente').classList.remove('hidden');
         } catch (error) {
@@ -158,10 +285,7 @@ class ClientesManager {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
             }
-
-            // Fetch complete client data from API to ensure we have all fields
             const clienteCompleto = await this.transaccionService.getClienteByCedula(cedula);
-            
             this.currentCliente = clienteCompleto || cliente;
             this.fillForm(this.currentCliente);
             document.getElementById('modalClienteTitle').textContent = 'Editar Cliente';
@@ -171,7 +295,6 @@ class ClientesManager {
             document.getElementById('modalCliente').classList.remove('hidden');
         } catch (error) {
             console.error('Error loading client for edit:', error);
-            // Fallback to cached data
             const cliente = this.clientes.find(c => c.cedula === cedula);
             if (cliente) {
                 this.currentCliente = cliente;
@@ -187,12 +310,20 @@ class ClientesManager {
         }
     }
 
-    // Método deleteCliente eliminado - no se permite eliminar clientes
+    async eliminarCliente(cedula) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este cliente?')) return;
+        try {
+            await this.transaccionService.deleteCliente(cedula);
+            window.showToast('Cliente eliminado exitosamente.', 'success');
+            await this.loadClientes();
+        } catch (error) {
+            console.error('Error eliminando cliente:', error);
+            window.showToast('Error al eliminar el cliente.', 'error');
+        }
+    }
 
     async handleSubmitCliente(e) {
         e.preventDefault();
-        console.log('Submit form triggered');
-        
         const formData = new FormData(e.target);
         const clienteData = {
             nombre: formData.get('nombre'),
@@ -202,20 +333,18 @@ class ClientesManager {
             email: formData.get('email'),
             direccion: formData.get('direccion')
         };
-
-        console.log('Cliente data:', clienteData);
-
         try {
             if (this.currentCliente) {
-                console.log('Updating client:', this.currentCliente.cedula);
                 await this.transaccionService.updateCliente(this.currentCliente.cedula, clienteData);
                 window.showToast('Cliente actualizado exitosamente.', 'success');
             } else {
-                console.log('Creating new client');
+                const cedulaExists = this.clientes.some(c => c.cedula === clienteData.cedula);
+                if (cedulaExists) {
+                    window.alert('Ya existe un cliente con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
+                    return;
+                }
                 await this.transaccionService.createCliente(clienteData);
-                window.showToast('Cliente creado exitosamente.', 'success');
             }
-            
             this.cerrarModalCliente();
             this.loadClientes();
         } catch (error) {
@@ -256,8 +385,6 @@ class ClientesManager {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
             }
-
-            // Redirect to transactions page with client filter
             const transaccionesUrl = new URL('/pages/contabilidad/transacciones.html', window.location.origin);
             transaccionesUrl.searchParams.set('cliente', cedula);
             transaccionesUrl.searchParams.set('clienteNombre', `${cliente.nombre} ${cliente.apellido}`);
@@ -288,10 +415,7 @@ class ClientesManager {
         }
     }
 
-    hideLoading() {
-        // Content will replace the loading spinner, no need for explicit hiding
-    }
-
+    hideLoading() {}
     showError(message) {
         const container = document.getElementById('clientesListContainer');
         if (container) {
@@ -313,8 +437,8 @@ class ClientesManager {
 
 const clientesManager = new ClientesManager();
 window.clientesManager = clientesManager;
-
-// Funciones globales para los event handlers de los modales
+window.tableViewManager = clientesManager.tableViewManager;
 window.cerrarModalCliente = () => clientesManager.cerrarModalCliente();
 window.cerrarModalVerCliente = () => clientesManager.cerrarModalVerCliente();
 window.editarClienteDesdeDetalle = () => clientesManager.editarClienteDesdeDetalle();
+window.eliminarCliente = (cedula) => clientesManager.eliminarCliente(cedula);

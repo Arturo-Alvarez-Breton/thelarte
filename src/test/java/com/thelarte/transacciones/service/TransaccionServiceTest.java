@@ -5,7 +5,6 @@ import com.thelarte.transacciones.model.Transaccion.EstadoTransaccion;
 import com.thelarte.transacciones.model.Transaccion.TipoTransaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
-import com.thelarte.inventory.service.UnidadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +19,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 

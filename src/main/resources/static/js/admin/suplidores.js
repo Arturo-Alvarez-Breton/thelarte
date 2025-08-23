@@ -1,4 +1,4 @@
-// src/main/resources/static/js/admin/suplidores.js
+// src/main/resources/static/js/contabilidad/suplidores.js
 
 import { TransaccionService } from '../services/transaccionService.js';
 import { TableViewManager } from '../components/tableView.js';
@@ -533,7 +533,6 @@ class SuplidoresManager {
     }
 
     showCustomFieldError(inputEl, message) {
-        // Si no hay <p> de error junto al input, crea uno temporal
         let errorElement = inputEl.nextElementSibling;
         if (!errorElement || !errorElement.classList.contains('text-red-500')) {
             errorElement = document.createElement('p');
@@ -555,20 +554,14 @@ class SuplidoresManager {
     }
 
     clearForm() {
-        // Destruye instancias de teléfono previas
         this.destroyAllTelInputs();
-
         document.getElementById('formSuplidor').reset();
         this.clearFieldErrors();
-
-        // Reset ciudad
         const ciudadSel = document.getElementById('suplidorCiudadSelect');
         if (ciudadSel) {
             ciudadSel.innerHTML = '<option value="">Seleccione un país primero...</option>';
             ciudadSel.disabled = true;
         }
-
-        // Resetear teléfonos a solo uno
         const container = document.getElementById('telefonosContainer');
         container.innerHTML = `
             <div class="flex gap-2 mb-2">
@@ -590,7 +583,6 @@ class SuplidoresManager {
         document.getElementById('suplidorNCF').value = suplidor.nCF || '';
         document.getElementById('suplidorDireccion').value = suplidor.direccion || '';
 
-        // País y ciudad
         const paisSel = document.getElementById('suplidorPaisSelect');
         const ciudadSel = document.getElementById('suplidorCiudadSelect');
 
@@ -608,7 +600,6 @@ class SuplidoresManager {
             }
         }
 
-        // Teléfonos
         const container = document.getElementById('telefonosContainer');
         container.innerHTML = '';
         if (suplidor.telefonos && suplidor.telefonos.length > 0) {
@@ -621,7 +612,6 @@ class SuplidoresManager {
     }
 
     agregarTelefono() {
-        // Usa país actual del select
         const iso2 = document.getElementById('suplidorPaisSelect')?.value || 'DO';
         this.addTelefonoField('', false, iso2);
     }
@@ -629,7 +619,7 @@ class SuplidoresManager {
     addTelefonoField(value = '', isFirst = false, iso2 = 'DO') {
         const container = document.getElementById('telefonosContainer');
         const telefonoDiv = document.createElement('div');
-        telefonoDiv.className = 'flex gap-2 mb-2 items-center'; // changed from items-start to items-center
+        telefonoDiv.className = 'flex gap-2 mb-2 items-center';
 
         telefonoDiv.innerHTML = `
             <div class="flex-1 flex items-center gap-2">
@@ -651,7 +641,6 @@ class SuplidoresManager {
         container.appendChild(telefonoDiv);
 
         const input = telefonoDiv.querySelector('input.telefono-input');
-        // Inicializa intl-tel-input con el país actual y valor pre-cargado
         this.initTelInput(input, iso2, value);
     }
 
@@ -661,7 +650,6 @@ class SuplidoresManager {
             if (!this.telInputs.has(input)) {
                 this.initTelInput(input, iso2, input.value || '');
             } else {
-                // Si ya existe instancia, solo actualiza país
                 const iti = this.telInputs.get(input);
                 try { iti.setCountry((iso2 || 'DO').toLowerCase()); } catch {}
             }
@@ -709,21 +697,16 @@ class SuplidoresManager {
         document.getElementById('suplidoresListContainer').innerHTML = '<div class="flex items-center justify-center py-12 col-span-full"><div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div></div>';
     }
 
-    hideLoading() { /* contenido reemplaza spinner */ }
+    hideLoading() { }
 }
 
 const suplidoresManager = new SuplidoresManager();
 window.suplidoresManager = suplidoresManager;
-
-// Make table view manager available globally
 window.tableViewManager = suplidoresManager.tableViewManager;
-
-// Handlers globales
 window.cerrarModalSuplidor = () => suplidoresManager.cerrarModalSuplidor();
 window.cerrarModalVerSuplidor = () => suplidoresManager.cerrarModalVerSuplidor();
 window.editarSuplidorDesdeDetalle = () => suplidoresManager.editarSuplidorDesdeDetalle();
 
-// Formateo en tiempo real RNC (opcional, sin cambios)
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('suplidorRNC')?.addEventListener('input', formatCedulaRnc);
 });

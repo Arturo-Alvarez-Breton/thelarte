@@ -1,21 +1,21 @@
-// src/main/resources/static/js/contabilidad/transacciones.js
-
 import { TransaccionService } from '../services/transaccionService.js';
 import { TableViewManager } from '../components/tableView.js';
 
+// --- MAIN CLASS ---
 class TransaccionesManager {
     constructor() {
         this.transaccionService = new TransaccionService();
         this.transactions = [];
         this.filteredTransactions = [];
         this.currentPage = 0;
-        this.transactionsPerPage = 25; // Changed to match client page
+        this.transactionsPerPage = 25; // Usamos 25 para mobile/tablet
         this.totalPages = 0;
         this.totalItems = 0;
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+        this.vista = 'tarjetas'; // 'tarjetas' o 'tabla'
 
-        // Initialize table view manager with responsive columns
+        // Responsive columns
         this.tableViewManager = new TableViewManager('#transaccionesListContainer', {
             columns: this.getResponsiveColumns(),
             actions: [
@@ -44,7 +44,6 @@ class TransaccionesManager {
         const isVerticalScreen = window.innerHeight > window.innerWidth;
 
         if (isVerticalScreen || this.isMobile) {
-            // Mobile: only show essential info
             return [
                 {
                     header: 'Transacción',
@@ -61,7 +60,6 @@ class TransaccionesManager {
                 }
             ];
         } else if (this.isTablet) {
-            // Tablet: show more info
             return [
                 {
                     header: 'Factura #',
@@ -98,7 +96,6 @@ class TransaccionesManager {
                 }
             ];
         } else {
-            // Desktop: show all info
             return [
                 {
                     header: 'Factura #',
@@ -150,22 +147,91 @@ class TransaccionesManager {
         this.updateTransactionCount();
     }
 
+    setupEventListeners() {
+        document.getElementById('transaccionTipoFilter')?.addEventListener('change', () => this.filterTransactions());
+        document.getElementById('transaccionEstadoFilter')?.addEventListener('change', () => this.filterTransactions());
+        document.getElementById('transaccionSearchInput')?.addEventListener('input', () => this.filterTransactions());
+        document.querySelectorAll('[data-action="open-wizard"]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const type = e.target.getAttribute('data-type') || e.target.closest('[data-type]')?.getAttribute('data-type');
+                if (type && window.openTransactionWizard) window.openTransactionWizard(type);
+            });
+        });
+        document.getElementById('btnVistaTarjetas')?.addEventListener('click', () => this.setVista('tarjetas'));
+        document.getElementById('btnVistaTabla')?.addEventListener('click', () => this.setVista('tabla'));
+    }
+
+    setVista(vista) {
+        this.vista = vista;
+        this.renderVista();
+    }
+
+    renderVista() {
+        if (this.vista === 'tarjetas') {
+            document.getElementById('transaccionesListContainer').classList.remove('hidden');
+            document.getElementById('transaccionesTableContainer').classList.add('hidden');
+            this.renderTransactions();
+            this.renderPagination();
+        } else {
+            document.getElementById('transaccionesListContainer').classList.add('hidden');
+            document.getElementById('transaccionesTableContainer').classList.remove('hidden');
+            this.renderTableTransactions();
+            this.renderTablePagination();
+        }
+    }
+
+    async loadTransactions() {
+        this.showLoading();
+        try {
+            const filters = {
+                tipo: document.getElementById('transaccionTipoFilter')?.value || null,
+                estado: document.getElementById('transaccionEstadoFilter')?.value || null,
+                busqueda: document.getElementById('transaccionSearchInput')?.value || null,
+                page: this.currentPage,
+                size: this.transactionsPerPage
+            };
+            this.transactions = await this.transaccionService.obtenerTransacciones(filters);
+            this.filteredTransactions = [...this.transactions];
+            this.tableViewManager.setData(this.transactions);
+
+            this.renderTransactions();
+            this.updateTransactionCount();
+        } catch (error) {
+            console.error('Error loading transactions:', error);
+            this.transactions = [];
+            this.filteredTransactions = [];
+            this.tableViewManager.setData([]);
+            this.renderTransactions();
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    getFilteredTransactions() {
+        return [...this.filteredTransactions];
+    }
+
     checkUrlFilters() {
         const urlParams = new URLSearchParams(window.location.search);
         const cliente = urlParams.get('cliente');
         const clienteNombre = urlParams.get('clienteNombre');
-        
         if (cliente) {
-            // Set filter for specific client
             const searchInput = document.getElementById('transaccionSearchInput');
-            if (searchInput) {
-                searchInput.value = cliente;
-            }
-            
-            // Show client filter info
-            if (clienteNombre) {
-                this.showClientFilter(clienteNombre, cliente);
-            }
+            if (searchInput) searchInput.value = cliente;
+            if (clienteNombre) this.showClientFilter(clienteNombre, cliente);
+        }
+    }
+
+    async cambiarEstadoTransaccion(id, nuevoEstado) {
+        try {
+            await this.transaccionService.cambiarEstadoTransaccion(id, nuevoEstado);
+            await this.loadTransactions();
+            const transaction = await this.transaccionService.obtenerTransaccionPorId(id);
+            this.renderTransactionDetailsModal(transaction);
+            window.showToast(`Estado cambiado a: ${nuevoEstado}`, 'success');
+        } catch (error) {
+            console.error('Error changing transaction state:', error);
+            window.showToast('Error al cambiar el estado de la transacción.', 'error');
         }
     }
 
@@ -193,96 +259,72 @@ class TransaccionesManager {
                     </div>
                 </div>
             `;
-            
             const firstChild = container.firstElementChild;
             container.insertBefore(filterInfo, firstChild);
         }
     }
 
     clearClientFilter() {
-        // Clear URL parameters
         const url = new URL(window.location);
         url.searchParams.delete('cliente');
         url.searchParams.delete('clienteNombre');
         window.history.replaceState({}, '', url);
-        
-        // Clear search input
         const searchInput = document.getElementById('transaccionSearchInput');
-        if (searchInput) {
-            searchInput.value = '';
-        }
-        
-        // Remove filter info and reload
+        if (searchInput) searchInput.value = '';
         const filterInfo = document.querySelector('.bg-blue-50');
-        if (filterInfo) {
-            filterInfo.remove();
-        }
-        
-        this.loadTransactions();
+        if (filterInfo) filterInfo.remove();
+        this.filterTransactions();
     }
 
-    setupEventListeners() {
-        document.getElementById('transaccionTipoFilter')?.addEventListener('change', () => this.filterTransactions());
-        document.getElementById('transaccionEstadoFilter')?.addEventListener('change', () => this.filterTransactions());
-        document.getElementById('transaccionSearchInput')?.addEventListener('keyup', () => this.filterTransactions());
-        
-        // Event listeners para los botones de nueva transacción
-        document.querySelectorAll('[data-action="open-wizard"]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const type = e.target.getAttribute('data-type') || e.target.closest('[data-type]').getAttribute('data-type');
-                if (window.openTransactionWizard) {
-                    window.openTransactionWizard(type);
-                } else {
-                    window.showToast(`Abrir wizard para ${type} - Funcionalidad en desarrollo.`, 'info');
-                }
-            });
+    filterTransactions() {
+        const tipo = document.getElementById('transaccionTipoFilter')?.value || '';
+        const estado = document.getElementById('transaccionEstadoFilter')?.value || '';
+        const busqueda = document.getElementById('transaccionSearchInput')?.value?.toLowerCase() || '';
+        this.currentPage = 0;
+
+        this.filteredTransactions = this.transactions.filter(t => {
+            let matchesTipo = tipo ? (t.tipo && t.tipo.toUpperCase() === tipo.toUpperCase()) : true;
+            let matchesEstado = estado ? (t.estado && t.estado.toUpperCase() === estado.toUpperCase()) : true;
+
+            let matchesBusqueda = true;
+            if (busqueda) {
+                let cliente = t.cliente ? `${t.cliente.nombre || ''} ${t.cliente.apellido || ''}` : '';
+                let proveedor = t.proveedor ? `${t.proveedor.nombre || ''}` : '';
+                let contraparte = t.contraparteNombre || '';
+                let numFactura = t.numeroFactura || '';
+                let id = String(t.id || '');
+                let total = String(t.total || '').replace(/[\D]+/g, '');
+                matchesBusqueda = (
+                    cliente.toLowerCase().includes(busqueda) ||
+                    proveedor.toLowerCase().includes(busqueda) ||
+                    contraparte.toLowerCase().includes(busqueda) ||
+                    numFactura.toLowerCase().includes(busqueda) ||
+                    id.includes(busqueda) ||
+                    total.includes(busqueda)
+                );
+            }
+            return matchesTipo && matchesEstado && matchesBusqueda;
         });
-    }
-
-    async loadTransactions() {
-        this.showLoading();
-        try {
-            const filters = {
-                tipo: document.getElementById('transaccionTipoFilter')?.value || null,
-                estado: document.getElementById('transaccionEstadoFilter')?.value || null,
-                busqueda: document.getElementById('transaccionSearchInput')?.value || null,
-                page: this.currentPage,
-                size: this.transactionsPerPage
-            };
-            this.transactions = await this.transaccionService.obtenerTransacciones(filters);
-            this.filteredTransactions = [...this.transactions];
-
-            // Update table view with all data
-            this.tableViewManager.setData(this.transactions);
-
-            this.renderTransactions();
-            this.updateTransactionCount();
-        } catch (error) {
-            console.error('Error loading transactions:', error);
-            // Show empty state instead of error for no data scenarios
-            this.transactions = [];
-            this.filteredTransactions = [];
-            this.tableViewManager.setData([]);
-            this.renderTransactions();
-        } finally {
-            this.hideLoading();
-        }
+        this.renderVista();
+        this.updateTransactionCount();
     }
 
     renderTransactions() {
         const container = document.getElementById('transaccionesListContainer');
         if (!container) return;
+        const filtered = this.getFilteredTransactions();
+        const start = this.currentPage * this.transactionsPerPage;
+        const end = start + this.transactionsPerPage;
+        const toShow = filtered.slice(start, end);
 
-        if (this.filteredTransactions.length === 0) {
+        if (toShow.length === 0) {
             const searchTerm = document.getElementById('transaccionSearchInput')?.value;
             const tipoFilter = document.getElementById('transaccionTipoFilter')?.value;
             const estadoFilter = document.getElementById('transaccionEstadoFilter')?.value;
-            
             let emptyMessage = 'No hay transacciones registradas.';
             if (searchTerm || tipoFilter || estadoFilter) {
                 emptyMessage = 'No se encontraron transacciones que coincidan con los filtros aplicados.';
             }
-            
             container.innerHTML = `
                 <div class="text-center py-8 md:py-12 col-span-full">
                     <div class="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -309,7 +351,7 @@ class TransaccionesManager {
             return;
         }
 
-        container.innerHTML = this.filteredTransactions.map(transaction => this.renderTransactionCard(transaction)).join('');
+        container.innerHTML = toShow.map(transaction => this.renderTransactionCard(transaction)).join('');
     }
 
     renderTransactionCard(transaction) {
@@ -317,7 +359,6 @@ class TransaccionesManager {
         const clientName = transaction.cliente ? `${transaction.cliente.nombre} ${transaction.cliente.apellido}` :
                           transaction.proveedor ? transaction.proveedor.nombre : 'Consumidor Final';
 
-        // Adaptive button rendering based on screen size
         const buttonsHtml = this.isMobile ? this.renderMobileButtons(transaction) :
                            this.isTablet ? this.renderTabletButtons(transaction) :
                            this.renderDesktopButtons(transaction);
@@ -395,7 +436,6 @@ class TransaccionesManager {
                         type="button"
                     >
                         <i class="fas fa-print text-xs"></i>
-                        <!--<span>Imprimir</span>-->
                     </button>
                 </div>
             </div>
@@ -446,56 +486,64 @@ class TransaccionesManager {
                     type="button"
                 >
                     <i class="fas fa-print"></i>
-                    <!--<span>Imprimir</span>-->
                 </button>
             </div>
         `;
     }
 
-    filterTransactions() {
-        const searchTerm = document.getElementById('transaccionSearchInput')?.value || '';
-        this.tableViewManager.filterData(searchTerm);
-        this.currentPage = 0;
-        this.loadTransactions();
+    changePage(page) {
+        this.currentPage = page;
+        this.renderVista();
     }
 
-    setupResponsiveHandlers() {
-        window.addEventListener('resize', () => {
-            const newIsMobile = window.innerWidth < 768;
-            const newIsTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-
-            if (newIsMobile !== this.isMobile || newIsTablet !== this.isTablet) {
-                this.isMobile = newIsMobile;
-                this.isTablet = newIsTablet;
-                this.tableViewManager.updateColumns(this.getResponsiveColumns());
-                // Re-render transactions if view changed significantly
-                this.renderTransactions();
-            }
-        });
+    renderTableTransactions() {
+        // Aquí iría la lógica para la vista en tabla si la necesitas, puedes adaptar del renderTransactions.
     }
 
     renderPagination() {
-        // This part needs to be updated based on actual total pages from API if available
-        const totalPages = Math.ceil(this.filteredTransactions.length / this.transactionsPerPage); // Placeholder
+        if (this.vista !== 'tarjetas') return;
+        const filtered = this.getFilteredTransactions();
+        const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
         const paginationContainer = document.getElementById('paginacion');
         if (!paginationContainer) return;
-
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
         let paginationHtml = '<div class="flex justify-center space-x-2">';
         for (let i = 0; i < totalPages; i++) {
             paginationHtml += `
-                <button onclick="transaccionesManager.changePage(${i})" 
-                        class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
-                    ${i + 1}
-                </button>
-            `;
+            <button onclick="transaccionesManager.changePage(${i})" 
+                    class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
+                ${i + 1}
+            </button>
+        `;
         }
         paginationHtml += '</div>';
         paginationContainer.innerHTML = paginationHtml;
     }
 
-    changePage(page) {
-        this.currentPage = page;
-        this.loadTransactions();
+    renderTablePagination() {
+        if (this.vista !== 'tabla') return;
+        const filtered = this.getFilteredTransactions();
+        const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
+        const paginationContainer = document.getElementById('paginacion');
+        if (!paginationContainer) return;
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        let paginationHtml = '<div class="flex justify-center space-x-2 my-4">';
+        for (let i = 0; i < totalPages; i++) {
+            paginationHtml += `
+            <button onclick="transaccionesManager.changePage(${i})" 
+                    class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
+                ${i + 1}
+            </button>
+        `;
+        }
+        paginationHtml += '</div>';
+        paginationContainer.innerHTML = paginationHtml;
     }
 
     clearFilters() {
@@ -508,7 +556,7 @@ class TransaccionesManager {
     updateTransactionCount() {
         const countElement = document.getElementById('totalTransacciones');
         if (countElement) {
-            countElement.textContent = `${this.filteredTransactions.length} transacciones`;
+            countElement.textContent = `${this.getFilteredTransactions().length} transacciones`;
         }
     }
 
@@ -524,10 +572,7 @@ class TransaccionesManager {
             `;
         }
     }
-
-    hideLoading() {
-        // Content will replace the loading spinner, no need for explicit hiding
-    }
+    hideLoading() {}
 
     showError(message) {
         const container = document.getElementById('transaccionesListContainer');
@@ -547,69 +592,31 @@ class TransaccionesManager {
         }
     }
 
-    // Utility functions (can be moved to a shared utility file if needed)
+    // --- UTILS ---
     formatCurrency(amount) {
-        if (typeof amount !== 'number') {
-            amount = parseFloat(amount) || 0;
-        }
-        return new Intl.NumberFormat('es-DO', {
-            style: 'currency',
-            currency: 'DOP',
-            minimumFractionDigits: 2
-        }).format(amount);
+        if (typeof amount !== 'number') amount = parseFloat(amount) || 0;
+        return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP', minimumFractionDigits: 2 }).format(amount);
     }
-
     formatDate(dateString) {
         const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         return new Date(dateString).toLocaleDateString('es-ES', options);
     }
-
     formatTransactionType(type) {
-        const types = {
-            'COMPRA': 'Compra',
-            'VENTA': 'Venta',
-            'DEVOLUCION_COMPRA': 'Devolución Compra',
-            'DEVOLUCION_VENTA': 'Devolución Venta'
-        };
+        const types = { 'COMPRA': 'Compra', 'VENTA': 'Venta', 'DEVOLUCION_COMPRA': 'Devolución Compra', 'DEVOLUCION_VENTA': 'Devolución Venta' };
         return types[type] || type;
     }
-
-    getTransactionTypeClass(type) {
-        const classes = {
-            'COMPRA': 'compra',
-            'VENTA': 'venta',
-            'DEVOLUCION_COMPRA': 'devolucion',
-            'DEVOLUCION_VENTA': 'devolucion'
-        };
-        return classes[type] || '';
-    }
-
-    getTransactionColor(type) {
-        const colors = {
-            'COMPRA': 'green-600',
-            'VENTA': 'yellow-600',
-            'DEVOLUCION_COMPRA': 'red-600',
-            'DEVOLUCION_VENTA': 'red-600'
-        };
-        return colors[type] || 'blue-600';
-    }
-
     getStateColor(state) {
         const colors = {
-            'PENDIENTE': 'yellow',
-            'CONFIRMADA': 'blue',
-            'COMPLETADA': 'green',
-            'CANCELADA': 'red',
-            'FACTURADA': 'purple',
-            'RECIBIDA': 'indigo',
-            'PAGADA': 'green',
-            'ENTREGADA': 'teal',
-            'COBRADA': 'emerald'
+            'PENDIENTE': 'yellow', 'CONFIRMADA': 'blue', 'PROCESANDO': 'orange',
+            'COMPLETADA': 'green', 'CANCELADA': 'red',
+            'FACTURADA': 'purple', 'RECIBIDA': 'indigo', 'PAGADA': 'green',
+            'ENTREGADA': 'teal', 'COBRADA': 'emerald',
+            'DEVUELTA': 'emerald', 'PARCIALMENTE_DEVUELTA': 'yellow'
         };
         return colors[state] || 'gray';
     }
 
-    // Transaction actions
+    // --- Transaction actions ---
     async viewTransactionDetails(id) {
         try {
             const transaction = await this.transaccionService.obtenerTransaccionPorId(id);
@@ -626,76 +633,66 @@ class TransaccionesManager {
     renderTransactionDetailsModal(transaction) {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
-
-        // Información del cliente o proveedor según el tipo de transacción
         let contraparteInfo = '';
-        if (transaction.tipoTransaccion === 'COMPRA' && transaction.proveedor) {
+        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
             contraparteInfo = `
                 <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
                 <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
                 <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
                 <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
             `;
-        } else if (transaction.cliente) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre} ${transaction.cliente.apellido} (${transaction.cliente.cedula})</p>`;
+        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''} (${transaction.cliente.cedula || ''})</p>`;
+        } else if (transaction.contraparteNombre) {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
         } else {
             contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
         }
-
-        // Lista de productos (muebles)
-        const productsList = transaction.lineas && transaction.lineas.length > 0 ?
-            transaction.lineas.map(line => `
-                <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
-                    <div>
-                        <p class="font-medium">${line.nombreProducto}</p>
-                        <p class="text-sm text-gray-600">Cantidad: ${line.cantidad} | Precio: ${this.formatCurrency(line.precioUnitario)}</p>
-                        <p class="text-sm text-gray-600">Código: ${line.codigoProducto || 'N/A'}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold">${this.formatCurrency(line.subtotalLinea)}</p>
-                        ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
-                    </div>
-                </div>
-            `).join('') :
-            '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
-
-        // Estado editable
-        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA'];
+        const productsList = transaction.lineas && transaction.lineas.length > 0
+            ? transaction.lineas.map(line => `
+        <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
+            <div>
+                <p class="font-medium">${line.nombreProducto || line.productoNombre || 'Sin nombre'}</p>
+                <p class="text-sm text-gray-600">Cantidad: ${line.cantidad} | Precio: ${this.formatCurrency(line.precioUnitario)}</p>
+                <p class="text-sm text-gray-600">Código: ${line.codigoProducto || 'N/A'}</p>
+            </div>
+            <div class="text-right">
+                <p class="font-bold">${this.formatCurrency(line.subtotalLinea ?? line.subtotal ?? 0)}</p>
+                ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
+            </div>
+        </div>
+    `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA','DEVUELTA','PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
             <div class="flex items-center space-x-2">
                 <label class="font-bold">Estado:</label>
                 <select id="estadoTransaccion" class="border rounded px-2 py-1" onchange="transaccionesManager.cambiarEstadoTransaccion(${transaction.id}, this.value)">
-                    ${estadoOptions.map(estado => 
-                        `<option value="${estado}" ${transaction.estado === estado ? 'selected' : ''}>${estado}</option>`
-                    ).join('')}
+                    ${estadoOptions.map(estado =>
+            `<option value="${estado}" ${transaction.estado === estado ? 'selected' : ''}>${estado}</option>`
+        ).join('')}
                 </select>
             </div>
         `;
-
         detailsContainer.innerHTML = `
             <div class="space-y-4">
                 <div class="bg-blue-50 p-3 rounded-lg">
                     <p><strong>Factura #:</strong> ${transaction.numeroFactura || 'N/A'}</p>
-                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipoTransaccion)}</p>
+                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipo)}</p>
                     <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
                     ${estadoSelect}
                 </div>
-                
                 <div class="bg-gray-50 p-3 rounded-lg">
                     <h4 class="font-bold mb-2">Información de Contraparte:</h4>
                     ${contraparteInfo}
                 </div>
-
                 <div>
                     <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
                     <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
                 </div>
-                
                 <div>
                     <h4 class="font-bold mb-2">Muebles/Productos Registrados:</h4>
                     <div class="border rounded p-3 max-h-64 overflow-y-auto">${productsList}</div>
                 </div>
-
                 <div class="bg-green-50 p-3 rounded-lg text-right">
                     <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
                     <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
@@ -705,41 +702,45 @@ class TransaccionesManager {
         `;
     }
 
-    async cambiarEstadoTransaccion(id, nuevoEstado) {
-        try {
-            // Aquí se podría implementar la llamada al backend para cambiar el estado
-            // Por ahora solo actualizamos localmente
-            const transaction = this.transactions.find(t => t.id === id);
-            if (transaction) {
-                transaction.estado = nuevoEstado;
-                this.renderTransactions(); // Actualizar la vista de la lista
-                window.showToast(`Estado cambiado a: ${nuevoEstado}`, 'success');
-            }
-        } catch (error) {
-            console.error('Error changing transaction state:', error);
-            window.showToast('Error al cambiar el estado de la transacción.', 'error');
-        }
-    }
-
     cerrarModalVerTransaccion() {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
 
     imprimirFactura(id) {
         window.showToast('Funcionalidad de impresión en desarrollo.', 'info');
-        // Implement actual printing logic here
     }
 
-    editTransaction(id) {
-        window.showToast(`Editar transacción ${id} - Funcionalidad en desarrollo.`, 'info');
-        // Implement edit logic, possibly opening the wizard in edit mode
+    async eliminarTransaccion(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
+            try {
+                await this.transaccionService.eliminarTransaccion(id);
+                await this.loadTransactions();
+                window.showToast('Transacción eliminada exitosamente', 'success');
+            } catch (error) {
+                console.error('Error al eliminar transacción:', error);
+                window.showToast('Error al eliminar la transacción', 'error');
+            }
+        }
+    }
+
+    setupResponsiveHandlers() {
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth < 768;
+            const newIsTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+            if (newIsMobile !== this.isMobile || newIsTablet !== this.isTablet) {
+                this.isMobile = newIsMobile;
+                this.isTablet = newIsTablet;
+                this.tableViewManager.updateColumns(this.getResponsiveColumns());
+                // Re-render transactions if view changed significantly
+                this.renderTransactions();
+            }
+        });
     }
 }
 
-// Global instance
+// --- GLOBAL INSTANCE & EXPORTS ---
 const transaccionesManager = new TransaccionesManager();
-
-// Expose functions to global scope for HTML onclick attributes
 window.transaccionesManager = transaccionesManager;
 window.tableViewManager = transaccionesManager.tableViewManager;
 window.cerrarModalVerTransaccion = () => transaccionesManager.cerrarModalVerTransaccion();

@@ -262,6 +262,19 @@
     </div>
 </div>
 
+<!-- Modal de Movimientos de Producto (centrado y responsive) -->
+<div id="modalMovimientosProducto"
+     class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4 overflow-y-auto">
+    <div id="movimientosDialog"
+         class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto transform transition-all max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-white z-10">
+            <h2 id="movimientosProductoTitle" class="text-xl font-semibold text-brand-brown">Movimientos de producto</h2>
+            <button onclick="productosManager.cerrarModalMovimientos()" class="text-gray-500 hover:text-red-600 text-2xl">&times;</button>
+        </div>
+        <div id="movimientosProductoBody" class="p-6"></div>
+    </div>
+</div>
+
 
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
