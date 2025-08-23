@@ -1,5 +1,6 @@
 package com.thelarte.auth.service;
 
+import com.thelarte.auth.dto.UserWithEmpleadoDTO;
 import com.thelarte.auth.entity.User;
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.repository.UserRepository;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -53,12 +55,7 @@ public class UserService implements UserDetailsService {
         newUser.setPassword(passwordEncoder.encode(password));
         newUser.setRoles(roles);
         newUser.setActive(true);
-
-        // Relación con empleado si existe la cédula
-        if (empleadoCedula != null) {
-            Optional<Empleado> empleadoOpt = empleadoRepository.findById(empleadoCedula);
-            empleadoOpt.ifPresent(newUser::setEmpleado);
-        }
+        newUser.setEmpleadoCedula(empleadoCedula);
 
         return userRepository.save(newUser);
     }
@@ -125,5 +122,31 @@ public class UserService implements UserDetailsService {
         if (!username.matches("^[a-zA-Z0-9_.-]+$")) {
             throw new IllegalArgumentException("Username can only contain letters, numbers, underscores, dots, and hyphens");
         }
+    }
+
+    public List<UserWithEmpleadoDTO> findAllWithEmpleados() {
+        List<User> users = userRepository.findAll();
+        return users.stream().map(this::convertToUserWithEmpleadoDTO).collect(Collectors.toList());
+    }
+
+    public Optional<UserWithEmpleadoDTO> findByUsernameWithEmpleado(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        return userOpt.map(this::convertToUserWithEmpleadoDTO);
+    }
+
+    private UserWithEmpleadoDTO convertToUserWithEmpleadoDTO(User user) {
+        Empleado empleado = null;
+        if (user.getEmpleadoCedula() != null) {
+            empleado = empleadoRepository.findById(user.getEmpleadoCedula()).orElse(null);
+        }
+
+        return new UserWithEmpleadoDTO(
+            user.getId(),
+            user.getUsername(),
+            user.getRoles(),
+            user.isActive(),
+            user.getEmpleadoCedula(),
+            empleado
+        );
     }
 }

@@ -1,6 +1,5 @@
 package com.thelarte.transacciones.service;
 
-import com.thelarte.inventory.repository.UnidadRepository;
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
 import com.thelarte.transacciones.model.Transaccion;
@@ -8,10 +7,7 @@ import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.inventory.model.Producto;
-import com.thelarte.inventory.model.Unidad;
 import com.thelarte.inventory.repository.ProductoRepository;
-import com.thelarte.inventory.service.UnidadService;
-import com.thelarte.inventory.util.EstadoUnidad;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import com.thelarte.auth.entity.User;
 import com.thelarte.auth.service.UserService;
@@ -43,12 +39,7 @@ public class TransaccionService {
     @Autowired
     private UserService userService;
 
-    @Autowired
-    private UnidadService unidadService;
-
-    @Autowired
-    private UnidadRepository unidadRepository;
-
+    // --- UNIDAD SERVICE/REPOSITORY ELIMINADOS ---
     public Transaccion crearTransaccion(Transaccion transaccion) {
         // Asignar la transacción a cada línea para que se guarde el transaccion_id
         if (transaccion.getLineas() != null) {
@@ -83,42 +74,62 @@ public class TransaccionService {
                 throw new IllegalArgumentException("La devolución requiere el ID de la transacción original");
             }
 
+            // Actualizar cantidades en Producto
             for (LineaTransaccion linea : transaccion.getLineas()) {
-                // Busca las unidades asociadas a la transacción original y producto
-                List<Unidad> unidadesOriginales = unidadRepository.findByTransaccionOrigenIdAndProductoId(
-                        transaccion.getTransaccionOrigenId(),
-                        linea.getProductoId()
-                );
-                int cantidadADevolver = linea.getCantidad();
-                int count = 0;
+                if (linea.getProductoId() != null) {
+                    Producto producto = productoRepository.findById(linea.getProductoId())
+                            .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+                    int cantidad = linea.getCantidad() != null ? linea.getCantidad() : 0;
 
-                for (Unidad unidad : unidadesOriginales) {
-                    if (count >= cantidadADevolver) break;
-
-                    // Solo unidades que aún no han sido devueltas
-                    if (
-                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA &&
-                                    (unidad.getEstado() == EstadoUnidad.DISPONIBLE || unidad.getEstado() == EstadoUnidad.RESERVADO)
-                    ) {
-                        unidad.setEstado(EstadoUnidad.DEVUELTO_COMPRA);
-                        unidadRepository.save(unidad);
-                        count++;
-                    } else if (
-                            transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA &&
-                                    (unidad.getEstado() == EstadoUnidad.VENDIDO || unidad.getEstado() == EstadoUnidad.RESERVADO)
-                    ) {
-                        unidad.setEstado(EstadoUnidad.DEVUELTO_VENTA);
-                        unidadRepository.save(unidad);
-                        count++;
+                    if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA) {
+                        // Solo restar de disponible, NO sumar a devueltos
+                        producto.setCantidadDisponible(
+                                (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) - cantidad
+                        );
+                        // No sumar a cantidadDevuelta (el producto se va del inventario)
+                    } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
+                        // Sumar a devueltos, opcional sumar a disponible si regresa al inventario
+                        producto.setCantidadDevuelta(
+                                (producto.getCantidadDevuelta() != null ? producto.getCantidadDevuelta() : 0) + cantidad
+                        );
+                        // Si el producto regresa al stock disponible, descomenta la siguiente línea:
+                        // producto.setCantidadDisponible(
+                        //     (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + cantidad
+                        // );
                     }
+                    productoRepository.save(producto);
                 }
             }
 
-            // === MARCAR TRANSACCION ORIGINAL COMO CANCELADA ===
+            // === MARCAR TRANSACCION ORIGINAL COMO DEVUELTA O PARCIALMENTE_DEVUELTA ===
             Optional<Transaccion> transaccionOriginalOpt = transaccionRepository.findById(transaccion.getTransaccionOrigenId());
             if (transaccionOriginalOpt.isPresent()) {
                 Transaccion transaccionOriginal = transaccionOriginalOpt.get();
-                transaccionOriginal.setEstado(Transaccion.EstadoTransaccion.CANCELADA);
+
+                // Calcular cantidad total de la transacción original
+                int totalOriginal = transaccionOriginal.getLineas().stream()
+                        .mapToInt(l -> l.getCantidad() != null ? l.getCantidad() : 0)
+                        .sum();
+
+                // Sumar todas las devoluciones asociadas a la transacción original
+                List<Transaccion> devoluciones = transaccionRepository.findByTransaccionOrigenIdAndDeletedFalse(transaccionOriginal.getId());
+                int totalDevuelto = devoluciones.stream()
+                        .flatMap(dev -> dev.getLineas().stream())
+                        .mapToInt(l -> l.getCantidad() != null ? l.getCantidad() : 0)
+                        .sum();
+
+                // Sumar también la actual devolución si aún no está persistida
+                totalDevuelto += transaccion.getLineas().stream()
+                        .mapToInt(l -> l.getCantidad() != null ? l.getCantidad() : 0)
+                        .sum();
+
+                if (totalDevuelto >= totalOriginal) {
+                    transaccionOriginal.setEstado(Transaccion.EstadoTransaccion.DEVUELTA);
+                } else if (totalDevuelto > 0) {
+                    transaccionOriginal.setEstado(Transaccion.EstadoTransaccion.PARCIALMENTE_DEVUELTA);
+                } else {
+                    transaccionOriginal.setEstado(Transaccion.EstadoTransaccion.CANCELADA); // fallback
+                }
                 transaccionRepository.save(transaccionOriginal);
             }
         }
@@ -330,11 +341,15 @@ public class TransaccionService {
         transaccion.setEstado(Transaccion.EstadoTransaccion.RECIBIDA);
         transaccion.setFechaEntregaReal(LocalDateTime.now());
 
+        // Actualiza stock de productos, no unidades
         for (LineaTransaccion linea : transaccion.getLineas()) {
             if (linea.getProductoId() != null) {
-                for (int i = 0; i < linea.getCantidad(); i++) {
-                    unidadService.registrarUnidad(linea.getProductoId(), EstadoUnidad.DISPONIBLE, true, transaccion.getId());
-                }
+                Producto producto = productoRepository.findById(linea.getProductoId())
+                        .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
+                producto.setCantidadDisponible(
+                        (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + linea.getCantidad()
+                );
+                productoRepository.save(producto);
             }
         }
         return transaccionRepository.save(transaccion);
@@ -430,23 +445,23 @@ public class TransaccionService {
     public void eliminarTransaccion(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         if (transaccion.isDeleted()) {
             throw new IllegalStateException("La transacción ya está eliminada");
         }
-        
+
         transaccion.setDeleted(true);
         transaccionRepository.save(transaccion);
     }
-    
+
     public void restaurarTransaccion(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         if (!transaccion.isDeleted()) {
             throw new IllegalStateException("La transacción no está eliminada");
         }
-        
+
         transaccion.setDeleted(false);
         transaccionRepository.save(transaccion);
     }
@@ -506,63 +521,98 @@ public class TransaccionService {
         transaccion.setTotal(total);
     }
 
+    /**
+     * Lógica de procesamiento de líneas usando solo los campos enteros de Producto.
+     */
     private void procesarLineasTransaccion(Transaccion transaccion) {
         if (transaccion.getLineas() != null) {
             for (LineaTransaccion linea : transaccion.getLineas()) {
                 if (transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA) {
+                    Producto producto;
                     if (linea.getProductoId() == null && linea.getProductoNombre() != null) {
-                        // Producto nuevo: crea el producto y las unidades
-                        Producto nuevoProducto = new Producto();
-                        nuevoProducto.setNombre(linea.getProductoNombre());
-                        nuevoProducto.setTipo("Mueble");
-                        nuevoProducto.setDescripcion("Mueble nuevo agregado por compra");
-                        nuevoProducto.setItbis(18.0f);
-                        nuevoProducto.setPrecioCompra(linea.getPrecioUnitario());
-                        nuevoProducto.setPrecioVenta(linea.getPrecioUnitario()); // Usar el precio del frontend
-                        nuevoProducto.setFotoURL("");
-                        nuevoProducto.setEsNuevo(true);
-                        nuevoProducto.setCantidadDisponible(linea.getCantidad());
-                        nuevoProducto = productoRepository.save(nuevoProducto);
+                        // Producto nuevo: crea el producto con cantidades iniciales
+                        producto = new Producto();
+                        producto.setNombre(linea.getProductoNombre());
+                        producto.setTipo("Mueble");
+                        producto.setDescripcion("Mueble nuevo agregado por compra");
+                        producto.setItbis(18.0f);
+                        producto.setPrecioCompra(linea.getPrecioUnitario());
+                        producto.setPrecioVenta(linea.getPrecioUnitario());
+                        producto.setFotoURL("");
+                        producto.setCantidadDisponible(0); // Al comprar, entra a almacen, no disponible
+                        producto.setCantidadReservada(0);
+                        producto.setCantidadDanada(0);
+                        producto.setCantidadDevuelta(0);
+                        producto.setCantidadAlmacen(linea.getCantidad()); // Aquí entra el stock de la compra
+                        producto = productoRepository.save(producto);
 
-                        for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(nuevoProducto.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
-                        }
-
-                        linea.setProductoId(nuevoProducto.getId());
-                        linea.setPrecioUnitario(nuevoProducto.getPrecioVenta()); // Asegura que la línea tenga el precio
-                    } else if (linea.getProductoId() != null) {
-                        Producto productoExistente = productoRepository.findById(linea.getProductoId())
+                        linea.setProductoId(producto.getId());
+                        linea.setPrecioUnitario(producto.getPrecioVenta());
+                    } else {
+                        // Producto existente: suma cantidad a almacen
+                        producto = productoRepository.findById(linea.getProductoId())
                                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
-
-                        for (int i = 0; i < linea.getCantidad(); i++) {
-                            unidadService.registrarUnidad(productoExistente.getId(), EstadoUnidad.DISPONIBLE, false, transaccion.getId());
-                        }
-                        productoExistente.setCantidadDisponible(productoExistente.getCantidadDisponible() + linea.getCantidad());
-                        productoRepository.save(productoExistente);
+                        producto.setCantidadAlmacen(
+                                (producto.getCantidadAlmacen() != null ? producto.getCantidadAlmacen() : 0) + linea.getCantidad()
+                        );
+                        productoRepository.save(producto);
                     }
                 } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA && linea.getProductoId() != null) {
                     Producto producto = productoRepository.findById(linea.getProductoId())
                             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + linea.getProductoId()));
 
-                    producto.actualizarEstadoPorUnidades();
+                    int disponible = producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0;
+                    int almacen = producto.getCantidadAlmacen() != null ? producto.getCantidadAlmacen() : 0;
+                    int reservada = producto.getCantidadReservada() != null ? producto.getCantidadReservada() : 0;
+                    int cantidad = linea.getCantidad() != null ? linea.getCantidad() : 0;
 
-                    if (producto.getCantidadDisponible() < linea.getCantidad()) {
-                        throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                    int totalStock = disponible + almacen;
+
+                    // Lógica para estado PENDIENTE (reserva de stock)
+                    if (transaccion.getEstado() == Transaccion.EstadoTransaccion.PENDIENTE) {
+                        if (totalStock < cantidad) {
+                            throw new IllegalArgumentException("Stock insuficiente para reservar el producto: " + producto.getNombre());
+                        }
+                        int descontarDeDisponible = Math.min(cantidad, disponible);
+                        int descontarDeAlmacen = cantidad - descontarDeDisponible;
+                        producto.setCantidadDisponible(disponible - descontarDeDisponible);
+                        producto.setCantidadAlmacen(almacen - descontarDeAlmacen);
+                        producto.setCantidadReservada(reservada + cantidad);
+                        productoRepository.save(producto);
                     }
-
-                    List<Unidad> unidadesDisponibles = producto.getUnidades().stream()
-                            .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
-                            .limit(linea.getCantidad())
-                            .collect(Collectors.toList());
-
-                    for (Unidad unidad : unidadesDisponibles) {
-                        unidad.setEstado(EstadoUnidad.RESERVADO);
-                        unidad.setTransaccionOrigenId(transaccion.getId()); // <<< marca la venta!
-                        unidadRepository.save(unidad);
+                    // Lógica para estados CONFIRMADA, COMPLETADA, ENTREGADA (entrega de stock reservado)
+                    else if (transaccion.getEstado() == Transaccion.EstadoTransaccion.CONFIRMADA ||
+                            transaccion.getEstado() == Transaccion.EstadoTransaccion.COMPLETADA ||
+                            transaccion.getEstado() == Transaccion.EstadoTransaccion.ENTREGADA) {
+                        if (reservada < cantidad) {
+                            // Si no hay suficiente reservado, intenta descontar de disponible y almacén
+                            if (totalStock < cantidad) {
+                                throw new IllegalArgumentException("Stock insuficiente para entregar el producto: " + producto.getNombre());
+                            }
+                            int descontarDeDisponible = Math.min(cantidad, disponible);
+                            int descontarDeAlmacen = cantidad - descontarDeDisponible;
+                            producto.setCantidadDisponible(disponible - descontarDeDisponible);
+                            producto.setCantidadAlmacen(almacen - descontarDeAlmacen);
+                            // No sumamos a reservada porque estamos entregando (descontando)
+                        } else {
+                            // Hay suficiente reservado, descuéntalo de reservada
+                            producto.setCantidadReservada(reservada - cantidad);
+                            // Ya no sumamos a disponible porque ya fue reservado previamente
+                        }
+                        productoRepository.save(producto);
                     }
-
-                    producto.actualizarEstadoPorUnidades();
-                    productoRepository.save(producto);
+                    // Por si acaso, si la venta se crea directamente como completada, descuenta de ambos
+                    else {
+                        if (totalStock < cantidad) {
+                            throw new IllegalArgumentException("Stock insuficiente para el producto: " + producto.getNombre());
+                        }
+                        int descontarDeDisponible = Math.min(cantidad, disponible);
+                        int descontarDeAlmacen = cantidad - descontarDeDisponible;
+                        producto.setCantidadDisponible(disponible - descontarDeDisponible);
+                        producto.setCantidadAlmacen(almacen - descontarDeAlmacen);
+                        productoRepository.save(producto);
+                    }
+                    // Puedes agregar aquí lógica para dañados, devueltos, etc. si lo necesitas
                 }
             }
         }
@@ -748,14 +798,14 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
-    public List<Transaccion> getTransaccionesFiltered(String tipoFilter, String estadoFilter, 
-                                                     java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin, 
-                                                     int page, int size) {
+    public List<Transaccion> getTransaccionesFiltered(String tipoFilter, String estadoFilter,
+                                                      java.time.LocalDate fechaInicio, java.time.LocalDate fechaFin,
+                                                      int page, int size) {
         LocalDateTime inicio = fechaInicio != null ? fechaInicio.atStartOfDay() : null;
         LocalDateTime fin = fechaFin != null ? fechaFin.atTime(23, 59, 59) : null;
-        
+
         List<Transaccion> transacciones = transaccionRepository.findByDeletedFalse();
-        
+
         if (tipoFilter != null && !tipoFilter.isEmpty()) {
             try {
                 Transaccion.TipoTransaccion tipo = Transaccion.TipoTransaccion.valueOf(tipoFilter);
@@ -766,7 +816,7 @@ public class TransaccionService {
                 // Ignorar filtro inválido
             }
         }
-        
+
         if (estadoFilter != null && !estadoFilter.isEmpty()) {
             try {
                 Transaccion.EstadoTransaccion estado = Transaccion.EstadoTransaccion.valueOf(estadoFilter);
@@ -777,21 +827,21 @@ public class TransaccionService {
                 // Ignorar filtro inválido
             }
         }
-        
+
         if (inicio != null && fin != null) {
             transacciones = transacciones.stream()
                     .filter(t -> t.getFecha().isAfter(inicio) && t.getFecha().isBefore(fin))
                     .collect(Collectors.toList());
         }
-        
+
         // Aplicar paginación manual
         int fromIndex = page * size;
         int toIndex = Math.min(fromIndex + size, transacciones.size());
-        
+
         if (fromIndex > transacciones.size()) {
             return List.of();
         }
-        
+
         return transacciones.subList(fromIndex, toIndex);
     }
 
@@ -808,23 +858,68 @@ public class TransaccionService {
     public Transaccion cancelarTransaccion(Long id, String motivo) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
-        
+
         transaccion.setEstado(Transaccion.EstadoTransaccion.CANCELADA);
         if (motivo != null && !motivo.isEmpty()) {
             String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
             transaccion.setObservaciones(observacionesActuales + " - Cancelada: " + motivo);
         }
-        
+
         return transaccionRepository.save(transaccion);
     }
 
     public void marcarComoImpresa(Long transaccionId) {
         Transaccion transaccion = transaccionRepository.findById(transaccionId)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
-        
+
         String observacionesActuales = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
         transaccion.setObservaciones(observacionesActuales + " - Factura impresa en " + LocalDateTime.now());
-        
+
         transaccionRepository.save(transaccion);
     }
+
+    public Transaccion marcarComoDevuelta(Long id, List<LineaTransaccionDTO> productosDevueltos, String motivo, boolean parcial) {
+        Transaccion transaccion = transaccionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
+
+        // Actualiza el estado
+        transaccion.setEstado(parcial ?
+                Transaccion.EstadoTransaccion.PARCIALMENTE_DEVUELTA :
+                Transaccion.EstadoTransaccion.DEVUELTA);
+
+        // Construye detalle de productos devueltos
+        StringBuilder detalle = new StringBuilder("Se realizó una devolución de esta ");
+        detalle.append(transaccion.getTipo() == Transaccion.TipoTransaccion.COMPRA ? "compra" : "venta");
+        detalle.append(", del producto(s): ");
+        for (LineaTransaccionDTO linea : productosDevueltos) {
+            detalle.append(String.format("%s x%d, ",
+                    linea.getProductoNombre() != null ? linea.getProductoNombre() : "ID " + linea.getProductoId(),
+                    linea.getCantidad()));
+        }
+        // Elimina la última coma si hay productos
+        if (productosDevueltos.size() > 0) {
+            detalle.setLength(detalle.length() - 2);
+        }
+        if (motivo != null && !motivo.isEmpty()) {
+            detalle.append(". Motivo: ").append(motivo);
+        }
+
+        String obsActual = transaccion.getObservaciones() != null ? transaccion.getObservaciones() : "";
+        String nuevaObs = obsActual +
+                (obsActual.isEmpty() ? "" : " ") +
+                detalle.toString();
+
+        transaccion.setObservaciones(nuevaObs.trim());
+
+        return transaccionRepository.save(transaccion);
+    }
+
+    public Transaccion marcarComoDevueltaTotal(Long id, List<LineaTransaccionDTO> productosDevueltos, String motivo) {
+        return marcarComoDevuelta(id, productosDevueltos, motivo, false);
+    }
+
+    public Transaccion marcarComoDevueltaParcial(Long id, List<LineaTransaccionDTO> productosDevueltos, String motivo) {
+        return marcarComoDevuelta(id, productosDevueltos, motivo, true);
+    }
+
 }

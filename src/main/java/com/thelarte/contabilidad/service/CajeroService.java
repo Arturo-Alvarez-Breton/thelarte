@@ -322,7 +322,10 @@ public class CajeroService {
         dto.setDisponible(producto.getEstado() == Producto.EstadoProducto.DISPONIBLE);
         dto.setFotoURL(producto.getFotoURL());
         dto.setItbis(producto.getItbis());
-        dto.setEsNuevo(producto.getEsNuevo());
+        dto.setCantidadAlmacen(producto.getCantidadAlmacen());
+        dto.setCantidadDanada(producto.getCantidadDanada());
+        dto.setCantidadDevuelta(producto.getCantidadDevuelta());
+        dto.setCantidadReservada(producto.getCantidadReservada());
         return dto;
     }
 

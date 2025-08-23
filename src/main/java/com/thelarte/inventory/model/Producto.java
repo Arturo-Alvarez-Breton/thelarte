@@ -1,11 +1,8 @@
 package com.thelarte.inventory.model;
 
-import com.thelarte.inventory.util.EstadoUnidad;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -22,9 +19,7 @@ public class Producto {
     private BigDecimal precioCompra;
     private BigDecimal precioVenta;
     private String fotoURL;
-    @OneToMany(mappedBy = "producto", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Unidad> unidades = new ArrayList<>();
-    
+    private boolean eliminado = false;
     @Column(name = "estado")
     @Enumerated(EnumType.STRING)
     private EstadoProducto estado;
@@ -34,13 +29,16 @@ public class Producto {
     
     @Column(name = "cantidad_reservada")
     private Integer cantidadReservada;
-    
-    @Column(name = "es_nuevo")
-    private Boolean esNuevo;
-    
+    @Column(name = "cantidad_danada")
+    private Integer cantidadDanada;
+    @Column(name = "cantidad_devuelta")
+    private Integer cantidadDevuelta;
+    @Column(name = "cantidad_almacen")
+    private Integer cantidadAlmacen;
+
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
-    
+
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
 
@@ -49,11 +47,22 @@ public class Producto {
         this.estado = EstadoProducto.DISPONIBLE;
         this.cantidadDisponible = 0;
         this.cantidadReservada = 0;
-        this.esNuevo = true;
     }
 
-    public Producto(String nombre, String tipo, String descripcion, float itbis, BigDecimal precioCompra, BigDecimal precioVenta, String fotoURL) {
-        this.id = id;
+    public Producto(
+            String nombre,
+            String tipo,
+            String descripcion,
+            float itbis,
+            BigDecimal precioCompra,
+            BigDecimal precioVenta,
+            String fotoURL,
+            Integer cantidadDisponible,
+            Integer cantidadReservada,
+            Integer cantidadDanada,
+            Integer cantidadDevuelta,
+            Integer cantidadAlmacen
+    ) {
         this.nombre = nombre;
         this.tipo = tipo;
         this.descripcion = descripcion;
@@ -61,6 +70,13 @@ public class Producto {
         this.precioCompra = precioCompra;
         this.precioVenta = precioVenta;
         this.fotoURL = fotoURL;
+        this.cantidadDisponible = cantidadDisponible != null ? cantidadDisponible : 0;
+        this.cantidadReservada = cantidadReservada != null ? cantidadReservada : 0;
+        this.cantidadDanada = cantidadDanada != null ? cantidadDanada : 0;
+        this.cantidadDevuelta = cantidadDevuelta != null ? cantidadDevuelta : 0;
+        this.cantidadAlmacen = cantidadAlmacen != null ? cantidadAlmacen : 0;
+        this.fechaCreacion = LocalDateTime.now();
+        this.estado = EstadoProducto.DISPONIBLE;
     }
 
     public long getId() {
@@ -150,14 +166,6 @@ public class Producto {
         this.cantidadReservada = cantidadReservada;
     }
     
-    public Boolean getEsNuevo() {
-        return esNuevo;
-    }
-    
-    public void setEsNuevo(Boolean esNuevo) {
-        this.esNuevo = esNuevo;
-    }
-    
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
@@ -173,7 +181,38 @@ public class Producto {
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
         this.fechaActualizacion = fechaActualizacion;
     }
-    
+
+    public Integer getCantidadAlmacen() {
+        return cantidadAlmacen;
+    }
+
+    public void setCantidadAlmacen(Integer cantidadAlmacen) {
+        this.cantidadAlmacen = cantidadAlmacen;
+    }
+
+    public Integer getCantidadDanada() {
+        return cantidadDanada;
+    }
+
+    public void setCantidadDanada(Integer cantidadDanada) {
+        this.cantidadDanada = cantidadDanada;
+    }
+
+    public Integer getCantidadDevuelta() {
+        return cantidadDevuelta;
+    }
+
+    public void setCantidadDevuelta(Integer cantidadDevuelta) {
+        this.cantidadDevuelta = cantidadDevuelta;
+    }
+
+    public boolean isEliminado() {
+        return eliminado;
+    }
+    public void setEliminado(boolean eliminado) {
+        this.eliminado = eliminado;
+    }
+
     @PreUpdate
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
@@ -185,26 +224,5 @@ public class Producto {
         DESCONTINUADO
     }
 
-    public List<Unidad> getUnidades() {
-        return unidades;
-    }
 
-    public void actualizarEstadoPorUnidades() {
-        long disponibles = unidades.stream()
-                .filter(u -> u.getEstado() == EstadoUnidad.DISPONIBLE)
-                .count();
-        
-        long reservadas = unidades.stream()
-                .filter(u -> u.getEstado() == EstadoUnidad.RESERVADO)
-                .count();
-
-        this.cantidadDisponible = (int) disponibles;
-        this.cantidadReservada = (int) reservadas;
-
-        if (disponibles > 0) {
-            this.estado = EstadoProducto.DISPONIBLE;
-        } else {
-            this.estado = EstadoProducto.AGOTADO;
-        }
-    }
 }
