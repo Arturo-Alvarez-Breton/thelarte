@@ -116,4 +116,36 @@ public class ProductoController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    /**
+     * Obtener todos los productos incluyendo eliminados (para administración)
+     */
+    @GetMapping("/all-inclusive")
+    public ResponseEntity<List<ProductoDTO>> listarTodosInclusiveEliminados() {
+        List<ProductoDTO> productos = ((com.thelarte.inventory.service.ProductoService) productoService).listarTodosInclusiveEliminados();
+        return ResponseEntity.ok(productos);
+    }
+
+    /**
+     * Obtener solo productos eliminados lógicamente
+     */
+    @GetMapping("/deleted")
+    public ResponseEntity<List<ProductoDTO>> listarEliminados() {
+        List<ProductoDTO> productos = ((com.thelarte.inventory.service.ProductoService) productoService).listarEliminados();
+        return ResponseEntity.ok(productos);
+    }
+
+    /**
+     * Reactivar un producto eliminado lógicamente
+     */
+    @PostMapping("/{id}/reactivate")
+    public ResponseEntity<ProductoDTO> reactivarProducto(@PathVariable Long id) {
+        try {
+            ProductoDTO producto = ((com.thelarte.inventory.service.ProductoService) productoService).reactivar(id);
+            return ResponseEntity.ok(producto);
+        } catch (Exception e) {
+            logger.error("Error reactivating product with id {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }

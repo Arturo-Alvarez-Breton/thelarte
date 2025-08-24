@@ -2,6 +2,8 @@ package com.thelarte.config;
 
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.service.UserService;
+import com.thelarte.inventory.model.Producto;
+import com.thelarte.inventory.repository.ProductoRepository;
 import com.thelarte.user.model.Cliente;
 import com.thelarte.user.model.Empleado;
 import com.thelarte.user.repository.ClienteRepository;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.Arrays;
 
@@ -31,6 +34,9 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private ProductoRepository productoRepository;
+
     @Override
     public void run(String... args) throws Exception {
         // 1) Iniciar H2 TCP Server
@@ -43,6 +49,7 @@ public class DataInitializer implements CommandLineRunner {
         seedEmpleados();
         seedClientes();
         seedAdminRoot();
+        seedProductos();
     }
 
     private void startH2ServerIfNeeded() {
@@ -302,6 +309,176 @@ public class DataInitializer implements CommandLineRunner {
                 null
             );
             logger.info("Usuario creado: adminroot (GERENTE, sin empleado)");
+        }
+    }
+
+    private void seedProductos() {
+        // Producto 1: Sofá moderno - activo
+        if (productoRepository.findByNombre("Sofá Moderno 3 Plazas").isEmpty()) {
+            Producto producto1 = new Producto(
+                "Sofá Moderno 3 Plazas",
+                "Muebles",
+                "Sofá contemporáneo de 3 plazas en tela gris, perfecto para salas de estar modernas",
+                18.0f, // ITBIS
+                new BigDecimal("15000.00"), // Precio compra
+                new BigDecimal("25000.00"), // Precio venta
+                null, // URL de foto
+                5, // Cantidad disponible
+                0, // Cantidad reservada
+                0, // Cantidad dañada
+                0, // Cantidad devuelta
+                5  // Cantidad almacén
+            );
+            producto1.setEliminado(false);
+            productoRepository.save(producto1);
+            logger.info("Producto creado: Sofá Moderno 3 Plazas (activo)");
+        }
+
+        // Producto 2: Mesa de comedor - activo
+        if (productoRepository.findByNombre("Mesa de Comedor Rectangular").isEmpty()) {
+            Producto producto2 = new Producto(
+                "Mesa de Comedor Rectangular",
+                "Muebles",
+                "Mesa de comedor en madera de roble para 6 personas, con acabado natural",
+                18.0f,
+                new BigDecimal("8000.00"),
+                new BigDecimal("14000.00"),
+                null,
+                3,
+                1,
+                0,
+                0,
+                4
+            );
+            producto2.setEliminado(false);
+            productoRepository.save(producto2);
+            logger.info("Producto creado: Mesa de Comedor Rectangular (activo)");
+        }
+
+        // Producto 3: Lámpara de pie - activo
+        if (productoRepository.findByNombre("Lámpara de Pie LED").isEmpty()) {
+            Producto producto3 = new Producto(
+                "Lámpara de Pie LED",
+                "Iluminación",
+                "Lámpara de pie con tecnología LED, regulable y con base en metal cromado",
+                18.0f,
+                new BigDecimal("2500.00"),
+                new BigDecimal("4200.00"),
+                null,
+                10,
+                2,
+                0,
+                1,
+                13
+            );
+            producto3.setEliminado(false);
+            productoRepository.save(producto3);
+            logger.info("Producto creado: Lámpara de Pie LED (activo)");
+        }
+
+        // Producto 4: Silla ejecutiva - activo
+        if (productoRepository.findByNombre("Silla Ejecutiva Ergonómica").isEmpty()) {
+            Producto producto4 = new Producto(
+                "Silla Ejecutiva Ergonómica",
+                "Oficina",
+                "Silla ejecutiva con soporte lumbar, apoyabrazos ajustables y base giratoria",
+                18.0f,
+                new BigDecimal("3200.00"),
+                new BigDecimal("5800.00"),
+                null,
+                8,
+                0,
+                1,
+                0,
+                9
+            );
+            producto4.setEliminado(false);
+            productoRepository.save(producto4);
+            logger.info("Producto creado: Silla Ejecutiva Ergonómica (activo)");
+        }
+
+        // Producto 5: Estantería - activo
+        if (productoRepository.findByNombre("Estantería Modular 5 Niveles").isEmpty()) {
+            Producto producto5 = new Producto(
+                "Estantería Modular 5 Niveles",
+                "Muebles",
+                "Estantería modular de 5 niveles en melamina blanca, ideal para libros y decoración",
+                18.0f,
+                new BigDecimal("1800.00"),
+                new BigDecimal("3200.00"),
+                null,
+                6,
+                1,
+                0,
+                0,
+                7
+            );
+            producto5.setEliminado(false);
+            productoRepository.save(producto5);
+            logger.info("Producto creado: Estantería Modular 5 Niveles (activo)");
+        }
+
+        // Producto 6: Mesa de centro - eliminado lógicamente para pruebas
+        if (productoRepository.findByNombre("Mesa de Centro Vintage").isEmpty()) {
+            Producto producto6 = new Producto(
+                "Mesa de Centro Vintage",
+                "Muebles",
+                "Mesa de centro estilo vintage con gavetas laterales y acabado en madera oscura",
+                18.0f,
+                new BigDecimal("4500.00"),
+                new BigDecimal("7200.00"),
+                null,
+                0,
+                0,
+                2,
+                1,
+                3
+            );
+            producto6.setEliminado(true); // Producto eliminado lógicamente
+            productoRepository.save(producto6);
+            logger.info("Producto creado y eliminado lógicamente: Mesa de Centro Vintage");
+        }
+
+        // Producto 7: Escritorio ejecutivo - activo
+        if (productoRepository.findByNombre("Escritorio Ejecutivo L-Shape").isEmpty()) {
+            Producto producto7 = new Producto(
+                "Escritorio Ejecutivo L-Shape",
+                "Oficina",
+                "Escritorio ejecutivo en forma de L con múltiples cajones y superficie amplia",
+                18.0f,
+                new BigDecimal("12000.00"),
+                new BigDecimal("18500.00"),
+                null,
+                2,
+                0,
+                0,
+                0,
+                2
+            );
+            producto7.setEliminado(false);
+            productoRepository.save(producto7);
+            logger.info("Producto creado: Escritorio Ejecutivo L-Shape (activo)");
+        }
+
+        // Producto 8: Cómoda - eliminado lógicamente para pruebas
+        if (productoRepository.findByNombre("Cómoda 4 Gavetas").isEmpty()) {
+            Producto producto8 = new Producto(
+                "Cómoda 4 Gavetas",
+                "Muebles",
+                "Cómoda de dormitorio con 4 gavetas amplias y tiradores metálicos",
+                18.0f,
+                new BigDecimal("5500.00"),
+                new BigDecimal("8800.00"),
+                null,
+                0,
+                0,
+                1,
+                0,
+                1
+            );
+            producto8.setEliminado(true); // Producto eliminado lógicamente
+            productoRepository.save(producto8);
+            logger.info("Producto creado y eliminado lógicamente: Cómoda 4 Gavetas");
         }
     }
 }
