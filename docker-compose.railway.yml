@@ -1,0 +1,72 @@
+version: '3.8'
+
+# Docker Compose configuration for Railway deployment
+# This file is optimized for Railway's container orchestration
+
+services:
+  # PostgreSQL Database for Railway
+  postgres:
+    image: postgres:15-alpine
+    container_name: thelarte-postgres-railway
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data_railway:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte_user -d thelarte"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - thelarte-railway-network
+    # PostgreSQL is not exposed externally on Railway for security
+    expose:
+      - "5432"
+
+  # Spring Boot Application for Railway
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: thelarte-app-railway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: thelarte
+      DB_USERNAME: thelarte_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: ${PORT:-8080}
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - app_uploads_railway:/app/uploads
+    networks:
+      - thelarte-railway-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8080}/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+volumes:
+  postgres_data_railway:
+    driver: local
+  app_uploads_railway:
+    driver: local
+
+networks:
+  thelarte-railway-network:
+    driver: bridge

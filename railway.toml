@@ -1,0 +1,37 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+
+[services.app]
+build.command = "./gradlew build -x test"
+start.command = "java -Dserver.port=$PORT -jar build/libs/thelarte-app-1.0.0.jar"
+port = 8080
+
+[services.app.variables]
+SPRING_PROFILES_ACTIVE = "prod"
+DB_HOST = "postgres"
+DB_PORT = "5432"
+DB_NAME = "thelarte"
+DB_USERNAME = "thelarte_user"
+
+[services.postgres]
+image = "postgres:15-alpine"
+port = 5432
+
+[services.postgres.variables]
+POSTGRES_DB = "thelarte"
+POSTGRES_USER = "thelarte_user"
+POSTGRES_PASSWORD = "${{POSTGRES_PASSWORD}}"
+
+[services.postgres.healthcheck]
+command = ["pg_isready", "-U", "thelarte_user", "-d", "thelarte"]
+interval = 30
+timeout = 10
+retries = 5
+
+[services.postgres.volumes]
+postgres_data = "/var/lib/postgresql/data"
