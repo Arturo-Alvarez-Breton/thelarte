@@ -41,3 +41,5 @@ out/
 node_modules/
 
 CLAUDE.md.env
+
+.env
