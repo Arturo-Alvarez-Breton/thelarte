@@ -4,20 +4,30 @@ FROM openjdk:17-jdk-slim AS builder
 # Set working directory
 WORKDIR /app
 
+# Set Gradle options for better network handling and performance
+ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.configureondemand=false"
+ENV GRADLE_USER_HOME=/app/.gradle
+
 # Copy gradle wrapper and build files
 COPY gradlew .
 COPY gradle/ gradle/
 COPY build.gradle .
 COPY settings.gradle .
 
-# Make gradlew executable
-RUN chmod +x ./gradlew
+# Make gradlew executable and download dependencies with retry logic
+RUN chmod +x ./gradlew && \
+    for i in 1 2 3; do \
+        ./gradlew --version --no-daemon --console=plain && break || \
+        (echo "Gradle download attempt $i failed, retrying..." && sleep 10); \
+    done
 
 # Copy source code
 COPY src/ src/
 
-# Build the application
-RUN ./gradlew build -x test --no-daemon
+# Build the application with increased timeouts
+RUN ./gradlew build -x test --no-daemon --console=plain \
+    -Dorg.gradle.internal.http.socketTimeout=120000 \
+    -Dorg.gradle.internal.http.connectionTimeout=120000
 
 # Production stage
 FROM eclipse-temurin:17-jre-alpine
