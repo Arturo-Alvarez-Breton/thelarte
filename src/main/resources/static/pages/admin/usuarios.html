@@ -32,6 +32,57 @@
             transform: translateY(-4px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
+
+        /* Filter buttons styling */
+        .filter-btn {
+            position: relative;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background: white;
+            color: black;
+            border: 2px solid #e5e7eb;
+        }
+
+        .filter-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .filter-btn:hover:before {
+            left: 100%;
+        }
+
+        .filter-btn:hover {
+            background: #f3f4f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn.active {
+            background: #8B4513 !important; /* Light brown */
+            color: white !important;
+            border-color: #8B4513;
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .count-badge {
+            transition: all 0.3s ease;
+            animation: pulse-count 0.5s ease-in-out;
+        }
+
+        @keyframes pulse-count {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
         @media (min-width: 1280px) {
             #usuariosListContainer {
                 justify-items: center;
@@ -166,10 +217,25 @@
         <section class="p-3 md:p-4 bg-white rounded-lg shadow">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Usuarios</h2>
-                <button id="nuevoUsuarioBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base w-full sm:w-auto justify-center">
-                    <i class="fas fa-plus mr-2"></i>
-                    <span class="sm:inline">Nuevo Usuario</span>
-                </button>
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <!-- Filtro de estado -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button id="btnUsuariosActivos" class="filter-btn active px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-activos">
+                            <i class="fas fa-user-check mr-1"></i>
+                            <span class="hidden sm:inline">Activos</span>
+                            <span id="countActivos" class="count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                        <button id="btnUsuariosInactivos" class="filter-btn px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-inactivos">
+                            <i class="fas fa-user-slash mr-1"></i>
+                            <span class="hidden sm:inline">Inactivos</span>
+                            <span id="countInactivos" class="count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                    </div>
+                    <button id="nuevoUsuarioBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base justify-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        <span class="sm:inline">Nuevo Usuario</span>
+                    </button>
+                </div>
             </div>
             <div class="mb-4">
                 <input type="text" id="usuarioSearchInput" placeholder="Buscar usuarios..."

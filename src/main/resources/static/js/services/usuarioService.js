@@ -94,4 +94,44 @@ export class UsuarioService {
             throw error;
         }
     }
+    async deactivateUsuario(username) {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}/deactivate`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error deactivating usuario:', error);
+            throw error;
+        }
+    }
+    async activateUsuario(username) {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}/activate`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error activating usuario:', error);
+            throw error;
+        }
+    }
 }

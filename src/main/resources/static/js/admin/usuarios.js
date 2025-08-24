@@ -4,7 +4,9 @@ import { TableViewManager } from '../components/tableView.js';
 class UsuariosManager {
     constructor() {
         this.usuarioService = new UsuarioService();
-        this.usuarios = [];
+        this.allUsuarios = []; // Todos los usuarios (activos e inactivos)
+        this.usuariosActivos = [];
+        this.usuariosInactivos = [];
         this.filteredUsuarios = [];
         this.currentUsuario = null;
         this.currentPage = 0;
@@ -13,6 +15,7 @@ class UsuariosManager {
         this.totalUsuarios = 0;
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+        this.currentView = 'activos'; // 'activos' o 'inactivos'
 
         // Initialize table view manager
         this.tableViewManager = new TableViewManager('#usuariosListContainer', {
@@ -31,10 +34,10 @@ class UsuariosManager {
                     title: 'Editar'
                 },
                 {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'usuariosManager.deleteUsuario',
+                    icon: 'fas fa-user-slash',
+                    handler: 'usuariosManager.toggleUsuarioStatus',
                     className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
+                    title: 'Desactivar/Activar usuario'
                 }
             ],
             searchFields: ['username', 'roles'],
@@ -56,6 +59,10 @@ class UsuariosManager {
         document.getElementById('usuarioSearchInput')?.addEventListener('input', () => this.filterUsuarios());
         document.getElementById('formUsuario')?.addEventListener('submit', (e) => this.handleSubmitUsuario(e));
 
+        // Filter buttons for active/inactive users
+        document.getElementById('btnUsuariosActivos')?.addEventListener('click', () => this.switchToActiveUsers());
+        document.getElementById('btnUsuariosInactivos')?.addEventListener('click', () => this.switchToInactiveUsers());
+
         // Delegación de eventos para los botones de acción en la lista de usuarios
         document.getElementById('usuariosListContainer')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
@@ -66,7 +73,7 @@ class UsuariosManager {
             } else if (btn.classList.contains('edit-btn')) {
                 this.editUsuario(username);
             } else if (btn.classList.contains('delete-btn')) {
-                this.deleteUsuario(username);
+                this.toggleUsuarioStatus(username);
             }
         });
     }
@@ -145,33 +152,59 @@ class UsuariosManager {
     async loadUsuarios() {
         this.showLoading();
         try {
+            const busqueda = document.getElementById('usuarioSearchInput')?.value || null;
+            // Obtener todos los usuarios (activos e inactivos)
             const allUsuarios = await this.usuarioService.getUsuarios();
-            const searchValue = (document.getElementById('usuarioSearchInput')?.value || '').trim().toLowerCase();
-            let filtered = allUsuarios;
-            if (searchValue) {
-                filtered = allUsuarios.filter(u =>
-                    (u.username && u.username.toLowerCase().includes(searchValue)) ||
-                    (Array.isArray(u.roles) && u.roles.join(', ').toLowerCase().includes(searchValue)) ||
-                    (u.active !== undefined && (u.active ? 'sí' : 'no').includes(searchValue))
+
+            // Separar usuarios activos e inactivos basado en el campo 'active'
+            this.usuariosActivos = allUsuarios.filter(u => u.active !== false);
+            this.usuariosInactivos = allUsuarios.filter(u => u.active === false);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué usuarios mostrar según la vista actual
+            const currentUsuarios = this.currentView === 'activos' ? this.usuariosActivos : this.usuariosInactivos;
+
+            // Aplicar filtro de búsqueda si existe
+            let filtered = currentUsuarios;
+            if (busqueda) {
+                filtered = currentUsuarios.filter(u =>
+                    (u.username && u.username.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (Array.isArray(u.roles) && u.roles.join(', ').toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (u.active !== undefined && (u.active ? 'activo' : 'inactivo').includes(busqueda.toLowerCase()))
                 );
             }
+
+            // Configurar paginación
             this.totalUsuarios = filtered.length;
             this.totalPages = Math.ceil(this.totalUsuarios / this.usuariosPerPage) || 1;
+
+            // Aplicar paginación
             const start = this.currentPage * this.usuariosPerPage;
             const end = start + this.usuariosPerPage;
             this.filteredUsuarios = filtered.slice(start, end);
-            this.usuarios = allUsuarios;
 
-            // Update table view with all data
-            this.tableViewManager.setData(allUsuarios);
+            // Guardar referencia a todos los usuarios
+            this.allUsuarios = allUsuarios;
+
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredUsuarios);
 
             this.renderUsuarios();
             this.renderPagination();
         } catch (error) {
-            this.usuarios = [];
+            console.error('Error loading users:', error);
+            this.usuariosActivos = [];
+            this.usuariosInactivos = [];
             this.filteredUsuarios = [];
             this.totalUsuarios = 0;
             this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons(); // Also update buttons on error
             this.tableViewManager.setData([]);
             this.renderUsuarios();
             this.renderPagination();
@@ -305,6 +338,10 @@ class UsuariosManager {
     }
 
     renderMobileButtons(usuario) {
+        const isActive = usuario.active !== false;
+        const actionText = isActive ? 'Desactivar' : 'Activar';
+        const actionIcon = isActive ? 'fas fa-user-slash' : 'fas fa-user-check';
+
         return `
             <div class="space-y-2">
                 <div class="grid grid-cols-2 gap-2">
@@ -331,11 +368,11 @@ class UsuariosManager {
                     <button 
                         data-username="${usuario.username}" 
                         class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                        title="Eliminar usuario"
+                        title="${actionText} usuario"
                         type="button"
                     >
-                        <i class="fas fa-trash-alt text-xs"></i>
-                        <span>Eliminar</span>
+                        <i class="${actionIcon} text-xs"></i>
+                        <span>${actionText}</span>
                     </button>
                 </div>
             </div>
@@ -343,6 +380,10 @@ class UsuariosManager {
     }
 
     renderTabletButtons(usuario) {
+        const isActive = usuario.active !== false;
+        const actionText = isActive ? 'Desactivar' : 'Activar';
+        const actionIcon = isActive ? 'fas fa-user-slash' : 'fas fa-user-check';
+
         return `
             <div class="flex flex-wrap gap-1.5 justify-center">
                 <button 
@@ -366,17 +407,21 @@ class UsuariosManager {
                 <button 
                     data-username="${usuario.username}" 
                     class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
-                    title="Eliminar usuario"
+                    title="${actionText} usuario"
                     type="button"
                 >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Del</span>
+                    <i class="${actionIcon}"></i>
+                    <span>${isActive ? 'Des.' : 'Act.'}</span>
                 </button>
             </div>
         `;
     }
 
     renderDesktopButtons(usuario) {
+        const isActive = usuario.active !== false;
+        const actionText = isActive ? 'Desactivar' : 'Activar';
+        const actionIcon = isActive ? 'fas fa-user-slash' : 'fas fa-user-check';
+
         return `
             <div class="flex flex-wrap gap-2">
                 <button 
@@ -400,11 +445,11 @@ class UsuariosManager {
                 <button 
                     data-username="${usuario.username}" 
                     class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Eliminar usuario"
+                    title="${actionText} usuario"
                     type="button"
                 >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Eliminar</span>
+                    <i class="${actionIcon}"></i>
+                    <span>${actionText}</span>
                 </button>
             </div>
         `;
@@ -498,7 +543,7 @@ class UsuariosManager {
     }
 
     async verUsuario(username) {
-        const usuario = this.usuarios.find(u => u.username === username);
+        const usuario = this.allUsuarios.find(u => u.username === username);
         if (!usuario) {
             window.showToast('Usuario no encontrado.', 'error');
             return;
@@ -530,6 +575,14 @@ class UsuariosManager {
                     <label class="block text-sm font-medium text-gray-700">Rol</label>
                     <p class="mt-1 text-sm text-gray-900">${Array.isArray(usuario.roles) ? usuario.roles.join(', ') : (usuario.roles || 'N/A')}</p>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Estado</label>
+                    <p class="mt-1 text-sm text-gray-900">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${usuario.active !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${usuario.active !== false ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </p>
+                </div>
                 ${empleadoHtml}
                 <!--<div class="flex justify-end mt-6">
                     <button onclick="usuariosManager.editUsuario('${usuario.username}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
@@ -544,7 +597,7 @@ class UsuariosManager {
     }
 
     async editUsuario(username) {
-        const usuario = this.usuarios.find(u => u.username === username);
+        const usuario = this.allUsuarios.find(u => u.username === username);
         if (!usuario) {
             window.showToast('Usuario no encontrado.', 'error');
             return;
@@ -559,14 +612,24 @@ class UsuariosManager {
         document.getElementById('modalUsuario').classList.remove('hidden');
     }
 
-    async deleteUsuario(username) {
-        if (!confirm(`¿Estás seguro de que deseas eliminar el usuario "${username}"?`)) return;
+    async toggleUsuarioStatus(username) {
+        const usuario = this.allUsuarios.find(u => u.username === username);
+        if (!usuario) {
+            window.showToast('Usuario no encontrado.', 'error');
+            return;
+        }
         try {
-            await this.usuarioService.deleteUsuario(username);
-            window.showToast('Usuario eliminado exitosamente.', 'success');
-            await this.loadUsuarios();
+            // Toggle status
+            const newStatus = usuario.active === false;
+            await this.usuarioService.updateUsuario(username, { active: newStatus });
+
+            // Update local data
+            usuario.active = newStatus;
+
+            window.showToast(`Usuario ${newStatus ? 'activado' : 'desactivado'} exitosamente.`, 'success');
+            this.loadUsuarios();
         } catch (error) {
-            window.showToast('Error al eliminar el usuario.', 'error');
+            window.showToast('Error al cambiar estado del usuario.', 'error');
         }
     }
 
@@ -664,6 +727,91 @@ class UsuariosManager {
                     </button>
                 </div>
             `;
+        }
+    }
+
+    switchToActiveUsers() {
+        if (this.currentView === 'activos') return;
+
+        this.currentView = 'activos';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar usuarios activos
+        this.loadUsuarios();
+    }
+
+    switchToInactiveUsers() {
+        if (this.currentView === 'inactivos') return;
+
+        this.currentView = 'inactivos';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar usuarios inactivos
+        this.loadUsuarios();
+    }
+
+    updateCounters() {
+        // Actualizar contadores en los botones con animación
+        const countActivos = document.getElementById('countActivos');
+        const countInactivos = document.getElementById('countInactivos');
+
+        if (countActivos) {
+            // Trigger animation by removing and re-adding the class
+            countActivos.classList.remove('count-badge');
+            countActivos.textContent = this.usuariosActivos.length;
+            // Force reflow
+            countActivos.offsetHeight;
+            countActivos.classList.add('count-badge');
+        }
+
+        if (countInactivos) {
+            // Trigger animation by removing and re-adding the class
+            countInactivos.classList.remove('count-badge');
+            countInactivos.textContent = this.usuariosInactivos.length;
+            // Force reflow
+            countInactivos.offsetHeight;
+            countInactivos.classList.add('count-badge');
+        }
+    }
+
+    updateFilterButtons() {
+        const btnActivos = document.getElementById('btnUsuariosActivos');
+        const btnInactivos = document.getElementById('btnUsuariosInactivos');
+
+        if (this.currentView === 'activos') {
+            // Activos seleccionado: agregar clase active, quitar de inactivos
+            btnActivos.classList.add('active');
+            btnInactivos.classList.remove('active');
+
+            // Contadores - activos tiene badge blanco, inactivos gris
+            const countActivos = btnActivos.querySelector('#countActivos');
+            const countInactivos = btnInactivos.querySelector('#countInactivos');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countInactivos) {
+                countInactivos.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+        } else {
+            // Inactivos seleccionado: agregar clase active, quitar de activos
+            btnActivos.classList.remove('active');
+            btnInactivos.classList.add('active');
+
+            // Contadores - inactivos tiene badge blanco, activos gris
+            const countActivos = btnActivos.querySelector('#countActivos');
+            const countInactivos = btnInactivos.querySelector('#countInactivos');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countInactivos) {
+                countInactivos.className = 'count-badge ml-1 bg-white text-red-600 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
         }
     }
 }
