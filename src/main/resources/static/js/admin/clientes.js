@@ -690,7 +690,7 @@ class ClientesManager {
         }
     }
 
-    editarClienteDesdeDetalle() {
+    editarClienteDesdeDetalle(editarClienteDesdeDetalle) {
         if (this.currentCliente) {
             this.cerrarModalVerCliente();
             this.editCliente(this.currentCliente.cedula);

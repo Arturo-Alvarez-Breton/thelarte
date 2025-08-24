@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contabilidad - Suplidores</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/22.0.2/css/intlTelInput.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,79 +23,194 @@
         }
     </script>
     <style>
-        .suplidor-card {transition: all .3s ease; max-width:480px;}
-        .suplidor-card:hover {transform: translateY(-4px); box-shadow:0 8px 25px rgba(0,0,0,.15)}
-        @media (min-width:1280px){#suplidoresListContainer{justify-items:center;gap:1rem}}
-        @media (min-width:1080px){#suplidoresListContainer{gap:.75rem!important}}
-        @media (min-width:1536px){#suplidoresListContainer{gap:2rem}.suplidor-card{max-width:420px}}
-        @media (min-width:1920px){#suplidoresListContainer{gap:1.5rem}.suplidor-card{max-width:480px}}
-        .loading-spinner{animation:spin 1s linear infinite}
-        @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        /* Supplier card hover effects and desktop optimizations */
+        .suplidor-card {
+            transition: all 0.3s ease;
+            max-width: 480px;
+        }
+        .suplidor-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* Ensure consistent grid layout across all screen sizes */
+        @media (min-width: 1280px) {
+            #suplidoresListContainer {
+                justify-items: center;
+                gap: 1rem;
+            }
+        }
+        @media (min-width: 1080px) {
+            #suplidoresListContainer {
+                gap: 0.75rem !important;
+            }
+        }
+        @media (min-width: 1536px) {
+            #suplidoresListContainer {
+                gap: 2rem;
+            }
+            .suplidor-card {
+                max-width: 420px;
+            }
+        }
+
+        /* Ultra-wide screen optimization */
+        @media (min-width: 1920px) {
+            #suplidoresListContainer {
+                gap: 1.5rem;
+            }
+            .suplidor-card {
+                max-width: 480px;
+            }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="flex h-screen bg-gray-100 overflow-x-hidden">
-<!-- Overlay móvil -->
+<!-- Mobile Sidebar Overlay -->
 <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
 <!-- Sidebar -->
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
-    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300"><i class="fas fa-times text-xl"></i></button>
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
     <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
     <nav class="flex-1">
         <ul class="space-y-2">
-            <li><a href="/pages/admin/index.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-home w-6 h-6"></i><span class="ml-3">Inicio Admin</span></a></li>
-            <li><a href="/pages/admin/clientes.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-users w-6 h-6"></i><span class="ml-3">Clientes</span></a></li>
-            <li><a href="/pages/admin/empleados.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-briefcase w-6 h-6"></i><span class="ml-3">Empleados</span></a></li>
-            <li><a href="/pages/admin/usuarios.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fa-regular fa-user w-6 h-6"></i><span class="ml-3">Usuarios</span></a></li>
-            <li><a href="/pages/admin/suplidores.html" class="group flex items-center p-2 rounded-lg bg-brand-light-brown"><i class="fas fa-truck w-6 h-6"></i><span class="ml-3">Suplidores</span></a></li>
-            <li><a href="/pages/admin/transacciones.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-exchange-alt w-6 h-6"></i><span class="ml-3">Transacciones</span></a></li>
-            <li><a href="/pages/admin/productos.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-box-open w-6 h-6"></i><span class="ml-3">Productos</span></a></li>
-            <li><a href="/pages/admin/reportes.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-chart-line w-6 h-6"></i><span class="ml-3">Reportes</span></a></li>
-            <li><a href="/pages/admin/config.html" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-cog w-6 h-6"></i><span class="ml-3">Configuración</span></a></li>
+            <li>
+                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-home flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Inicio Admin</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-users flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Clientes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/empleados.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-briefcase flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Empleados</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/usuarios.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fa-regular fa-user flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Usuarios</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-truck flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Suplidores</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/reportes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-chart-line flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Reportes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-cog flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Configuración</span>
+                </a>
+            </li>
         </ul>
     </nav>
-    <div class="mt-auto"><a href="#" id="logoutBtn" class="group flex items-center p-2 rounded-lg hover:bg-brand-light-brown"><i class="fas fa-sign-out-alt w-6 h-6"></i><span class="ml-3">Cerrar Sesión</span></a></div>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6"></i>
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
+    </div>
 </aside>
-<!-- Contenido principal -->
-<div class="flex-1 flex flex-col min-w-0">
+
+<!-- Main content -->
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
     <header class="bg-white shadow p-2 md:p-4 flex justify-between items-center">
+        <!-- Mobile hamburger menu -->
         <div class="flex items-center">
-            <button id="hamburgerBtn" class="lg:hidden mr-3 text-gray-600 hover:text-gray-900"><i class="fas fa-bars text-xl"></i></button>
+            <button id="hamburgerBtn" class="lg:hidden mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
             <div>
                 <h1 class="text-lg md:text-2xl font-bold text-gray-800">Suplidores</h1>
                 <p class="text-xs md:text-sm text-gray-600 hidden sm:block">Gestión de proveedores y suplidores.</p>
             </div>
         </div>
         <div class="flex space-x-2">
-            <button id="nuevoSuplidorBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base"><i class="fas fa-plus mr-2"></i><span>Nuevo</span></button>
+            <button id="nuevoSuplidorBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base">
+                <i class="fas fa-plus mr-2"></i><span>Nuevo</span>
+            </button>
         </div>
     </header>
+
     <main class="flex-1 p-2 md:p-4 overflow-auto">
         <section class="p-3 md:p-4 bg-white rounded-lg shadow">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Suplidores</h2>
                 <div class="w-full sm:w-auto"></div>
             </div>
-            <div class="mb-4"><input id="suplidorSearchInput" type="text" placeholder="Buscar suplidores..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base" /></div>
-            <div id="suplidoresListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3"></div>
+            <div class="mb-4">
+                <input id="suplidorSearchInput" type="text" placeholder="Buscar suplidores..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base" />
+            </div>
+            <div id="suplidoresListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
+                <!-- Suppliers will be loaded here -->
+            </div>
             <div id="suplidoresPagination" class="flex justify-center mt-6"></div>
         </section>
     </main>
 </div>
-<!-- Modales existentes conservados -->
+
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
 <!-- Modal Nuevo/Editar Suplidor -->
 <div id="modalSuplidor" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div class="bg-brand-brown text-white p-6">
+    <div class="flex items-center justify-center min-h-screen p-2 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="bg-brand-brown text-white p-4 md:p-6">
                 <div class="flex items-center justify-between">
-                    <h3 id="modalSuplidorTitle" class="text-xl font-bold">Nuevo Suplidor</h3>
+                    <h3 id="modalSuplidorTitle" class="text-lg md:text-xl font-bold">Nuevo Suplidor</h3>
                     <button onclick="cerrarModalSuplidor()" class="text-white hover:text-gray-300">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
             </div>
 
-            <form id="formSuplidor" class="p-6 space-y-4" novalidate>
+            <form id="formSuplidor" class="p-4 md:p-6 space-y-4" novalidate>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="suplidorNombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Suplidor *</label>
@@ -165,11 +281,11 @@
                 </div>
             </form>
 
-            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                <button type="button" onclick="cerrarModalSuplidor()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+            <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
+                <button type="button" onclick="cerrarModalSuplidor()" class="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
                     Cancelar
                 </button>
-                <button type="submit" form="formSuplidor" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
+                <button type="submit" form="formSuplidor" class="w-full sm:w-auto px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
                     <i id="btnSuplidorIcon" class="fas fa-plus mr-2"></i>
                     <span id="btnSuplidorText">Crear Suplidor</span>
                 </button>
@@ -180,34 +296,33 @@
 
 <!-- Modal Ver Suplidor -->
 <div id="modalVerSuplidor" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div class="bg-brand-brown text-white p-6">
+    <div class="flex items-center justify-center min-h-screen p-2 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="bg-brand-brown text-white p-4 md:p-6">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-xl font-bold">Detalles del Suplidor</h3>
+                    <h3 class="text-lg md:text-xl font-bold">Detalles del Suplidor</h3>
                     <button onclick="cerrarModalVerSuplidor()" class="text-white hover:text-gray-300">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="p-6" id="detallesSuplidor">
+            <div class="p-4 md:p-6" id="detallesSuplidor">
                 <!-- Se llenará dinámicamente -->
             </div>
 
-            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
-                <button id="btnEditarDesdeDetalle" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <i class="fas fa-edit mr-2"></i>
-                    Editar
-                </button>
-                <button onclick="cerrarModalVerSuplidor()" class="px-4 py-2 text-blue-600 hover:text-blue-800 border border-blue-300 rounded-lg">
+            <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
+<!--                <button id="btnEditarDesdeDetalle" class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">-->
+<!--                    <i class="fas fa-edit mr-2"></i>-->
+<!--                    Editar-->
+<!--                </button>-->
+                <button onclick="cerrarModalVerSuplidor()" class="w-full sm:w-auto px-4 py-2 bg-brand-brown text-white hover:bg-brand-light-brown transition-colors rounded-lg">
                     Cerrar
                 </button>
             </div>
         </div>
     </div>
 </div>
-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/22.0.2/js/intlTelInput.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/22.0.2/js/utils.min.js"></script>

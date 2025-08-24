@@ -9,8 +9,12 @@ class SuplidoresManager {
         this.suplidores = [];
         this.filteredSuplidores = [];
         this.currentPage = 0;
-        this.suplidoresPerPage = 10;
+        this.suplidoresPerPage = 15; // Increased from 10 to 15 like clients
+        this.totalPages = 1;
+        this.totalSuplidores = 0;
         this.currentSuplidor = null;
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
         // Geo cache
         this.countries = [];
@@ -19,30 +23,9 @@ class SuplidoresManager {
         // Tel input instances
         this.telInputs = new Map(); // Map<HTMLInputElement, intlTelInputInstance>
 
-        // Initialize table view manager
+        // Initialize table view manager with responsive columns
         this.tableViewManager = new TableViewManager('#suplidoresListContainer', {
-            columns: [
-                { header: 'Nombre', field: 'nombre' },
-                {
-                    header: 'Ubicación',
-                    field: 'ciudad',
-                    formatter: (value, item) => {
-                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
-                    }
-                },
-                { header: 'RNC', field: 'rNC', formatter: (value) => value || 'N/A' },
-                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
-                {
-                    header: 'Teléfono',
-                    field: 'telefonos',
-                    formatter: (value) => {
-                        if (value && Array.isArray(value) && value.length > 0) {
-                            return value[0];
-                        }
-                        return 'N/A';
-                    }
-                }
-            ],
+            columns: this.getResponsiveColumns(),
             actions: [
                 {
                     icon: 'fas fa-eye',
@@ -71,8 +54,51 @@ class SuplidoresManager {
         this.init();
     }
 
+    getResponsiveColumns() {
+        const isVerticalScreen = window.innerHeight > window.innerWidth;
+
+        if (isVerticalScreen || this.isMobile) {
+            // Vertical screen or mobile: only show name and location
+            return [
+                {
+                    header: 'Suplidor',
+                    field: 'nombre',
+                    formatter: (value, item) => {
+                        const ubicacion = [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
+                        return `${value}<br><small class="text-gray-500">${ubicacion}</small>`;
+                    }
+                }
+            ];
+        } else {
+            // Horizontal screen: show all info
+            return [
+                { header: 'Nombre', field: 'nombre' },
+                {
+                    header: 'Ubicación',
+                    field: 'ciudad',
+                    formatter: (value, item) => {
+                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
+                    }
+                },
+                { header: 'RNC', field: 'rNC', formatter: (value) => value || 'N/A' },
+                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
+                {
+                    header: 'Teléfono',
+                    field: 'telefonos',
+                    formatter: (value) => {
+                        if (value && Array.isArray(value) && value.length > 0) {
+                            return value[0];
+                        }
+                        return 'N/A';
+                    }
+                }
+            ];
+        }
+    }
+
     async init() {
         this.setupEventListeners();
+        this.setupResponsiveHandlers();
         await this.loadCountries();
         await this.loadSuplidores();
     }
@@ -136,6 +162,77 @@ class SuplidoresManager {
             this.initTelInput(input, iso2);
         };
         window.eliminarTelefono = (button) => this.eliminarTelefono(button);
+    }
+
+    setupResponsiveHandlers() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                this.closeMobileSidebar();
+            }
+        });
+    }
+
+    toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+
+        // Prevent body scroll when sidebar is open
+        document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+    }
+
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    handleWindowResize() {
+        const wasTablet = this.isTablet;
+        const wasMobile = this.isMobile;
+
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+        // Close mobile sidebar on desktop resize
+        if (window.innerWidth >= 1024) {
+            this.closeMobileSidebar();
+        }
+
+        // Update table columns based on screen orientation
+        this.tableViewManager.updateColumns(this.getResponsiveColumns());
+
+        // Re-render suppliers if breakpoint changed significantly
+        if ((wasMobile !== this.isMobile) || (wasTablet !== this.isTablet)) {
+            this.renderSuplidores();
+        }
     }
 
     // ---------------- GEO ----------------
@@ -282,16 +379,30 @@ class SuplidoresManager {
         this.showLoading();
         try {
             const searchTerm = document.getElementById('suplidorSearchInput')?.value || null;
-            this.suplidores = await this.transaccionService.getSuplidores(searchTerm);
+            // Get all filtered suppliers
+            const allSuplidores = await this.transaccionService.getSuplidores(searchTerm);
+            this.totalSuplidores = allSuplidores.length;
+            this.totalPages = Math.ceil(this.totalSuplidores / this.suplidoresPerPage);
+            // Paginate on frontend
+            const start = this.currentPage * this.suplidoresPerPage;
+            const end = start + this.suplidoresPerPage;
+            this.suplidores = allSuplidores.slice(start, end);
             this.filteredSuplidores = [...this.suplidores];
 
             // Update table view with all data
-            this.tableViewManager.setData(this.suplidores);
+            this.tableViewManager.setData(allSuplidores);
 
             this.renderSuplidores();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading suppliers:', error);
-            window.showToast?.('Error al cargar los suplidores.', 'error');
+            this.suplidores = [];
+            this.filteredSuplidores = [];
+            this.totalSuplidores = 0;
+            this.totalPages = 1;
+            this.tableViewManager.setData([]);
+            this.renderSuplidores();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -307,18 +418,18 @@ class SuplidoresManager {
                 `No se encontraron suplidores que coincidan con "${searchTerm}".` :
                 'No hay suplidores registrados.';
             container.innerHTML = `
-                <div class="text-center py-12 col-span-full">
-                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-truck text-3xl text-gray-400"></i>
+                <div class="text-center py-8 md:py-12 col-span-full">
+                    <div class="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-truck text-2xl md:text-3xl text-gray-400"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin suplidores</h3>
-                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                    <h3 class="text-base md:text-lg font-medium text-gray-900 mb-2">Sin suplidores</h3>
+                    <p class="text-gray-600 mb-4 md:mb-6 text-sm md:text-base px-4">${emptyMessage}</p>
                     ${!searchTerm ? `
-                        <button onclick="suplidoresManager.newSuplidor()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <button onclick="suplidoresManager.newSuplidor()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-plus mr-2"></i>Agregar Primer Suplidor
                         </button>
                     ` : `
-                        <button onclick="document.getElementById('suplidorSearchInput').value = ''; suplidoresManager.filterSuplidores();" class="text-brand-brown hover:text-brand-light-brown">
+                        <button onclick="document.getElementById('suplidorSearchInput').value = ''; suplidoresManager.filterSuplidores();" class="text-brand-brown hover:text-brand-light-brown text-sm md:text-base">
                             <i class="fas fa-times mr-2"></i>Limpiar búsqueda
                         </button>
                     `}
@@ -327,44 +438,248 @@ class SuplidoresManager {
             return;
         }
 
-        function truncate(str, max) {
-            if (!str) return '';
-            return str.length > max ? str.slice(0, max - 1) + '…' : str;
-        }
+        container.innerHTML = this.filteredSuplidores.map(suplidor => this.renderSuplidorCard(suplidor)).join('');
+    }
 
-        container.innerHTML = this.filteredSuplidores.map(s => {
-            const ubicacion = [s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A';
-            const ubicacionTrunc = truncate(ubicacion, 24);
-            const emailTrunc = truncate(s.email || 'N/A', 24);
-            return `
-                <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto">
-                    <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
-                        <i class='fas fa-truck text-brand-brown'></i> 
-                        ${truncate(s.nombre, 32)}
-                    </h3>
-                    <div class="space-y-2 text-sm text-gray-600 mb-4">
-                        <p title="${ubicacion}"><i class="fas fa-map-marker-alt w-4"></i> ${ubicacionTrunc}</p>
-                        <p title="${s.email || ''}"><i class="fas fa-envelope w-4"></i> ${emailTrunc}</p>
-                        ${s.telefonos && s.telefonos.length > 0 ?
-            `<p><i class="fas fa-phone w-4"></i> ${truncate(s.telefonos[0], 20)}</p>` :
-            '<p><i class="fas fa-phone w-4"></i> Sin teléfono</p>'
-        }
+    renderSuplidorCard(suplidor) {
+        // Adaptive button rendering based on screen size
+        const buttonsHtml = this.isMobile ? this.renderMobileButtons(suplidor) :
+                           this.isTablet ? this.renderTabletButtons(suplidor) :
+                           this.renderDesktopButtons(suplidor);
+
+        const ubicacion = [suplidor.ciudad, suplidor.pais].filter(Boolean).join(', ') || 'N/A';
+        const ubicacionTrunc = this.truncate(ubicacion, 24);
+        const emailTrunc = this.truncate(suplidor.email || 'N/A', 24);
+
+        return `
+            <div class="suplidor-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[220px] 
+                sm:min-h-[240px] md:min-h-[260px] lg:min-h-[280px] xl:min-h-[300px] 
+                ${this.isMobile ? 'max-w-full' : 'max-w-[420px] xl:max-w-[480px]'}
+                ">
+                <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-5">
+                    <div class="flex items-start justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900 truncate max-w-[70%] flex items-center gap-2">
+                            <i class='fas fa-truck text-brand-brown'></i>
+                            ${this.truncate(suplidor.nombre, 28)}
+                        </h3>
                     </div>
-                    <div class="flex flex-wrap gap-2 mt-auto">
-                        <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
-                            <i class="fas fa-eye"></i> Detalles
-                        </button>
-                        <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button data-id="${s.id}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs">
-                            <i class="fas fa-trash-alt"></i> 
-                            <span>Eliminar</span>
-                        </button>
+                    <div class="flex-1 flex flex-col gap-2 mt-1">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs" title="${ubicacion}">${ubicacionTrunc}</span>
+                        </div>
+                        ${!this.isMobile ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs" title="${suplidor.email || ''}">${emailTrunc}</span>
+                        </div>
+                        ${suplidor.telefonos && suplidor.telefonos.length > 0 ? `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </span>
+                            <span class="truncate text-xs">${this.truncate(suplidor.telefonos[0], 20)}</span>
+                        </div>
+                        ` : `
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="w-5 h-5 flex items-center justify-center mr-2 flex-shrink-0">
+                                <i class="fas fa-phone text-gray-400"></i>
+                            </span>
+                            <span class="text-xs">Sin teléfono</span>
+                        </div>
+                        `}
+                        ` : ''}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-100">
+                        ${buttonsHtml}
                     </div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `;
+    }
+
+    renderMobileButtons(suplidor) {
+        return `
+            <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                        title="Ver detalles"
+                        type="button"
+                    >
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver</span>
+                    </button>
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="edit-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        title="Editar suplidor"
+                        type="button"
+                    >
+                        <i class="fas fa-edit text-xs"></i>
+                        <span>Editar</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        title="Eliminar suplidor"
+                        type="button"
+                    >
+                        <i class="fas fa-trash-alt text-xs"></i>
+                        <span>Eliminar</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTabletButtons(suplidor) {
+        return `
+            <div class="flex flex-wrap gap-1.5 justify-center">
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="edit-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
+                    title="Editar suplidor"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Edit</span>
+                </button>
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
+                    title="Eliminar suplidor"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Del</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderDesktopButtons(suplidor) {
+        return `
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                    title="Ver detalles"
+                    type="button"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Detalles</span>
+                </button>
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Editar suplidor"
+                    type="button"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span>Editar</span>
+                </button>
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
+                    title="Eliminar suplidor"
+                    type="button"
+                >
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Eliminar</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderPagination() {
+        let pagContainer = document.getElementById('suplidoresPagination');
+        if (!pagContainer) {
+            pagContainer = document.createElement('div');
+            pagContainer.id = 'suplidoresPagination';
+            pagContainer.className = 'flex justify-center mt-6';
+            document.getElementById('suplidoresListContainer').after(pagContainer);
+        }
+
+        if (this.totalPages <= 1) {
+            pagContainer.innerHTML = '';
+            return;
+        }
+
+        let html = '<nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">';
+
+        // Previous button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-l-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === 0 ? 'disabled' : ''} data-page="prev">&laquo;</button>`;
+
+        // Page numbers - responsive display
+        if (this.isMobile) {
+            // Mobile: only show current page
+            html += `<span class="px-3 py-1 border-t border-b border-gray-300 bg-brand-brown text-white font-medium text-sm">${this.currentPage + 1} / ${this.totalPages}</span>`;
+        } else if (this.isTablet) {
+            // Tablet: show limited page numbers
+            const maxPages = 3;
+            let startPage = Math.max(0, this.currentPage - 1);
+            let endPage = Math.min(this.totalPages - 1, startPage + maxPages - 1);
+
+            if (endPage - startPage < maxPages - 1) {
+                startPage = Math.max(0, endPage - maxPages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="px-2 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
+        } else {
+            // Desktop: show all page numbers (up to reasonable limit)
+            const maxDisplayPages = Math.min(this.totalPages, 10);
+            for (let i = 0; i < maxDisplayPages; i++) {
+                html += `<button class="px-3 py-1 border-t border-b border-gray-300 bg-white text-brand-brown hover:bg-brand-light-brown hover:text-white font-medium text-sm ${i === this.currentPage ? 'bg-brand-brown text-white' : ''}" data-page="${i}">${i + 1}</button>`;
+            }
+        }
+
+        // Next button
+        html += `<button class="px-2 md:px-3 py-1 border border-gray-300 bg-white text-brand-brown rounded-r-lg hover:bg-brand-light-brown hover:text-white font-medium disabled:opacity-50 text-sm" ${this.currentPage === this.totalPages - 1 ? 'disabled' : ''} data-page="next">&raquo;</button>`;
+        html += '</nav>';
+
+        pagContainer.innerHTML = html;
+        pagContainer.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.onclick = (e) => {
+                const val = btn.getAttribute('data-page');
+                if (val === 'prev' && this.currentPage > 0) {
+                    this.currentPage--;
+                    this.loadSuplidores();
+                } else if (val === 'next' && this.currentPage < this.totalPages - 1) {
+                    this.currentPage++;
+                    this.loadSuplidores();
+                } else if (!isNaN(val)) {
+                    const page = parseInt(val);
+                    if (page !== this.currentPage) {
+                        this.currentPage = page;
+                        this.loadSuplidores();
+                    }
+                }
+            };
+        });
+    }
+
+    truncate(str, max) {
+        if (!str) return '';
+        return str.length > max ? str.slice(0, max - 1) + '…' : str;
     }
 
     filterSuplidores() {
@@ -373,6 +688,43 @@ class SuplidoresManager {
         this.currentPage = 0;
         this.loadSuplidores();
     }
+
+    showLoading() {
+        const container = document.getElementById('suplidoresListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-600 font-medium">Consultando información de suplidores...</p>
+                    <p class="text-gray-500 text-sm mt-2">Un momento, por favor</p>
+                </div>
+            `;
+        }
+    }
+
+    hideLoading() {
+        // Content will replace the loading spinner, no need for explicit hiding
+    }
+
+    showError(message) {
+        const container = document.getElementById('suplidoresListContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <button onclick="suplidoresManager.loadSuplidores()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        <i class="fas fa-refresh mr-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // ---------------- FORMULARIO ----------------
 
     newSuplidor() {
         this.currentSuplidor = null;
@@ -692,12 +1044,6 @@ class SuplidoresManager {
             window.showToast?.('Error al eliminar el suplidor.', 'error');
         }
     }
-
-    showLoading() {
-        document.getElementById('suplidoresListContainer').innerHTML = '<div class="flex items-center justify-center py-12 col-span-full"><div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div></div>';
-    }
-
-    hideLoading() { }
 }
 
 const suplidoresManager = new SuplidoresManager();
