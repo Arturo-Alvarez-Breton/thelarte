@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: thelarte-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte_user -d thelarte"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - thelarte-network
+
+  # Spring Boot Application
+  app:
+    build: .
+    container_name: thelarte-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: thelarte
+      DB_USERNAME: thelarte_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_uploads:/app/uploads
+    networks:
+      - thelarte-network
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  thelarte-network:
+    driver: bridge

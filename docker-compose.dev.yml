@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  postgres:
+    image: postgres:15-alpine
+    container_name: thelarte-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte_user
+      POSTGRES_PASSWORD: thelarte123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte_user -d thelarte"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - thelarte-dev-network
+
+  # Spring Boot Application
+  app:
+    build: .
+    container_name: thelarte-app-dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: thelarte
+      DB_USERNAME: thelarte_user
+      POSTGRES_PASSWORD: thelarte123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SPRING_JPA_SHOW_SQL: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_uploads:/app/uploads
+      - ./src:/app/src  # Enable live reload during development
+    networks:
+      - thelarte-dev-network
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  thelarte-dev-network:
+    driver: bridge
