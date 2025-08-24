@@ -36,6 +36,9 @@ public class Empleado {
     @Column(name = "fecha_contratacion", nullable = false)
     private LocalDate fechaContratacion;
 
+    @Column(name = "deleted", nullable = false)
+    private Boolean deleted = false;
+
     public Empleado() {
         // JPA requires a no-arg constructor
     }
@@ -122,10 +125,25 @@ public class Empleado {
         this.fechaContratacion = fechaContratacion;
     }
 
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public boolean isDeleted() {
+        return deleted != null && deleted;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.fechaContratacion == null) {
             this.fechaContratacion = LocalDate.now();
+        }
+        if (this.deleted == null) {
+            this.deleted = false;
         }
     }
 }

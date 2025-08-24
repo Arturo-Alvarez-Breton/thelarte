@@ -4,15 +4,18 @@ import { TableViewManager } from '../components/tableView.js';
 class EmpleadosManager {
     constructor() {
         this.empleadoService = new EmpleadoService();
-        this.empleados = [];
+        this.allEmpleados = []; // Todos los empleados (activos y eliminados)
+        this.empleadosActivos = [];
+        this.empleadosEliminados = [];
         this.filteredEmpleados = [];
         this.currentPage = 0;
-        this.empleadosPerPage = 15; // Changed to match clients
+        this.empleadosPerPage = 15;
         this.totalPages = 1;
         this.totalEmpleados = 0;
         this.currentEmpleado = null;
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+        this.currentView = 'activos'; // 'activos' o 'eliminados'
 
         // Initialize table view manager with responsive columns
         this.tableViewManager = new TableViewManager('#empleadosListContainer', {
@@ -89,20 +92,25 @@ class EmpleadosManager {
         document.getElementById('nuevoEmpleadoBtn')?.addEventListener('click', () => this.newEmpleado());
         document.getElementById('empleadoSearchInput')?.addEventListener('input', () => this.filterEmpleados());
         document.getElementById('formEmpleado')?.addEventListener('submit', (e) => this.handleSubmitEmpleado(e));
+
+        // Filter buttons for active/deleted employees
+        document.getElementById('btnEmpleadosActivos')?.addEventListener('click', () => this.switchToActiveEmpleados());
+        document.getElementById('btnEmpleadosEliminados')?.addEventListener('click', () => this.switchToDeletedEmpleados());
+
+        // Event delegation for action buttons
         document.getElementById('empleadosListContainer')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
+            const cedula = btn.getAttribute('data-cedula');
             if (btn.classList.contains('ver-btn')) {
-                const cedula = btn.dataset.cedula;
                 this.verEmpleado(cedula);
             } else if (btn.classList.contains('edit-btn')) {
-                const cedula = btn.dataset.cedula;
                 this.editEmpleado(cedula);
             } else if (btn.classList.contains('delete-btn')) {
-                const cedula = btn.dataset.cedula;
                 this.deleteEmpleado(cedula);
             }
         });
+
         // Arreglo: Añade el event listener al botón del modal de detalles aquí (mejor que usar onclick)
         document.getElementById('btnEditarDesdeDetalle')?.addEventListener('click', () => this.editarEmpleadoDesdeDetalle());
     }
@@ -185,41 +193,136 @@ class EmpleadosManager {
     async loadEmpleados() {
         this.showLoading();
         try {
-            const allEmpleados = await this.empleadoService.getEmpleados();
-            const searchValue = (document.getElementById('empleadoSearchInput')?.value || '').trim().toLowerCase();
-            let filtered = allEmpleados;
-            if (searchValue) {
-                filtered = allEmpleados.filter(emp =>
-                    (emp.nombre && emp.nombre.toLowerCase().includes(searchValue)) ||
-                    (emp.apellido && emp.apellido.toLowerCase().includes(searchValue)) ||
-                    (emp.cedula && emp.cedula.toLowerCase().includes(searchValue)) ||
-                    (emp.rol && emp.rol.toLowerCase().includes(searchValue)) ||
-                    (emp.email && emp.email.toLowerCase().includes(searchValue))
-                );
-            }
-            this.totalEmpleados = filtered.length;
-            this.totalPages = Math.ceil(this.totalEmpleados / this.empleadosPerPage) || 1;
+            const busqueda = document.getElementById('empleadoSearchInput')?.value || null;
+            // Obtener todos los empleados (activos y eliminados)
+            const allEmpleados = await this.empleadoService.getTodosLosEmpleados(busqueda);
+
+            // Separar empleados activos y eliminados basado en el campo 'deleted'
+            this.empleadosActivos = allEmpleados.filter(e => !e.deleted);
+            this.empleadosEliminados = allEmpleados.filter(e => e.deleted);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué empleados mostrar según la vista actual
+            const currentEmpleados = this.currentView === 'activos' ? this.empleadosActivos : this.empleadosEliminados;
+
+            // Configurar paginación
+            this.totalEmpleados = currentEmpleados.length;
+            this.totalPages = Math.ceil(this.totalEmpleados / this.empleadosPerPage);
+
+            // Aplicar paginación
             const start = this.currentPage * this.empleadosPerPage;
             const end = start + this.empleadosPerPage;
-            this.filteredEmpleados = filtered.slice(start, end);
-            this.empleados = allEmpleados;
+            this.filteredEmpleados = currentEmpleados.slice(start, end);
 
-            // Update table view with all data
-            this.tableViewManager.setData(allEmpleados);
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredEmpleados);
 
             this.renderEmpleados();
             this.renderPagination();
         } catch (error) {
             console.error('Error loading empleados:', error);
-            this.empleados = [];
+            this.empleadosActivos = [];
+            this.empleadosEliminados = [];
             this.filteredEmpleados = [];
             this.totalEmpleados = 0;
             this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons();
             this.tableViewManager.setData([]);
             this.renderEmpleados();
             this.renderPagination();
         } finally {
             this.hideLoading();
+        }
+    }
+
+    updateCounters() {
+        // Actualizar contadores en los botones con animación
+        const countActivos = document.getElementById('countActivosEmpleados');
+        const countEliminados = document.getElementById('countEliminadosEmpleados');
+
+        if (countActivos) {
+            // Trigger animation by removing and re-adding the class
+            countActivos.classList.remove('count-badge');
+            countActivos.textContent = this.empleadosActivos.length;
+            // Force reflow
+            countActivos.offsetHeight;
+            countActivos.classList.add('count-badge');
+        }
+
+        if (countEliminados) {
+            // Trigger animation by removing and re-adding the class
+            countEliminados.classList.remove('count-badge');
+            countEliminados.textContent = this.empleadosEliminados.length;
+            // Force reflow
+            countEliminados.offsetHeight;
+            countEliminados.classList.add('count-badge');
+        }
+    }
+
+    switchToActiveEmpleados() {
+        if (this.currentView === 'activos') return;
+
+        this.currentView = 'activos';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar empleados activos
+        this.loadEmpleados();
+    }
+
+    switchToDeletedEmpleados() {
+        if (this.currentView === 'eliminados') return;
+
+        this.currentView = 'eliminados';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar empleados eliminados
+        this.loadEmpleados();
+    }
+
+    updateFilterButtons() {
+        const btnActivos = document.getElementById('btnEmpleadosActivos');
+        const btnEliminados = document.getElementById('btnEmpleadosEliminados');
+
+        if (this.currentView === 'activos') {
+            // Activos seleccionado: agregar clase active, quitar de eliminados
+            btnActivos?.classList.add('active');
+            btnEliminados?.classList.remove('active');
+
+            // Contadores - activos tiene badge blanco, eliminados gris
+            const countActivos = btnActivos?.querySelector('#countActivosEmpleados');
+            const countEliminados = btnEliminados?.querySelector('#countEliminadosEmpleados');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countEliminados) {
+                countEliminados.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+        } else {
+            // Eliminados seleccionado: agregar clase active, quitar de activos
+            btnActivos?.classList.remove('active');
+            btnEliminados?.classList.add('active');
+
+            // Contadores - eliminados tiene badge blanco, activos gris
+            const countActivos = btnActivos?.querySelector('#countActivosEmpleados');
+            const countEliminados = btnEliminados?.querySelector('#countEliminadosEmpleados');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countEliminados) {
+                countEliminados.className = 'count-badge ml-1 bg-white text-red-600 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
         }
     }
 
@@ -517,7 +620,7 @@ class EmpleadosManager {
     }
 
     verEmpleado(cedula) {
-        const empleado = this.empleados.find(e => e.cedula === cedula);
+        const empleado = this.filteredEmpleados.find(e => e.cedula === cedula);
         if (!empleado) {
             window.showToast('Empleado no encontrado.', 'error');
             return;
@@ -539,6 +642,10 @@ class EmpleadosManager {
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Teléfono</label>
                     <p class="mt-1 text-sm text-gray-900">${empleado.telefono || 'N/A'}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <p class="mt-1 text-sm text-gray-900">${empleado.email || 'N/A'}</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Rol</label>
@@ -563,7 +670,7 @@ class EmpleadosManager {
     }
 
     editEmpleado(cedula) {
-        const empleado = this.empleados.find(e => e.cedula === cedula);
+        const empleado = this.filteredEmpleados.find(e => e.cedula === cedula);
         if (!empleado) {
             window.showToast('Empleado no encontrado.', 'error');
             return;
@@ -584,10 +691,17 @@ class EmpleadosManager {
         e.preventDefault();
 
         const formData = new FormData(e.target);
+
+        // Si estamos editando y la cédula está deshabilitada, obtenerla del empleado actual
+        let cedula = formData.get('cedula');
+        if (!cedula && this.currentEmpleado) {
+            cedula = this.currentEmpleado.cedula;
+        }
+
         const empleadoData = {
             nombre: formData.get('nombre'),
             apellido: formData.get('apellido'),
-            cedula: formData.get('cedula'),
+            cedula: cedula, // Usar la cédula obtenida correctamente
             telefono: formData.get('telefono'),
             email: formData.get('email'),
             rol: formData.get('rol'),
@@ -627,9 +741,11 @@ class EmpleadosManager {
         try {
             if (this.currentEmpleado) {
                 await this.empleadoService.updateEmpleado(this.currentEmpleado.cedula, empleadoData);
+                window.showToast('Empleado actualizado exitosamente.', 'success');
             } else {
-                // Validación: no permitir empleados con cédula duplicada
-                const cedulaExists = this.empleados.some(e => e.cedula === empleadoData.cedula);
+                // Validación: no permitir empleados con cédula duplicada - usar todos los empleados
+                const allEmpleados = [...this.empleadosActivos, ...this.empleadosEliminados];
+                const cedulaExists = allEmpleados.some(e => e.cedula === empleadoData.cedula);
                 if (cedulaExists) {
                     window.alert('Ya existe un Empleado con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
                     return;
@@ -654,6 +770,7 @@ class EmpleadosManager {
                 } catch (err) {
                     window.alert('Empleado creado, pero hubo un problema creando el usuario. Puedes crearlo manualmente.');
                 }
+                window.showToast('Empleado creado exitosamente.', 'success');
             }
             this.cerrarModalEmpleado();
             await this.loadEmpleados();
@@ -804,4 +921,3 @@ function formatTelefono(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
-

@@ -13,4 +13,16 @@ public interface EmpleadoService {
     List<Empleado> listarEmpleados();
     Empleado actualizarEmpleado(String cedula, Empleado datosActualizados);
     void eliminarEmpleado(String cedula);
+
+    // Métodos para borrado lógico
+    void eliminarEmpleadoLogico(String cedula);
+    void restaurarEmpleado(String cedula);
+
+    // Métodos para obtener TODOS los empleados (activos y eliminados)
+    List<Empleado> listarTodosLosEmpleados();
+    List<Empleado> getTodosLosEmpleadosFiltered(String busqueda, int page, int size);
+
+    // Métodos adicionales para filtrado
+    Empleado getEmpleadoByCedula(String cedula);
+    List<Empleado> getEmpleadosFiltered(String busqueda, int page, int size);
 }

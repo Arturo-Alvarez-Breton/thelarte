@@ -1,10 +1,36 @@
 export class EmpleadoService {
-    // Lista todos los empleados desde /api/empleados (sin filtrar/paginar en backend)
-    async getEmpleados() {
+    constructor() {
+        this.baseURL = '/api/empleados';
+    }
+
+    async getTodosLosEmpleados(busqueda = null) {
         try {
-            const response = await fetch(`/api/empleados`);
+            let url = `${this.baseURL}/todos`;
+            if (busqueda) {
+                url += `?busqueda=${encodeURIComponent(busqueda)}`;
+            }
+
+            const response = await fetch(url);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching all empleados:', error);
+            throw error;
+        }
+    }
+
+    async getEmpleados(busqueda = null) {
+        try {
+            let url = this.baseURL;
+            if (busqueda) {
+                url += `?busqueda=${encodeURIComponent(busqueda)}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
             return await response.json();
         } catch (error) {
@@ -13,13 +39,14 @@ export class EmpleadoService {
         }
     }
 
-    // Obtener un empleado por cédula
     async getEmpleadoByCedula(cedula) {
         try {
-            const response = await fetch(`/api/empleados/${cedula}`);
+            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`);
             if (!response.ok) {
-                if (response.status === 404) return null;
-                throw new Error(`HTTP error! status: ${response.status}`);
+                if (response.status === 404) {
+                    throw new Error('Empleado no encontrado');
+                }
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
             return await response.json();
         } catch (error) {
@@ -28,18 +55,21 @@ export class EmpleadoService {
         }
     }
 
-    // Crear un empleado
     async createEmpleado(empleadoData) {
         try {
-            const response = await fetch(`/api/empleados`, {
+            const response = await fetch(this.baseURL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(empleadoData)
             });
+
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                const errorData = await response.text();
+                throw new Error(errorData || `Error ${response.status}: ${response.statusText}`);
             }
+
             return await response.json();
         } catch (error) {
             console.error('Error creating empleado:', error);
@@ -47,18 +77,21 @@ export class EmpleadoService {
         }
     }
 
-    // Actualizar un empleado
     async updateEmpleado(cedula, empleadoData) {
         try {
-            const response = await fetch(`/api/empleados/${cedula}`, {
+            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify(empleadoData)
             });
+
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                const errorData = await response.text();
+                throw new Error(errorData || `Error ${response.status}: ${response.statusText}`);
             }
+
             return await response.json();
         } catch (error) {
             console.error('Error updating empleado:', error);
@@ -66,19 +99,105 @@ export class EmpleadoService {
         }
     }
 
-    // Eliminar un empleado (por cédula)
     async deleteEmpleado(cedula) {
         try {
-            const response = await fetch(`/api/empleados/${cedula}`, {
+            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`, {
                 method: 'DELETE'
             });
+
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                const errorData = await response.text();
+                throw new Error(errorData || `Error ${response.status}: ${response.statusText}`);
             }
-            return { success: true };
+
+            return true;
         } catch (error) {
             console.error('Error deleting empleado:', error);
+            throw error;
+        }
+    }
+
+    async restaurarEmpleado(cedula) {
+        try {
+            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}/restaurar`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(errorData || `Error ${response.status}: ${response.statusText}`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error restoring empleado:', error);
+            throw error;
+        }
+    }
+
+    // Método de utilidad para validar datos de empleado
+    validateEmpleadoData(data) {
+        const errors = [];
+
+        if (!data.cedula || data.cedula.trim() === '') {
+            errors.push('La cédula es obligatoria');
+        }
+
+        if (!data.nombre || data.nombre.trim() === '') {
+            errors.push('El nombre es obligatorio');
+        }
+
+        if (!data.apellido || data.apellido.trim() === '') {
+            errors.push('El apellido es obligatorio');
+        }
+
+        if (!data.telefono || data.telefono.trim() === '') {
+            errors.push('El teléfono es obligatorio');
+        }
+
+        if (!data.rol || data.rol.trim() === '') {
+            errors.push('El rol es obligatorio');
+        }
+
+        if (!data.salario || data.salario <= 0) {
+            errors.push('El salario debe ser mayor que cero');
+        }
+
+        if (data.rol === 'COMERCIAL' && data.comision != null) {
+            if (data.comision < 0 || data.comision > 100) {
+                errors.push('La comisión debe estar entre 0 y 100');
+            }
+        }
+
+        return errors;
+    }
+
+    // Método para formatear empleado para mostrar
+    formatEmpleadoForDisplay(empleado) {
+        return {
+            ...empleado,
+            nombreCompleto: `${empleado.nombre} ${empleado.apellido}`,
+            salarioFormatted: empleado.salario ? `$${empleado.salario.toLocaleString('es-DO')}` : 'N/A',
+            comisionFormatted: empleado.comision != null ? `${empleado.comision}%` : 'N/A',
+            fechaContratacionFormatted: empleado.fechaContratacion ?
+                new Date(empleado.fechaContratacion).toLocaleDateString('es-DO') : 'N/A'
+        };
+    }
+
+    async buscarEmpleadosPorNombreApellido(nombre, apellido, pagina = 0, tamaño = 10, incluirEliminados = false) {
+        try {
+            let url = `${this.baseURL}/buscar?nombre=${encodeURIComponent(nombre)}&apellido=${encodeURIComponent(apellido)}&pagina=${pagina}&tamaño=${tamaño}`;
+            if (incluirEliminados) {
+                url += '&eliminados=true';
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error buscando empleados por nombre o apellido:', error);
             throw error;
         }
     }

@@ -93,6 +93,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setRol(Rol.COMERCIAL);
             emp.setSalario(25000f);
             emp.setComision(10.0f);
+            emp.setDeleted(false); // Empleado activo
             empleadoRepository.save(emp);
 
             if (!userService.existsByUsername("edwinbrito")) {
@@ -127,6 +128,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setRol(Rol.ADMIN);
             emp.setSalario(40000f);
             emp.setComision(null);
+            emp.setDeleted(false); // Empleado activo
             empleadoRepository.save(emp);
 
             if (!userService.existsByUsername("anagarcia")) {
@@ -140,7 +142,7 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        // Juan Pérez - TI
+        // Juan Pérez - Usuario (antes TI)
         if (!empleadoRepository.existsById("40222022003")) {
             Empleado emp = new Empleado();
             emp.setCedula("40222022003");
@@ -148,9 +150,10 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Pérez");
             emp.setTelefono("809-555-3003");
             emp.setEmail("juan.perez@ejemplo.com");
-            emp.setRol(Rol.TI);
+            emp.setRol(Rol.COMERCIAL); // Cambiado de TI a USER
             emp.setSalario(32000f);
             emp.setComision(null);
+            emp.setDeleted(false); // Empleado activo
             empleadoRepository.save(emp);
 
             if (!userService.existsByUsername("juanperez")) {
@@ -185,6 +188,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setRol(Rol.CAJERO);
             emp.setSalario(18000f);
             emp.setComision(null);
+            emp.setDeleted(false); // Empleado activo
             empleadoRepository.save(emp);
 
             if (!userService.existsByUsername("carlasantos")) {
@@ -209,6 +213,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setRol(Rol.COMERCIAL);
             emp.setSalario(24000f);
             emp.setComision(8.0f);
+            emp.setDeleted(false); // Empleado activo
             empleadoRepository.save(emp);
 
             if (!userService.existsByUsername("arturob")) {
@@ -220,6 +225,22 @@ public class DataInitializer implements CommandLineRunner {
                 );
                 logger.info("Usuario creado: arturob (VENDEDOR, empleado: 40222022005)");
             }
+        }
+
+        // Agregar un empleado eliminado para pruebas del borrado lógico
+        if (!empleadoRepository.existsById("40222022099")) {
+            Empleado emp = new Empleado();
+            emp.setCedula("40222022099");
+            emp.setNombre("Carlos");
+            emp.setApellido("Eliminado");
+            emp.setTelefono("809-555-9999");
+            emp.setEmail("carlos.eliminado@ejemplo.com");
+            emp.setRol(Rol.COMERCIAL);
+            emp.setSalario(20000f);
+            emp.setComision(null);
+            emp.setDeleted(true); // Empleado eliminado lógicamente
+            empleadoRepository.save(emp);
+            logger.info("Empleado de prueba creado y eliminado lógicamente: Carlos Eliminado");
         }
     }
 
