@@ -691,8 +691,324 @@ class TransaccionesManager {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
 
-    imprimirFactura(id) {
-        window.showToast('Funcionalidad de impresión en desarrollo.', 'info');
+    async imprimirFactura(id) {
+        try {
+            const transaction = await this.transaccionService.obtenerTransaccionPorId(id);
+            if (!transaction) {
+                window.showToast('Error al obtener los datos de la transacción.', 'error');
+                return;
+            }
+
+            this.generateAndPrintInvoice(transaction);
+        } catch (error) {
+            console.error('Error printing invoice:', error);
+            window.showToast('Error al generar la factura para imprimir.', 'error');
+        }
+    }
+
+    generateAndPrintInvoice(transaction) {
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        const invoiceHTML = this.createInvoiceHTML(transaction);
+        
+        printWindow.document.write(invoiceHTML);
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+        };
+    }
+
+    createInvoiceHTML(transaction) {
+        const tipoTransaccion = this.formatTransactionType(transaction.tipo || transaction.tipoTransaccion);
+        const fechaFormateada = this.formatDate(transaction.fecha);
+        
+        let contraparteInfo = '';
+        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
+            contraparteInfo = `
+                <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
+                <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
+                <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
+                <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
+            `;
+        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
+            contraparteInfo = `
+                <p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''}</p>
+                <p><strong>Cédula:</strong> ${transaction.cliente.cedula || 'N/A'}</p>
+                <p><strong>Teléfono:</strong> ${transaction.cliente.telefono || 'N/A'}</p>
+                <p><strong>Email:</strong> ${transaction.cliente.email || 'N/A'}</p>
+            `;
+        } else {
+            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre || 'Consumidor Final'}</p>`;
+        }
+
+        const productsList = transaction.lineas && transaction.lineas.length > 0
+            ? transaction.lineas.map(line => `
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">
+                        <strong>${line.nombreProducto || line.productoNombre || 'Sin nombre'}</strong><br>
+                        <small>Código: ${line.codigoProducto || 'N/A'}</small>
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${line.cantidad}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${this.formatCurrency(line.precioUnitario)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${this.formatCurrency(line.subtotalLinea ?? line.subtotal ?? 0)}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 20px; text-align: center; font-style: italic; color: #666;">No hay productos en esta transacción</td></tr>';
+
+        return `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Factura ${transaction.numeroFactura || transaction.id} - TheLarte</title>
+                <style>
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                        @page { margin: 1cm; }
+                    }
+                    
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 20px;
+                        color: #333;
+                        line-height: 1.4;
+                    }
+                    
+                    .invoice-container {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        background: white;
+                    }
+                    
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 3px solid #4A3228;
+                        padding-bottom: 20px;
+                        margin-bottom: 30px;
+                    }
+                    
+                    .company-info {
+                        flex: 1;
+                    }
+                    
+                    .company-name {
+                        font-size: 32px;
+                        font-weight: bold;
+                        color: #4A3228;
+                        margin: 0;
+                    }
+                    
+                    .company-tagline {
+                        color: #8B4513;
+                        font-size: 14px;
+                        margin: 5px 0 0 0;
+                    }
+                    
+                    .invoice-details {
+                        text-align: right;
+                        flex: 1;
+                    }
+                    
+                    .invoice-title {
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #4A3228;
+                        margin: 0 0 10px 0;
+                    }
+                    
+                    .invoice-number {
+                        font-size: 16px;
+                        color: #666;
+                        margin: 5px 0;
+                    }
+                    
+                    .info-section {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 30px;
+                    }
+                    
+                    .info-box {
+                        flex: 1;
+                        margin-right: 20px;
+                        background: #F5F5DC;
+                        padding: 15px;
+                        border-radius: 5px;
+                        border-left: 4px solid #4A3228;
+                    }
+                    
+                    .info-box:last-child {
+                        margin-right: 0;
+                    }
+                    
+                    .info-title {
+                        font-weight: bold;
+                        color: #4A3228;
+                        margin-bottom: 10px;
+                        font-size: 14px;
+                        text-transform: uppercase;
+                    }
+                    
+                    .info-box p {
+                        margin: 5px 0;
+                        font-size: 13px;
+                    }
+                    
+                    .products-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 30px;
+                    }
+                    
+                    .products-table th {
+                        background-color: #4A3228;
+                        color: white;
+                        padding: 12px 8px;
+                        text-align: left;
+                        font-size: 13px;
+                        font-weight: bold;
+                    }
+                    
+                    .products-table th:nth-child(2) { text-align: center; }
+                    .products-table th:nth-child(3), .products-table th:nth-child(4) { text-align: right; }
+                    
+                    .products-table td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                        font-size: 12px;
+                    }
+                    
+                    .totals-section {
+                        display: flex;
+                        justify-content: flex-end;
+                        margin-bottom: 30px;
+                    }
+                    
+                    .totals-box {
+                        background: #F5F5DC;
+                        padding: 20px;
+                        border-radius: 5px;
+                        border: 2px solid #4A3228;
+                        min-width: 300px;
+                    }
+                    
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        font-size: 14px;
+                    }
+                    
+                    .total-row.final {
+                        border-top: 2px solid #4A3228;
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #4A3228;
+                    }
+                    
+                    .footer {
+                        text-align: center;
+                        padding: 20px 0;
+                        border-top: 2px solid #4A3228;
+                        margin-top: 30px;
+                        color: #666;
+                        font-size: 12px;
+                    }
+                    
+                    .status-badge {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                        color: white;
+                        background-color: #28a745;
+                    }
+                    
+                    .status-pendiente { background-color: #ffc107; color: #000; }
+                    .status-completada { background-color: #28a745; }
+                    .status-cancelada { background-color: #dc3545; }
+                    .status-devuelta { background-color: #17a2b8; }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <div class="header">
+                        <div class="company-info">
+                            <h1 class="company-name">TheLarte</h1>
+                            <p class="company-tagline">Muebles de Calidad Premium</p>
+                        </div>
+                        <div class="invoice-details">
+                            <h2 class="invoice-title">${tipoTransaccion}</h2>
+                            <p class="invoice-number">Factura #${transaction.numeroFactura || transaction.id}</p>
+                            <p class="invoice-number">Fecha: ${fechaFormateada}</p>
+                            <span class="status-badge status-${transaction.estado?.toLowerCase() || 'pendiente'}">${transaction.estado || 'PENDIENTE'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <div class="info-box">
+                            <div class="info-title">Información de ${transaction.tipo === 'COMPRA' ? 'Proveedor' : 'Cliente'}</div>
+                            ${contraparteInfo}
+                        </div>
+                        
+                        <div class="info-box">
+                            <div class="info-title">Detalles de Transacción</div>
+                            <p><strong>Método de Pago:</strong> ${transaction.metodoPago || 'N/A'}</p>
+                            <p><strong>Estado:</strong> ${transaction.estado || 'PENDIENTE'}</p>
+                            ${transaction.observaciones ? `<p><strong>Observaciones:</strong> ${transaction.observaciones}</p>` : ''}
+                            ${transaction.numeroReferencia ? `<p><strong>Referencia:</strong> ${transaction.numeroReferencia}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productsList}
+                        </tbody>
+                    </table>
+                    
+                    <div class="totals-section">
+                        <div class="totals-box">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span>${this.formatCurrency(transaction.subtotal || 0)}</span>
+                            </div>
+                            <div class="total-row">
+                                <span>Impuestos:</span>
+                                <span>${this.formatCurrency(transaction.impuestos || 0)}</span>
+                            </div>
+                            <div class="total-row final">
+                                <span>TOTAL:</span>
+                                <span>${this.formatCurrency(transaction.total || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p><strong>TheLarte - Muebles de Calidad Premium</strong></p>
+                        <p>Gracias por confiar en nosotros para sus necesidades de mobiliario</p>
+                        <p style="margin-top: 10px; font-size: 10px;">Factura generada el ${new Date().toLocaleString('es-ES')}</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
     }
 
     async eliminarTransaccion(id) {
