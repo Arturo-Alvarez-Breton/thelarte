@@ -8,7 +8,7 @@ class TransaccionesManager {
         this.transactions = [];
         this.filteredTransactions = [];
         this.currentPage = 0;
-        this.transactionsPerPage = 25; // Usamos 25 para mobile/tablet
+        this.transactionsPerPage = 15; // Ajustado a 15 como en clientes
         this.totalPages = 0;
         this.totalItems = 0;
         this.isMobile = window.innerWidth < 768;
@@ -151,14 +151,44 @@ class TransaccionesManager {
         document.getElementById('transaccionTipoFilter')?.addEventListener('change', () => this.filterTransactions());
         document.getElementById('transaccionEstadoFilter')?.addEventListener('change', () => this.filterTransactions());
         document.getElementById('transaccionSearchInput')?.addEventListener('input', () => this.filterTransactions());
+
+        // Transaction wizard buttons
         document.querySelectorAll('[data-action="open-wizard"]').forEach(button => {
             button.addEventListener('click', (e) => {
                 const type = e.target.getAttribute('data-type') || e.target.closest('[data-type]')?.getAttribute('data-type');
                 if (type && window.openTransactionWizard) window.openTransactionWizard(type);
             });
         });
+
+        // View toggle buttons
         document.getElementById('btnVistaTarjetas')?.addEventListener('click', () => this.setVista('tarjetas'));
         document.getElementById('btnVistaTabla')?.addEventListener('click', () => this.setVista('tabla'));
+
+        // Mobile actions menu
+        document.getElementById('mobileActionsBtn')?.addEventListener('click', () => this.toggleMobileActionsMenu());
+
+        // Close mobile actions menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('mobileActionsMenu');
+            const btn = document.getElementById('mobileActionsBtn');
+            if (menu && !menu.contains(e.target) && !btn?.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Delegación de eventos para los botones de acción en la lista de transacciones
+        document.getElementById('transaccionesListContainer')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const transactionId = btn.getAttribute('data-id');
+            if (btn.classList.contains('ver-btn')) {
+                this.viewTransactionDetails(transactionId);
+            } else if (btn.classList.contains('print-btn')) {
+                this.imprimirFactura(transactionId);
+            } else if (btn.classList.contains('delete-btn')) {
+                this.eliminarTransaccion(transactionId);
+            }
+        });
     }
 
     setVista(vista) {
@@ -564,21 +594,24 @@ class TransaccionesManager {
         const container = document.getElementById('transaccionesListContainer');
         if (container) {
             container.innerHTML = `
-                <div class="text-center py-12">
+                <div class="text-center py-12 col-span-full">
                     <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p class="text-gray-600 font-medium">Consultando historial de transacciones...</p>
+                    <p class="text-gray-600 font-medium">Consultando transacciones...</p>
                     <p class="text-gray-500 text-sm mt-2">Un momento, por favor</p>
                 </div>
             `;
         }
     }
-    hideLoading() {}
+
+    hideLoading() {
+        // Content will replace the loading spinner, no need for explicit hiding
+    }
 
     showError(message) {
         const container = document.getElementById('transaccionesListContainer');
         if (container) {
             container.innerHTML = `
-                <div class="text-center py-12">
+                <div class="text-center py-12 col-span-full">
                     <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-4">
                         <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
                     </div>
@@ -592,62 +625,157 @@ class TransaccionesManager {
         }
     }
 
-    // --- UTILS ---
-    formatCurrency(amount) {
-        if (typeof amount !== 'number') amount = parseFloat(amount) || 0;
-        return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP', minimumFractionDigits: 2 }).format(amount);
-    }
-    formatDate(dateString) {
-        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-        return new Date(dateString).toLocaleDateString('es-ES', options);
-    }
-    formatTransactionType(type) {
-        const types = { 'COMPRA': 'Compra', 'VENTA': 'Venta', 'DEVOLUCION_COMPRA': 'Devolución Compra', 'DEVOLUCION_VENTA': 'Devolución Venta' };
-        return types[type] || type;
-    }
-    getStateColor(state) {
-        const colors = {
-            'PENDIENTE': 'yellow', 'CONFIRMADA': 'blue', 'PROCESANDO': 'orange',
-            'COMPLETADA': 'green', 'CANCELADA': 'red',
-            'FACTURADA': 'purple', 'RECIBIDA': 'indigo', 'PAGADA': 'green',
-            'ENTREGADA': 'teal', 'COBRADA': 'emerald',
-            'DEVUELTA': 'emerald', 'PARCIALMENTE_DEVUELTA': 'yellow'
-        };
-        return colors[state] || 'gray';
+    setupResponsiveHandlers() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+
+        // Handle escape key for sidebar and mobile menu
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    this.closeMobileSidebar();
+                }
+                const mobileMenu = document.getElementById('mobileActionsMenu');
+                if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                }
+            }
+        });
     }
 
-    // --- Transaction actions ---
+    toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+
+        // Prevent body scroll when sidebar is open
+        document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+    }
+
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    toggleMobileActionsMenu() {
+        const menu = document.getElementById('mobileActionsMenu');
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
+    }
+
+    handleWindowResize() {
+        const wasTablet = this.isTablet;
+        const wasMobile = this.isMobile;
+
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+        // Close mobile sidebar on desktop resize
+        if (window.innerWidth >= 1024) {
+            this.closeMobileSidebar();
+        }
+
+        // Close mobile actions menu on desktop resize
+        if (window.innerWidth >= 768) {
+            const mobileMenu = document.getElementById('mobileActionsMenu');
+            if (mobileMenu) {
+                mobileMenu.classList.add('hidden');
+            }
+        }
+
+        // Update table columns based on screen orientation
+        this.tableViewManager.updateColumns(this.getResponsiveColumns());
+
+        // Re-render transactions if breakpoint changed significantly
+        if ((wasMobile !== this.isMobile) || (wasTablet !== this.isTablet)) {
+            this.renderTransactions();
+        }
+    }
+
+    // --- UTILITY FUNCTIONS ---
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('es-DO', {
+            style: 'currency',
+            currency: 'DOP'
+        }).format(amount || 0);
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('es-DO', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
+    }
+
+    formatTransactionType(tipo) {
+        const types = {
+            'VENTA': 'Venta',
+            'COMPRA': 'Compra',
+            'DEVOLUCION_VENTA': 'Devolución de Venta',
+            'DEVOLUCION_COMPRA': 'Devolución de Compra'
+        };
+        return types[tipo] || tipo;
+    }
+
+    getStateColor(estado) {
+        const colors = {
+            'PENDIENTE': 'yellow',
+            'CONFIRMADA': 'blue',
+            'PROCESANDO': 'purple',
+            'COMPLETADA': 'green',
+            'CANCELADA': 'red',
+            'DEVUELTA': 'orange',
+            'PARCIALMENTE_DEVUELTA': 'amber'
+        };
+        return colors[estado] || 'gray';
+    }
+
+    // --- TRANSACTION DETAILS MODAL ---
     async viewTransactionDetails(id) {
         try {
             const transaction = await this.transaccionService.obtenerTransaccionPorId(id);
-            if (transaction) {
-                this.renderTransactionDetailsModal(transaction);
-                document.getElementById('modalVerTransaccion').classList.remove('hidden');
-            }
+            this.renderTransactionDetailsModal(transaction);
+            document.getElementById('modalVerTransaccion').classList.remove('hidden');
         } catch (error) {
-            console.error('Error viewing transaction details:', error);
+            console.error('Error fetching transaction details:', error);
             window.showToast('Error al cargar los detalles de la transacción.', 'error');
         }
     }
 
     renderTransactionDetailsModal(transaction) {
         const detailsContainer = document.getElementById('detallesTransaccion');
-        if (!detailsContainer) return;
-        let contraparteInfo = '';
-        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
-            contraparteInfo = `
-                <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
-                <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
-                <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
-                <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
-            `;
-        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''} (${transaction.cliente.cedula || ''})</p>`;
-        } else if (transaction.contraparteNombre) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
-        } else {
-            contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
-        }
+        if (!detailsContainer || !transaction) return;
+
         const productsList = transaction.lineas && transaction.lineas.length > 0
             ? transaction.lineas.map(line => `
         <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
@@ -662,6 +790,7 @@ class TransaccionesManager {
             </div>
         </div>
     `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+
         const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA','DEVUELTA','PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
             <div class="flex items-center space-x-2">
@@ -673,6 +802,7 @@ class TransaccionesManager {
                 </select>
             </div>
         `;
+
         detailsContainer.innerHTML = `
             <div class="space-y-4">
                 <div class="bg-blue-50 p-3 rounded-lg">
@@ -682,21 +812,14 @@ class TransaccionesManager {
                     ${estadoSelect}
                 </div>
                 <div class="bg-gray-50 p-3 rounded-lg">
-                    <h4 class="font-bold mb-2">Información de Contraparte:</h4>
-                    ${contraparteInfo}
+                    <p><strong>Cliente/Proveedor:</strong> ${transaction.cliente ? `${transaction.cliente.nombre} ${transaction.cliente.apellido}` : 
+                        transaction.proveedor ? transaction.proveedor.nombre : 'Consumidor Final'}</p>
+                    ${transaction.metodoPago ? `<p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>` : ''}
+                    <p><strong>Total:</strong> <span class="text-lg font-bold text-brand-brown">${this.formatCurrency(transaction.total)}</span></p>
                 </div>
                 <div>
-                    <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
-                    <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
-                </div>
-                <div>
-                    <h4 class="font-bold mb-2">Muebles/Productos Registrados:</h4>
-                    <div class="border rounded p-3 max-h-64 overflow-y-auto">${productsList}</div>
-                </div>
-                <div class="bg-green-50 p-3 rounded-lg text-right">
-                    <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
-                    <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
-                    <p class="text-xl font-bold text-green-700">Total: ${this.formatCurrency(transaction.total)}</p>
+                    <h4 class="font-bold mb-2">Productos:</h4>
+                    ${productsList}
                 </div>
             </div>
         `;
@@ -721,21 +844,6 @@ class TransaccionesManager {
                 window.showToast('Error al eliminar la transacción', 'error');
             }
         }
-    }
-
-    setupResponsiveHandlers() {
-        window.addEventListener('resize', () => {
-            const newIsMobile = window.innerWidth < 768;
-            const newIsTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-
-            if (newIsMobile !== this.isMobile || newIsTablet !== this.isTablet) {
-                this.isMobile = newIsMobile;
-                this.isTablet = newIsTablet;
-                this.tableViewManager.updateColumns(this.getResponsiveColumns());
-                // Re-render transactions if view changed significantly
-                this.renderTransactions();
-            }
-        });
     }
 }
 
