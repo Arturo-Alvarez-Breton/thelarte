@@ -531,12 +531,12 @@ class UsuariosManager {
                     <p class="mt-1 text-sm text-gray-900">${Array.isArray(usuario.roles) ? usuario.roles.join(', ') : (usuario.roles || 'N/A')}</p>
                 </div>
                 ${empleadoHtml}
-                <div class="flex justify-end mt-6">
+                <!--<div class="flex justify-end mt-6">
                     <button onclick="usuariosManager.editUsuario('${usuario.username}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-edit mr-2"></i>
                         Editar
                     </button>
-                </div>
+                </div>-->
             </div>
         `;
         this.currentUsuario = usuario;
