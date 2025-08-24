@@ -6,7 +6,9 @@ import { TableViewManager } from '../components/tableView.js';
 class ClientesManager {
     constructor() {
         this.transaccionService = new TransaccionService();
-        this.clientes = [];
+        this.allClientes = []; // Todos los clientes (activos y eliminados)
+        this.clientesActivos = [];
+        this.clientesEliminados = [];
         this.filteredClientes = [];
         this.currentPage = 0;
         this.clientesPerPage = 15; // Cambiado a 15 por página
@@ -14,6 +16,7 @@ class ClientesManager {
         this.totalClientes = 0;
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+        this.currentView = 'activos'; // 'activos' o 'eliminados'
 
         // Initialize table view manager with responsive columns
         this.tableViewManager = new TableViewManager('#clientesListContainer', {
@@ -87,6 +90,10 @@ class ClientesManager {
         document.getElementById('nuevoClienteBtn')?.addEventListener('click', () => this.newCliente());
         document.getElementById('clientSearchInput')?.addEventListener('keyup', () => this.filterClientes());
         document.getElementById('formCliente')?.addEventListener('submit', (e) => this.handleSubmitCliente(e));
+
+        // Filter buttons for active/deleted clients
+        document.getElementById('btnClientesActivos')?.addEventListener('click', () => this.switchToActiveClients());
+        document.getElementById('btnClientesEliminados')?.addEventListener('click', () => this.switchToDeletedClients());
 
         // Delegación de eventos para los botones de acción en la lista de clientes
         document.getElementById('clientesListContainer')?.addEventListener('click', (e) => {
@@ -180,27 +187,181 @@ class ClientesManager {
         this.showLoading();
         try {
             const busqueda = document.getElementById('clientSearchInput')?.value || null;
-            // Obtener todos los clientes filtrados
+            // Obtener todos los clientes (activos y eliminados) - usar el método existente
             const allClientes = await this.transaccionService.getClientes(busqueda);
-            this.totalClientes = allClientes.length;
+
+            // Separar clientes activos y eliminados basado en el campo 'deleted'
+            this.clientesActivos = allClientes.filter(c => !c.deleted);
+            this.clientesEliminados = allClientes.filter(c => c.deleted);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué clientes mostrar según la vista actual
+            const currentClientes = this.currentView === 'activos' ? this.clientesActivos : this.clientesEliminados;
+
+            // Configurar paginación
+            this.totalClientes = currentClientes.length;
             this.totalPages = Math.ceil(this.totalClientes / this.clientesPerPage);
-            // Paginar en frontend
+
+            // Aplicar paginación
             const start = this.currentPage * this.clientesPerPage;
             const end = start + this.clientesPerPage;
-            this.clientes = allClientes.slice(start, end);
-            this.filteredClientes = [...this.clientes];
+            this.filteredClientes = currentClientes.slice(start, end);
 
-            // Update table view with all data
-            this.tableViewManager.setData(allClientes);
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredClientes);
 
             this.renderClientes();
             this.renderPagination();
         } catch (error) {
             console.error('Error loading clients:', error);
-            this.clientes = [];
+            this.clientesActivos = [];
+            this.clientesEliminados = [];
             this.filteredClientes = [];
             this.totalClientes = 0;
             this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons(); // Also update buttons on error
+            this.tableViewManager.setData([]);
+            this.renderClientes();
+            this.renderPagination();
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    updateCounters() {
+        // Actualizar contadores en los botones con animación
+        const countActivos = document.getElementById('countActivos');
+        const countEliminados = document.getElementById('countEliminados');
+
+        if (countActivos) {
+            // Trigger animation by removing and re-adding the class
+            countActivos.classList.remove('count-badge');
+            countActivos.textContent = this.clientesActivos.length;
+            // Force reflow
+            countActivos.offsetHeight;
+            countActivos.classList.add('count-badge');
+        }
+
+        if (countEliminados) {
+            // Trigger animation by removing and re-adding the class
+            countEliminados.classList.remove('count-badge');
+            countEliminados.textContent = this.clientesEliminados.length;
+            // Force reflow
+            countEliminados.offsetHeight;
+            countEliminados.classList.add('count-badge');
+        }
+    }
+
+    switchToActiveClients() {
+        if (this.currentView === 'activos') return;
+
+        this.currentView = 'activos';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar clientes activos
+        this.loadClientes();
+    }
+
+    switchToDeletedClients() {
+        if (this.currentView === 'eliminados') return;
+
+        this.currentView = 'eliminados';
+        this.currentPage = 0;
+
+        // Actualizar estilos de los botones con transición suave
+        this.updateFilterButtons();
+
+        // Cargar clientes eliminados
+        this.loadClientes();
+    }
+
+    updateFilterButtons() {
+        const btnActivos = document.getElementById('btnClientesActivos');
+        const btnEliminados = document.getElementById('btnClientesEliminados');
+
+        if (this.currentView === 'activos') {
+            // Activos seleccionado: agregar clase active, quitar de eliminados
+            btnActivos.classList.add('active');
+            btnEliminados.classList.remove('active');
+
+            // Contadores - activos tiene badge blanco, eliminados gris
+            const countActivos = btnActivos.querySelector('#countActivos');
+            const countEliminados = btnEliminados.querySelector('#countEliminados');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countEliminados) {
+                countEliminados.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+        } else {
+            // Eliminados seleccionado: agregar clase active, quitar de activos
+            btnActivos.classList.remove('active');
+            btnEliminados.classList.add('active');
+
+            // Contadores - eliminados tiene badge blanco, activos gris
+            const countActivos = btnActivos.querySelector('#countActivos');
+            const countEliminados = btnEliminados.querySelector('#countEliminados');
+            if (countActivos) {
+                countActivos.className = 'count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+            if (countEliminados) {
+                countEliminados.className = 'count-badge ml-1 bg-white text-red-600 px-1.5 py-0.5 rounded text-xs font-bold';
+            }
+        }
+    }
+
+    async loadClientes() {
+        this.showLoading();
+        try {
+            const busqueda = document.getElementById('clientSearchInput')?.value || null;
+            // Obtener todos los clientes (activos y eliminados) - usar el método existente
+            const allClientes = await this.transaccionService.getClientes(busqueda);
+
+            // Separar clientes activos y eliminados basado en el campo 'deleted'
+            this.clientesActivos = allClientes.filter(c => !c.deleted);
+            this.clientesEliminados = allClientes.filter(c => c.deleted);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué clientes mostrar según la vista actual
+            const currentClientes = this.currentView === 'activos' ? this.clientesActivos : this.clientesEliminados;
+
+            // Configurar paginación
+            this.totalClientes = currentClientes.length;
+            this.totalPages = Math.ceil(this.totalClientes / this.clientesPerPage);
+
+            // Aplicar paginación
+            const start = this.currentPage * this.clientesPerPage;
+            const end = start + this.clientesPerPage;
+            this.filteredClientes = currentClientes.slice(start, end);
+
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredClientes);
+
+            this.renderClientes();
+            this.renderPagination();
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            this.clientesActivos = [];
+            this.clientesEliminados = [];
+            this.filteredClientes = [];
+            this.totalClientes = 0;
+            this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons(); // Also update buttons on error
             this.tableViewManager.setData([]);
             this.renderClientes();
             this.renderPagination();
@@ -519,7 +680,7 @@ class ClientesManager {
 
     async verCliente(cedula) {
         try {
-            const cliente = this.clientes.find(c => c.cedula === cedula);
+            const cliente = this.filteredClientes.find(c => c.cedula === cedula);
             if (!cliente) {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
@@ -564,7 +725,7 @@ class ClientesManager {
 
     async editCliente(cedula) {
         try {
-            const cliente = this.clientes.find(c => c.cedula === cedula);
+            const cliente = this.filteredClientes.find(c => c.cedula === cedula);
             if (!cliente) {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
@@ -583,7 +744,7 @@ class ClientesManager {
         } catch (error) {
             console.error('Error loading client for edit:', error);
             // Fallback to cached data
-            const cliente = this.clientes.find(c => c.cedula === cedula);
+            const cliente = this.filteredClientes.find(c => c.cedula === cedula);
             if (cliente) {
                 this.currentCliente = cliente;
                 this.fillForm(cliente);
@@ -629,13 +790,15 @@ class ClientesManager {
                 await this.transaccionService.updateCliente(this.currentCliente.cedula, clienteData);
                 window.showToast('Cliente actualizado exitosamente.', 'success');
             } else {
-                // Check for duplicate cedula before creating
-                const cedulaExists = this.clientes.some(c => c.cedula === clienteData.cedula);
+                // Check for duplicate cedula before creating - usar todos los clientes
+                const allClientes = [...this.clientesActivos, ...this.clientesEliminados];
+                const cedulaExists = allClientes.some(c => c.cedula === clienteData.cedula);
                 if (cedulaExists) {
                     window.alert('Ya existe un cliente con este número de cédula. Por favor, verifica los datos e intenta nuevamente.');
                     return;
                 }
                 await this.transaccionService.createCliente(clienteData);
+                window.showToast('Cliente creado exitosamente.', 'success');
             }
 
             this.cerrarModalCliente();
@@ -647,33 +810,9 @@ class ClientesManager {
         }
     }
 
-    clearForm() {
-        document.getElementById('formCliente').reset();
-    }
-
-    fillForm(cliente) {
-        document.getElementById('clienteNombre').value = cliente.nombre || '';
-        document.getElementById('clienteApellido').value = cliente.apellido || '';
-        document.getElementById('clienteCedula').value = cliente.cedula || '';
-        document.getElementById('clienteTelefono').value = cliente.telefono || '';
-        document.getElementById('clienteEmail').value = cliente.email || '';
-        document.getElementById('clienteDireccion').value = cliente.direccion || '';
-    }
-
-    cerrarModalCliente() {
-        document.getElementById('modalCliente').classList.add('hidden');
-        this.clearForm();
-        this.currentCliente = null;
-    }
-
-    cerrarModalVerCliente() {
-        document.getElementById('modalVerCliente').classList.add('hidden');
-        this.currentCliente = null;
-    }
-
     async verTransaccionesCliente(cedula) {
         try {
-            const cliente = this.clientes.find(c => c.cedula === cedula);
+            const cliente = this.filteredClientes.find(c => c.cedula === cedula);
             if (!cliente) {
                 window.showToast('Cliente no encontrado.', 'error');
                 return;
@@ -730,6 +869,56 @@ class ClientesManager {
                 </div>
             `;
         }
+    }
+
+    switchToActiveClients() {
+        this.currentView = 'activos';
+        this.currentPage = 0;
+        this.loadClientes();
+    }
+
+    switchToDeletedClients() {
+        this.currentView = 'eliminados';
+        this.currentPage = 0;
+        this.loadClientes();
+    }
+
+    // Modal functions
+    cerrarModalCliente() {
+        document.getElementById('modalCliente').classList.add('hidden');
+        this.clearForm();
+    }
+
+    cerrarModalVerCliente() {
+        document.getElementById('modalVerCliente').classList.add('hidden');
+        this.currentCliente = null;
+    }
+
+    clearForm() {
+        const form = document.getElementById('formCliente');
+        if (form) {
+            form.reset();
+            // Clear validation errors
+            const errorElements = form.querySelectorAll('.text-red-500');
+            errorElements.forEach(el => el.classList.add('hidden'));
+
+            // Remove error styles from inputs
+            const inputs = form.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.classList.remove('border-red-500');
+            });
+        }
+    }
+
+    fillForm(cliente) {
+        if (!cliente) return;
+
+        document.getElementById('clienteCedula').value = cliente.cedula || '';
+        document.getElementById('clienteNombre').value = cliente.nombre || '';
+        document.getElementById('clienteApellido').value = cliente.apellido || '';
+        document.getElementById('clienteTelefono').value = cliente.telefono || '';
+        document.getElementById('clienteEmail').value = cliente.email || '';
+        document.getElementById('clienteDireccion').value = cliente.direccion || '';
     }
 }
 

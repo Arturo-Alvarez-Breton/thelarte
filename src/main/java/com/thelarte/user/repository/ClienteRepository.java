@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import com.thelarte.user.model.Cliente;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,4 +41,18 @@ public interface ClienteRepository extends JpaRepository<Cliente, String> {
      * @return página de clientes que contienen el nombre o apellido
      */
     Page<Cliente> findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCase(String nombre, String apellido, Pageable pageable);
+
+    // Métodos que excluyen clientes eliminados lógicamente
+    List<Cliente> findByDeletedFalse();
+
+    Optional<Cliente> findByCedulaAndDeletedFalse(String cedula);
+
+    Optional<Cliente> findByEmailAndDeletedFalse(String email);
+
+    boolean existsByCedulaAndDeletedFalse(String cedula);
+
+    Page<Cliente> findByDeletedFalse(Pageable pageable);
+
+    Page<Cliente> findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCaseAndDeletedFalse(
+            String nombre, String apellido, Pageable pageable);
 }

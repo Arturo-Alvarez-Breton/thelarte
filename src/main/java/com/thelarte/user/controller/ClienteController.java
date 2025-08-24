@@ -9,6 +9,7 @@ import com.thelarte.user.model.Cliente;
 import com.thelarte.user.service.ClienteService;
 import com.thelarte.user.dto.ClienteCreateDTO;
 import com.thelarte.user.dto.ClienteUpdateDTO;
+import com.thelarte.shared.exception.EntityNotFoundException;
 
 import java.net.URI;
 import java.util.List;
@@ -50,6 +51,12 @@ public class ClienteController {
         return ResponseEntity.ok(lista);
     }
 
+    @GetMapping("/todos")
+    public ResponseEntity<List<Cliente>> listarTodosLosClientes() {
+        List<Cliente> lista = clienteService.listarTodosLosClientes();
+        return ResponseEntity.ok(lista);
+    }
+
     @GetMapping("/{cedula}")
     public ResponseEntity<Cliente> obtenerCliente(@PathVariable String cedula) {
         Cliente c = clienteService.obtenerClientePorCedula(cedula);
@@ -74,7 +81,19 @@ public class ClienteController {
 
     @DeleteMapping("/{cedula}")
     public ResponseEntity<Void> eliminarCliente(@PathVariable String cedula) {
-        clienteService.eliminarCliente(cedula);
+        clienteService.eliminarClienteLogico(cedula);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{cedula}/restaurar")
+    public ResponseEntity<Void> restaurarCliente(@PathVariable String cedula) {
+        try {
+            clienteService.restaurarCliente(cedula);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

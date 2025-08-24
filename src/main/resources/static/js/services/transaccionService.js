@@ -253,7 +253,8 @@ export class TransaccionService {
         console.log('Fetching clients with search:', busqueda);
         try {
             const authToken = this.getAuthToken();
-            const response = await fetch(`/api/clientes`, {
+            // Usar el endpoint /todos para obtener TODOS los clientes (activos y eliminados)
+            const response = await fetch(`/api/clientes/todos`, {
                 headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {

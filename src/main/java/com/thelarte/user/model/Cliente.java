@@ -29,6 +29,9 @@ public class Cliente {
     @Column(name = "fecha_registro")
     private LocalDate fechaRegistro;
 
+    @Column(name = "deleted", nullable = false)
+    private Boolean deleted = false;
+
     public Cliente() {}
 
     // Getters y setters
@@ -87,6 +90,18 @@ public class Cliente {
 
     public void setFechaRegistro(LocalDate fechaRegistro) {
         this.fechaRegistro = fechaRegistro;
+    }
+
+    public Boolean getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public boolean isDeleted() {
+        return deleted != null && deleted;
     }
 
     @PrePersist

@@ -232,6 +232,7 @@ public class DataInitializer implements CommandLineRunner {
             c.setTelefono("829-555-1111");
             c.setEmail("pedro.martinez@dominio.com");
             c.setDireccion("Av. Independencia #100, Santo Domingo");
+            c.setDeleted(false); // Cliente activo
             clienteRepository.save(c);
         }
         if (!clienteRepository.existsById("402-9876543-2")) {
@@ -242,6 +243,7 @@ public class DataInitializer implements CommandLineRunner {
             c.setTelefono("829-555-2222");
             c.setEmail("luisa.fernandez@dominio.com");
             c.setDireccion("Calle Duarte #55, Santiago");
+            c.setDeleted(false); // Cliente activo
             clienteRepository.save(c);
         }
         if (!clienteRepository.existsById("003-5555555-3")) {
@@ -252,6 +254,20 @@ public class DataInitializer implements CommandLineRunner {
             c.setTelefono("829-555-3333");
             c.setEmail("jose.gomez@dominio.com");
             c.setDireccion("Calle El Sol #10, La Vega");
+            c.setDeleted(false); // Cliente activo
+            clienteRepository.save(c);
+        }
+
+        // Agregar un cliente eliminado para pruebas
+        if (!clienteRepository.existsById("001-0000000-1")) {
+            Cliente c = new Cliente();
+            c.setCedula("001-0000000-1");
+            c.setNombre("María");
+            c.setApellido("López");
+            c.setTelefono("829-555-4444");
+            c.setEmail("maria.lopez@dominio.com");
+            c.setDireccion("Calle Principal #20, San Pedro");
+            c.setDeleted(true); // Cliente eliminado lógicamente
             clienteRepository.save(c);
         }
     }

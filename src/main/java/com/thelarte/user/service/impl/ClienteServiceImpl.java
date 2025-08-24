@@ -29,19 +29,19 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente obtenerClientePorCedula(String cedula) {
-        return clienteRepository.findById(cedula)
+        return clienteRepository.findByCedulaAndDeletedFalse(cedula)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
     }
 
     @Override
     public List<Cliente> listarClientes() {
-        return clienteRepository.findAll();
+        return clienteRepository.findByDeletedFalse();
     }
 
     @Override
     public Cliente actualizarCliente(String cedula, Cliente datosActualizados) {
-        Cliente existente = clienteRepository.findById(cedula)
+        Cliente existente = clienteRepository.findByCedulaAndDeletedFalse(cedula)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
 
@@ -55,20 +55,69 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public void eliminarCliente(String cedula) {
-        Cliente existente = clienteRepository.findById(cedula)
+        Cliente existente = clienteRepository.findByCedulaAndDeletedFalse(cedula)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
         clienteRepository.delete(existente);
     }
 
+    @Override
     public Cliente getClienteByCedula(String cedula) {
-        return clienteRepository.findById(cedula)
+        return clienteRepository.findByCedulaAndDeletedFalse(cedula)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
     }
 
+    @Override
     public List<Cliente> getClientesFiltered(String busqueda, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         
+        if (busqueda != null && !busqueda.isEmpty()) {
+            Page<Cliente> pageResult = clienteRepository.findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCaseAndDeletedFalse(
+                    busqueda, busqueda, pageable);
+            return pageResult.getContent();
+        } else {
+            Page<Cliente> pageResult = clienteRepository.findByDeletedFalse(pageable);
+            return pageResult.getContent();
+        }
+    }
+
+    // Métodos para borrado lógico
+    @Override
+    public void eliminarClienteLogico(String cedula) {
+        Cliente cliente = clienteRepository.findById(cedula)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
+
+        if (cliente.isDeleted()) {
+            throw new IllegalStateException("El cliente ya está eliminado");
+        }
+
+        cliente.setDeleted(true);
+        clienteRepository.save(cliente);
+    }
+
+    @Override
+    public void restaurarCliente(String cedula) {
+        Cliente cliente = clienteRepository.findById(cedula)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con cédula: " + cedula));
+
+        if (!cliente.isDeleted()) {
+            throw new IllegalStateException("El cliente no está eliminado");
+        }
+
+        cliente.setDeleted(false);
+        clienteRepository.save(cliente);
+    }
+
+    // Métodos para obtener TODOS los clientes (activos y eliminados)
+    @Override
+    public List<Cliente> listarTodosLosClientes() {
+        return clienteRepository.findAll();
+    }
+
+    @Override
+    public List<Cliente> getTodosLosClientesFiltered(String busqueda, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
         if (busqueda != null && !busqueda.isEmpty()) {
             Page<Cliente> pageResult = clienteRepository.findByNombreContainingIgnoreCaseOrApellidoContainingIgnoreCase(
                     busqueda, busqueda, pageable);
