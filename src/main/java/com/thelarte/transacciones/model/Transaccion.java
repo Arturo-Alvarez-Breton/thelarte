@@ -85,6 +85,21 @@ public class Transaccion {
     @Column(name = "numero_referencia")
     private String numeroReferencia;
 
+    // Campos nuevos para el sistema de pagos en cuotas
+    @Column(name = "tipo_pago")
+    @Enumerated(EnumType.STRING)
+    private TipoPago tipoPago;
+
+    @Column(name = "monto_inicial", precision = 12, scale = 2)
+    private BigDecimal montoInicial;
+
+    @Column(name = "saldo_pendiente", precision = 12, scale = 2)
+    private BigDecimal saldoPendiente;
+
+    // Relación con los pagos (se puede añadir si se crea la entidad Pago)
+    @OneToMany(mappedBy = "transaccion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Pago> pagos;
+
     @Column(name = "fecha_creacion", nullable = false)
     private LocalDateTime fechaCreacion;
 
@@ -98,6 +113,7 @@ public class Transaccion {
         this.fechaCreacion = LocalDateTime.now();
         this.fecha = LocalDateTime.now();
         this.estado = EstadoTransaccion.PENDIENTE;
+        this.tipoPago = TipoPago.NORMAL; // Por defecto
     }
 
     public Transaccion(TipoTransaccion tipo, Long contraparteId, TipoContraparte tipoContraparte, String contraparteNombre) {
@@ -112,14 +128,24 @@ public class Transaccion {
     public void preUpdate() {
         this.fechaActualizacion = LocalDateTime.now();
     }
-    
+
     @PrePersist
     public void prePersist() {
         if (this.numeroFactura == null) {
             this.numeroFactura = generateNumeroFactura();
         }
+
+        // Si es venta en cuotas, calcular saldo pendiente
+        if (this.tipo == TipoTransaccion.VENTA && this.tipoPago == TipoPago.ENCUOTAS) {
+            if (this.montoInicial == null) {
+                this.montoInicial = BigDecimal.ZERO;
+            }
+            if (this.total != null) {
+                this.saldoPendiente = this.total.subtract(this.montoInicial);
+            }
+        }
     }
-    
+
     private String generateNumeroFactura() {
         // Genera un número de factura único basado en el tipo y timestamp
         String prefix = this.tipo == TipoTransaccion.COMPRA ? "C" : "V";
@@ -127,6 +153,41 @@ public class Transaccion {
         return prefix + String.format("%010d", timestamp % 10000000000L);
     }
 
+    // Getters y setters originales...
+
+    public TipoPago getTipoPago() {
+        return tipoPago;
+    }
+
+    public void setTipoPago(TipoPago tipoPago) {
+        this.tipoPago = tipoPago;
+    }
+
+    public BigDecimal getMontoInicial() {
+        return montoInicial;
+    }
+
+    public void setMontoInicial(BigDecimal montoInicial) {
+        this.montoInicial = montoInicial;
+    }
+
+    public BigDecimal getSaldoPendiente() {
+        return saldoPendiente;
+    }
+
+    public void setSaldoPendiente(BigDecimal saldoPendiente) {
+        this.saldoPendiente = saldoPendiente;
+    }
+
+    public List<Pago> getPagos() {
+        return pagos;
+    }
+
+    public void setPagos(List<Pago> pagos) {
+        this.pagos = pagos;
+    }
+
+    // Todos los getters y setters existentes...
     public Long getId() {
         return id;
     }
@@ -347,6 +408,7 @@ public class Transaccion {
         return deleted != null && deleted;
     }
 
+    // Enumeraciones existentes
     public enum TipoTransaccion {
         COMPRA,
         VENTA,
@@ -371,5 +433,11 @@ public class Transaccion {
     public enum TipoContraparte {
         CLIENTE,
         SUPLIDOR
+    }
+
+    // Nueva enumeración para el tipo de pago
+    public enum TipoPago {
+        NORMAL,
+        ENCUOTAS
     }
 }

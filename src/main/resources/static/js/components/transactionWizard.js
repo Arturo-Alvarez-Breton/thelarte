@@ -1,7 +1,5 @@
 // src/main/resources/static/js/components/transactionWizard.js
-
 import { TransaccionService } from '../services/transaccionService.js';
-
 export class TransactionWizard {
     constructor() {
         this.transaccionService = new TransaccionService();
@@ -11,6 +9,12 @@ export class TransactionWizard {
         this.wizardPrevBtn = document.getElementById('wizardPrevBtn');
         this.wizardNextBtn = document.getElementById('wizardNextBtn');
         this.currentStep = 0;
+        this.loadCardnetService();
+        // Inicializa un cardnetService provisional mientras carga el real
+        this.cardnetService = {
+            createSession: () => Promise.reject("Servicio aún no disponible"),
+            verifyTransaction: () => Promise.reject("Servicio aún no disponible")
+        };
         this.transactionData = {
             tipoTransaccion: '',
             cliente: null,
@@ -30,6 +34,15 @@ export class TransactionWizard {
 
         this.initSteps();
         this.setupEventListeners();
+    }
+    async loadCardnetService() {
+        try {
+            const module = await import('../services/cardnetService.js');
+            this.cardnetService = new module.CardnetService();
+            console.log("CardnetService cargado correctamente");
+        } catch (e) {
+            console.error("No se pudo cargar el servicio de CardNet:", e);
+        }
     }
 
     initSteps() {
@@ -537,11 +550,11 @@ export class TransactionWizard {
     loadDevolucionStep4Data() {
         // Nada por ahora
     }
-
-
     async finalizeVenta() {
         try {
             this.updateTotals && this.updateTotals();
+
+            // Gestión del cliente
             if (this.transactionData.cliente && !this.transactionData.cliente.cedula) {
                 const nuevoCliente = await this.transaccionService.createCliente(this.transactionData.cliente);
                 if (!nuevoCliente || !nuevoCliente.cedula) {
@@ -554,7 +567,7 @@ export class TransactionWizard {
                 ? cedulaToLong(this.transactionData.cliente.cedula)
                 : null;
 
-            // Validación extra para nombreProducto
+            // Validación de productos
             const lineaInvalida = this.transactionData.lineas.find(
                 line => !(line.nombreProducto || line.nombre)
             );
@@ -575,10 +588,10 @@ export class TransactionWizard {
                 observaciones: this.transactionData.observaciones,
                 lineas: this.transactionData.lineas.map(line => ({
                     productoId: line.productoId,
-                    productoNombre: line.nombreProducto || line.nombre, // ¡usa productoNombre!
+                    productoNombre: line.nombreProducto || line.nombre,
                     cantidad: line.cantidad,
                     precioUnitario: line.precioUnitario,
-                    subtotal: line.subtotalLinea,      // asegúrate que sea el monto correcto
+                    subtotal: line.subtotalLinea,
                     impuestoPorcentaje: line.impuestoPorcentaje ?? 0,
                     impuestoMonto: line.impuestoMonto ?? 0,
                     total: line.totalLinea ?? line.subtotalLinea,
@@ -596,6 +609,56 @@ export class TransactionWizard {
                 tipoContraparte: "CLIENTE",
                 vendedorId: 1,
             };
+
+            // Añadir información del tipo de pago y si es en cuotas
+            payload.tipoPago = this.transactionData.tipoPago || 'NORMAL';
+
+            // Si es pago con tarjeta
+            if (this.transactionData.metodoPago === 'TARJETA' && this.transactionData.cardnetResponse) {
+                payload.datosTarjeta = {
+                    numeroAutorizacion: this.transactionData.cardnetAuthCode,
+                    referencia: this.transactionData.referenceNumber,
+                    ultimosCuatro: this.extractLastFourDigits(this.transactionData.cardnetResponse.CreditCardNumber),
+                    respuestaAdquirente: this.transactionData.cardnetResponse.ResponseCode
+                };
+            }
+
+            // Si es pago en cuotas
+            if (this.transactionData.tipoPago === 'ENCUOTAS') {
+                // Calcular montos y saldo pendiente
+                const montoInicial = this.transactionData.montoInicial || 0;
+                const montoTotal = this.transactionData.total || 0;
+                const totalCuotas = this.transactionData.cuotasFlexibles?.reduce(
+                    (sum, cuota) => sum + (parseFloat(cuota.monto) || 0), 0
+                ) || 0;
+                const saldoPendiente = montoTotal - montoInicial - totalCuotas;
+
+                // Agregar información del plan de pagos al payload
+                payload.planPagos = {
+                    montoInicial: montoInicial,
+                    montoTotal: montoTotal,
+                    saldoPendiente: saldoPendiente,
+                    cuotas: this.transactionData.cuotasFlexibles.map(cuota => ({
+                        numero: cuota.numero,
+                        fecha: cuota.fecha,
+                        monto: parseFloat(cuota.monto),
+                        estado: 'PENDIENTE'
+                    }))
+                };
+
+                // Registrar detalles en observaciones también
+                if (!payload.observaciones) payload.observaciones = "";
+                payload.observaciones += "\n\nVENTA A CRÉDITO:";
+                payload.observaciones += `\nPago inicial: ${this.formatCurrency(montoInicial)}`;
+                payload.observaciones += `\nTotal a financiar: ${this.formatCurrency(montoTotal - montoInicial)}`;
+                payload.observaciones += `\nNúmero de cuotas: ${this.transactionData.cuotasFlexibles?.length || 0}`;
+
+                // Si hay saldo pendiente (no cubierto por las cuotas), incluirlo
+                if (saldoPendiente > 0) {
+                    payload.observaciones += `\nSaldo pendiente sin programar: ${this.formatCurrency(saldoPendiente)}`;
+                }
+            }
+
             console.log("Payload de venta:", JSON.stringify(payload, null, 2));
             await this.transaccionService.crearTransaccion(payload);
             window.showToast('Venta procesada exitosamente.', 'success');
@@ -605,6 +668,260 @@ export class TransactionWizard {
             console.error('Error al procesar venta:', error);
             window.showToast('Error al procesar la venta: ' + (error.message || error), 'error');
         }
+    }
+    extractLastFourDigits(cardNumber) {
+        if (!cardNumber) return '';
+        const match = cardNumber.match(/(\d{4})$/);
+        return match ? match[1] : '';
+    }
+    async processCardnetPayment() {
+        try {
+            // Mostrar pantalla de carga
+            this.showLoadingOverlay("Enviando pago al terminal Verifone...");
+
+            // Crea la sesión de CardNet indicando que es para terminal físico
+            const sessionData = await this.cardnetService.createSession({
+                ordenId: `ORD-${Date.now()}`,
+                total: this.transactionData.total,
+                impuestos: this.transactionData.impuestos,
+                email: this.transactionData.cliente?.email,
+                telefono: this.transactionData.cliente?.telefono,
+                direccion: this.transactionData.cliente?.direccion
+            }, true); // Añadimos 'true' para indicar que es para terminal físico
+
+            if (!sessionData.SESSION) {
+                throw new Error("No se pudo crear la sesión de pago");
+            }
+
+            // Guarda los datos de la sesión
+            this.cardnetSessionId = sessionData.SESSION;
+            this.cardnetSessionKey = sessionData["session-key"];
+
+            // Oculta el overlay de carga y muestra el modal de proceso de terminal
+            this.hideLoadingOverlay();
+            this.showTerminalProcessingModal(sessionData.SESSION);
+
+        } catch (error) {
+            this.hideLoadingOverlay();
+            window.showToast(`Error al iniciar pago con terminal: ${error.message}`, 'error');
+            console.error("Error en processCardnetPayment:", error);
+        }
+    }
+    /**
+     * Muestra el modal de proceso de pago en terminal
+     */
+    showTerminalProcessingModal(sessionId) {
+        // Crea un modal para mostrar el estado del proceso en terminal
+        const modal = document.createElement('div');
+        modal.id = 'terminalPaymentModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+        modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Pago con Terminal</h3>
+                    <button id="closeTerminalModal" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div id="terminalPaymentStatus" class="mb-4">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full"></div>
+                    </div>
+                    <p class="text-center text-lg font-medium" id="terminalStatusMessage">
+                        Transacción enviada al terminal
+                    </p>
+                    <p class="text-center text-gray-600 mt-2" id="terminalInstructions">
+                        Por favor, solicite al cliente que presente su tarjeta en el terminal.
+                    </p>
+                </div>
+                
+                <div id="terminalPaymentComplete" class="text-center hidden">
+                    <div class="bg-green-100 text-green-800 p-4 rounded-lg mb-4">
+                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                        <p class="font-bold">¡Pago completado exitosamente!</p>
+                        <p id="terminalAuthCode" class="mt-1"></p>
+                    </div>
+                    <button id="closeTerminalPaymentComplete" 
+                            class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        Cerrar
+                    </button>
+                </div>
+                
+                <div id="terminalPaymentError" class="text-center hidden">
+                    <div class="bg-red-100 text-red-800 p-4 rounded-lg mb-4">
+                        <i class="fas fa-exclamation-circle text-3xl text-red-500 mb-2"></i>
+                        <p class="font-bold">Error en la transacción</p>
+                        <p id="terminalErrorMessage" class="mt-1"></p>
+                    </div>
+                    <button id="closeTerminalPaymentError" 
+                            class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        // Configura los eventos
+        document.getElementById('closeTerminalModal').addEventListener('click', () => {
+            this.cancelTerminalPayment();
+        });
+
+        document.getElementById('closeTerminalPaymentComplete')?.addEventListener('click', () => {
+            document.getElementById('terminalPaymentModal').remove();
+            this.finalizeVenta();
+        });
+
+        document.getElementById('closeTerminalPaymentError')?.addEventListener('click', () => {
+            document.getElementById('terminalPaymentModal').remove();
+        });
+
+        // Iniciar el polling para consultar estado
+        this.startPollingTerminalStatus(
+            sessionId,
+            this.handleTerminalStatusChange.bind(this),
+            this.handleTerminalPaymentComplete.bind(this),
+            this.handleTerminalPaymentError.bind(this)
+        );
+    }
+
+    /**
+     * Maneja cambios de estado en la transacción del terminal
+     */
+    handleTerminalStatusChange(statusData) {
+        const statusMessage = document.getElementById('terminalStatusMessage');
+        const instructions = document.getElementById('terminalInstructions');
+
+        if (!statusMessage || !instructions) return;
+
+        if (statusData.status === 'CREATED') {
+            statusMessage.textContent = 'Transacción enviada al terminal';
+            instructions.textContent = 'Por favor, solicite al cliente que presente su tarjeta en el terminal.';
+        } else if (statusData.status === 'PENDING') {
+            statusMessage.textContent = 'Esperando acción en terminal';
+            instructions.textContent = 'El terminal está procesando el pago.';
+        } else if (statusData.status === 'CANCELLED_BY_USER') {
+            this.handleTerminalPaymentError(new Error("Transacción cancelada por el usuario"));
+        } else {
+            statusMessage.textContent = statusData.message || 'Procesando...';
+        }
+    }
+
+    /**
+     * Maneja la finalización exitosa del pago en terminal
+     */
+    handleTerminalPaymentComplete(statusData) {
+        const statusDiv = document.getElementById('terminalPaymentStatus');
+        const completeDiv = document.getElementById('terminalPaymentComplete');
+        const authCodeElement = document.getElementById('terminalAuthCode');
+
+        if (!statusDiv || !completeDiv) return;
+
+        // Ocultar estado y mostrar completado
+        statusDiv.classList.add('hidden');
+        completeDiv.classList.remove('hidden');
+
+        // Mostrar código de autorización si existe
+        if (statusData.authCode && authCodeElement) {
+            authCodeElement.textContent = `Código de autorización: ${statusData.authCode}`;
+        }
+
+        // Guardar información para la venta
+        this.transactionData.cardnetResponse = statusData;
+        this.transactionData.cardnetAuthCode = statusData.authCode;
+        this.transactionData.referenceNumber = statusData.referenceName || statusData.sessionId;
+    }
+
+    /**
+     * Maneja errores en el proceso de pago en terminal
+     */
+    handleTerminalPaymentError(error) {
+        const statusDiv = document.getElementById('terminalPaymentStatus');
+        const errorDiv = document.getElementById('terminalPaymentError');
+        const errorMessageElement = document.getElementById('terminalErrorMessage');
+
+        if (!statusDiv || !errorDiv) return;
+
+        // Ocultar estado y mostrar error
+        statusDiv.classList.add('hidden');
+        errorDiv.classList.remove('hidden');
+
+        // Mostrar mensaje de error
+        if (errorMessageElement) {
+            errorMessageElement.textContent = error.message || 'Error desconocido al procesar el pago';
+        }
+    }
+
+    /**
+     * Cancela una transacción en curso en el terminal
+     */
+    cancelTerminalPayment() {
+        // Detener polling
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+            this._pollingInterval = null;
+        }
+
+        // Cerrar modal
+        const modal = document.getElementById('terminalPaymentModal');
+        if (modal) modal.remove();
+    }
+
+    /**
+     * Inicia consultas periódicas al servidor para verificar estado
+     */
+    async startPollingTerminalStatus(sessionId, onStatusChange, onComplete, onError) {
+        const startTime = Date.now();
+        const maxPollingTime = 300000; // 5 minutos máximo
+        const pollingInterval = 3000; // Consultar cada 3 segundos
+
+        // Limpiar cualquier intervalo existente
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+        }
+
+        this._pollingInterval = setInterval(async () => {
+            try {
+                const statusData = await this.cardnetService.checkStatus(sessionId);
+
+                // Notificar el cambio de estado
+                if (onStatusChange) {
+                    onStatusChange(statusData);
+                }
+
+                // Si la transacción está completada
+                if (statusData.isCompleted) {
+                    clearInterval(this._pollingInterval);
+                    this._pollingInterval = null;
+                    if (onComplete) {
+                        onComplete(statusData);
+                    }
+                }
+
+                // Si ha pasado el tiempo máximo, detener
+                if (Date.now() - startTime > maxPollingTime) {
+                    clearInterval(this._pollingInterval);
+                    this._pollingInterval = null;
+                    if (onError) {
+                        onError(new Error("Tiempo de espera agotado para la transacción"));
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error consultando estado:", error);
+                clearInterval(this._pollingInterval);
+                this._pollingInterval = null;
+                if (onError) {
+                    onError(error);
+                }
+            }
+        }, pollingInterval);
     }
     async finalizeCompra() {
         try {
@@ -973,49 +1290,486 @@ export class TransactionWizard {
         return true;
     }
 
-    getVentaStep3Content() {
-        return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Método de Pago</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar método:</label>
-                        <div class="space-y-2">
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="ventaMetodoPago" value="EFECTIVO" class="form-radio text-brand-brown" checked>
-                                <span class="ml-2">Efectivo</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="ventaMetodoPago" value="TARJETA" class="form-radio text-brand-brown">
-                                <span class="ml-2">Tarjeta</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="ventaMetodoPago" value="TRANSFERENCIA" class="form-radio text-brand-brown">
-                                <span class="ml-2">Transferencia</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                        <textarea id="ventaObservaciones" rows="4" placeholder="Observaciones adicionales..." 
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown"></textarea>
-                    </div>
-                </div>
+
+    /**
+     * Muestra el formulario de pago de CardNet
+     */
+    showCardnetPaymentForm(sessionId) {
+        // Crea un modal con el formulario de CardNet
+        const modal = document.createElement('div');
+        modal.id = 'cardnetPaymentModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+        modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-brand-brown">Pago con Tarjeta</h3>
+                <button id="closeCardnetModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-        `;
+            <div class="text-center mb-4">
+                <p class="mb-4">Serás redirigido a la plataforma segura de CardNet para completar el pago.</p>
+                <form id="cardnetForm" action="https://lab.cardnet.com.do/authorize" method="post" target="_blank">
+                    <input name="SESSION" value="${sessionId}" type="hidden">
+                    <button type="submit" class="w-full bg-brand-brown text-white py-3 rounded-lg hover:bg-brand-light-brown transition-colors">
+                        Proceder al Pago
+                    </button>
+                </form>
+            </div>
+            <div class="mt-4 text-sm text-gray-500 text-center">
+                <p>Al hacer clic en "Proceder al Pago", serás redirigido a la plataforma segura de CardNet.</p>
+                <p>Una vez completado el pago, regresa a esta ventana.</p>
+            </div>
+            <div class="mt-6 flex justify-center">
+                <button id="checkCardnetPayment" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    Ya completé el pago
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        // Configura los eventos
+        document.getElementById('closeCardnetModal').addEventListener('click', () => {
+            document.getElementById('cardnetPaymentModal').remove();
+        });
+
+        document.getElementById('cardnetForm').addEventListener('submit', () => {
+            setTimeout(() => {
+                window.showToast('Procesando pago con CardNet...', 'info');
+            }, 1000);
+        });
+
+        document.getElementById('checkCardnetPayment').addEventListener('click', () => {
+            this.verifyCardnetPayment();
+        });
     }
 
-    validateVentaStep3() {
-        const metodoPago = document.querySelector('input[name="ventaMetodoPago"]:checked')?.value;
-        if (!metodoPago) {
-            window.showToast('Selecciona un método de pago.', 'error');
-            return false;
+    /**
+     * Verifica el estado del pago en CardNet
+     */
+    async verifyCardnetPayment() {
+        if (!this.cardnetSessionId || !this.cardnetSessionKey) {
+            window.showToast('No hay una sesión de pago activa', 'error');
+            return;
         }
 
-        this.transactionData.metodoPago = metodoPago;
+        try {
+            this.showLoadingOverlay("Verificando pago...");
+
+            const result = await this.cardnetService.verifyTransaction(
+                this.cardnetSessionId,
+                this.cardnetSessionKey
+            );
+
+            this.hideLoadingOverlay();
+
+            // Verifica si el pago fue exitoso
+            if (result.ResponseCode === '00') {
+                // Guarda los datos de la transacción
+                this.transactionData.cardnetResponse = result;
+                this.transactionData.cardnetAuthCode = result.AuthorizationCode;
+                this.transactionData.referenceNumber = result.RetrievalReferenceNumber;
+
+                // Cierra el modal de CardNet
+                const modal = document.getElementById('cardnetPaymentModal');
+                if (modal) modal.remove();
+
+                // Muestra mensaje de éxito
+                window.showToast('Pago procesado exitosamente', 'success');
+
+                // Continúa con la finalización de la venta
+                this.finalizeVenta();
+            } else {
+                window.showToast(`Pago rechazado: ${this.getCardnetErrorMessage(result.ResponseCode)}`, 'error');
+            }
+        } catch (error) {
+            this.hideLoadingOverlay();
+            window.showToast(`Error al verificar el pago: ${error.message}`, 'error');
+            console.error("Error en verifyCardnetPayment:", error);
+        }
+    }
+
+    /**
+     * Obtiene el mensaje de error según el código de respuesta de CardNet
+     */
+    getCardnetErrorMessage(responseCode) {
+        const errorMessages = {
+            '01': 'Tarjeta rechazada, contacta a tu banco',
+            '05': 'Transacción rechazada',
+            '51': 'Fondos insuficientes',
+            '54': 'Tarjeta vencida',
+            '61': 'Excedió límite de retiro',
+            '99': 'Error en el código de seguridad (CVV)'
+            // Puedes agregar más códigos según la documentación
+        };
+
+        return errorMessages[responseCode] || `Error código ${responseCode}`;
+    }
+
+    /**
+     * Muestra un overlay de carga
+     */
+    showLoadingOverlay(message = "Procesando...") {
+        const overlay = document.createElement('div');
+        overlay.id = 'paymentLoadingOverlay';
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+            <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600 font-medium">${message}</p>
+        </div>
+    `;
+        document.body.appendChild(overlay);
+    }
+
+    /**
+     * Oculta el overlay de carga
+     */
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('paymentLoadingOverlay');
+        if (overlay) overlay.remove();
+    }
+
+    // Muestra/oculta campos según el tipo de pago
+    toggleTipoPago(tipo) {
+        const normalFields = document.getElementById('metodoPagoNormal');
+        const cuotasFields = document.getElementById('metodoPagoEnCuotas');
+        const gestionCuotas = document.getElementById('gestionCuotasFlexibles');
+
+        if (tipo === 'NORMAL') {
+            normalFields.classList.remove('hidden');
+            cuotasFields.classList.add('hidden');
+            gestionCuotas.classList.add('hidden');
+        } else {
+            normalFields.classList.add('hidden');
+            cuotasFields.classList.remove('hidden');
+            gestionCuotas.classList.remove('hidden');
+
+            // Inicializar cuotas
+            this.inicializarGestionCuotas();
+        }
+
+        this.transactionData.tipoPago = tipo;
+    }
+
+// Inicializa la gestión de cuotas
+    inicializarGestionCuotas() {
+        // Inicializar arreglo de cuotas si no existe
+        if (!this.transactionData.cuotasFlexibles) {
+            this.transactionData.cuotasFlexibles = [];
+        }
+
+        // Mostrar cuotas existentes
+        this.actualizarListaCuotas();
+
+        // Configurar eventos
+        const btnAgregarCuota = document.getElementById('btnAgregarCuota');
+        if (btnAgregarCuota) {
+            btnAgregarCuota.onclick = () => this.agregarCuotaFlexible();
+        }
+
+        // Configurar evento para el monto inicial
+        const montoInicial = document.getElementById('montoInicial');
+        if (montoInicial) {
+            montoInicial.onchange = () => this.actualizarMontoAFinanciar();
+            montoInicial.onkeyup = () => this.actualizarMontoAFinanciar();
+        }
+    }
+
+// Actualiza el monto a financiar cuando cambia el monto inicial
+    actualizarMontoAFinanciar() {
+        const montoInicial = parseFloat(document.getElementById('montoInicial').value) || 0;
+        const montoTotal = this.transactionData.total || 0;
+
+        // Validar que el monto inicial no exceda el total
+        if (montoInicial > montoTotal) {
+            window.showToast('El monto inicial no puede ser mayor al total', 'error');
+            document.getElementById('montoInicial').value = montoTotal;
+            return;
+        }
+
+        // Calcular monto a financiar
+        const montoAFinanciar = montoTotal - montoInicial;
+
+        // Actualizar en la interfaz
+        const spanMontoAFinanciar = document.getElementById('montoAFinanciar');
+        if (spanMontoAFinanciar) {
+            spanMontoAFinanciar.textContent = this.formatCurrency(montoAFinanciar);
+        }
+
+        // Guardar en transactionData
+        this.transactionData.montoInicial = montoInicial;
+        this.transactionData.montoAFinanciar = montoAFinanciar;
+
+        // Actualizar saldo pendiente
+        this.actualizarSaldoPendiente();
+    }
+
+// Agrega una nueva cuota flexible
+    agregarCuotaFlexible() {
+        // Calcular fecha sugerida (1 mes después de la última cuota o de hoy)
+        let fechaSugerida = new Date();
+        if (this.transactionData.cuotasFlexibles && this.transactionData.cuotasFlexibles.length > 0) {
+            const ultimaCuota = this.transactionData.cuotasFlexibles[this.transactionData.cuotasFlexibles.length - 1];
+            fechaSugerida = new Date(ultimaCuota.fecha);
+        }
+        fechaSugerida.setMonth(fechaSugerida.getMonth() + 1);
+
+        // Formato YYYY-MM-DD para el input date
+        const fechaFormateada = fechaSugerida.toISOString().split('T')[0];
+
+        // Crear nueva cuota
+        const nuevaCuota = {
+            id: Date.now(), // ID único temporal
+            numero: (this.transactionData.cuotasFlexibles?.length || 0) + 1,
+            fecha: fechaFormateada,
+            monto: 0,
+            estado: 'PENDIENTE'
+        };
+
+        // Agregar al arreglo
+        if (!this.transactionData.cuotasFlexibles) {
+            this.transactionData.cuotasFlexibles = [];
+        }
+        this.transactionData.cuotasFlexibles.push(nuevaCuota);
+
+        // Actualizar la lista en la interfaz
+        this.actualizarListaCuotas();
+    }
+
+// Actualiza la lista de cuotas en la interfaz
+    actualizarListaCuotas() {
+        const container = document.getElementById('listaCuotasFlexibles');
+        if (!container) return;
+
+        if (!this.transactionData.cuotasFlexibles || this.transactionData.cuotasFlexibles.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 italic">No hay cuotas configuradas</p>';
+            return;
+        }
+
+        container.innerHTML = this.transactionData.cuotasFlexibles.map((cuota, index) => `
+        <div class="flex items-center space-x-3 p-3 bg-white rounded border">
+            <div class="font-medium text-gray-700">Cuota ${cuota.numero}</div>
+            <div class="flex-grow grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-xs text-gray-600 block">Fecha</label>
+                    <input type="date" value="${cuota.fecha}" 
+                           class="w-full border rounded px-2 py-1 text-sm"
+                           onchange="window.transactionWizard.actualizarFechaCuota(${cuota.id}, this.value)">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-600 block">Monto</label>
+                    <input type="number" value="${cuota.monto}" min="0" step="0.01"
+                           class="w-full border rounded px-2 py-1 text-sm"
+                           onchange="window.transactionWizard.actualizarMontoCuota(${cuota.id}, this.value)">
+                </div>
+            </div>
+            <div>
+                <button type="button" class="text-red-500 hover:text-red-700"
+                        onclick="window.transactionWizard.eliminarCuota(${cuota.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+        // Actualizar saldo pendiente
+        this.actualizarSaldoPendiente();
+    }
+
+// Actualiza la fecha de una cuota
+    actualizarFechaCuota(id, fecha) {
+        const cuota = this.transactionData.cuotasFlexibles.find(c => c.id === id);
+        if (cuota) {
+            cuota.fecha = fecha;
+        }
+    }
+
+// Actualiza el monto de una cuota
+    actualizarMontoCuota(id, monto) {
+        const montoValue = parseFloat(monto) || 0;
+        const cuota = this.transactionData.cuotasFlexibles.find(c => c.id === id);
+        if (cuota) {
+            cuota.monto = montoValue;
+            this.actualizarSaldoPendiente();
+        }
+    }
+
+// Elimina una cuota
+    eliminarCuota(id) {
+        this.transactionData.cuotasFlexibles = this.transactionData.cuotasFlexibles.filter(c => c.id !== id);
+
+        // Renumerar cuotas
+        this.transactionData.cuotasFlexibles.forEach((cuota, index) => {
+            cuota.numero = index + 1;
+        });
+
+        this.actualizarListaCuotas();
+    }
+
+// Actualiza el saldo pendiente
+    actualizarSaldoPendiente() {
+        const montoInicial = parseFloat(document.getElementById('montoInicial').value) || 0;
+        const totalCuotas = this.transactionData.cuotasFlexibles?.reduce((sum, cuota) => sum + (parseFloat(cuota.monto) || 0), 0) || 0;
+        const totalPagos = montoInicial + totalCuotas;
+        const saldoPendiente = this.transactionData.total - totalPagos;
+
+        const spanSaldoPendiente = document.getElementById('saldoPendiente');
+        if (spanSaldoPendiente) {
+            spanSaldoPendiente.textContent = this.formatCurrency(saldoPendiente);
+
+            // Cambiar color según si está completo o no
+            if (saldoPendiente <= 0) {
+                spanSaldoPendiente.classList.remove('text-brand-brown');
+                spanSaldoPendiente.classList.add('text-green-600');
+            } else {
+                spanSaldoPendiente.classList.add('text-brand-brown');
+                spanSaldoPendiente.classList.remove('text-green-600');
+            }
+        }
+
+        // Guardar en transactionData
+        this.transactionData.saldoPendiente = saldoPendiente;
+        return saldoPendiente;
+    }
+
+    getVentaStep3Content() {
+        return `
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-brand-brown">Método de Pago</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de pago:</label>
+                    <div class="space-y-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="TipoPago" value="NORMAL" class="form-radio text-brand-brown" checked 
+                                   onchange="window.transactionWizard.toggleTipoPago('NORMAL')">
+                            <span class="ml-2">Normal</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="TipoPago" value="ENCUOTAS" class="form-radio text-brand-brown"
+                                   onchange="window.transactionWizard.toggleTipoPago('ENCUOTAS')">
+                            <span class="ml-2">En cuotas</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Campos normales -->
+                <div id="metodoPagoNormal">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar método:</label>
+                    <div class="space-y-2">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="ventaMetodoPago" value="EFECTIVO" class="form-radio text-brand-brown" checked>
+                            <span class="ml-2">Efectivo</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="ventaMetodoPago" value="TARJETA" class="form-radio text-brand-brown">
+                            <span class="ml-2">Tarjeta</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="ventaMetodoPago" value="TRANSFERENCIA" class="form-radio text-brand-brown">
+                            <span class="ml-2">Transferencia</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Campos para pago en cuotas (inicialmente oculto) -->
+                <div id="metodoPagoEnCuotas" class="hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Monto de inicial</label>
+                            <input type="number" id="montoInicial" class="w-full border rounded px-3 py-2" min="0">
+                        </div>
+                        <div class="text-sm text-gray-700 py-1 px-2 bg-gray-100 rounded">
+                            <span>Total a financiar: </span>
+                            <span id="montoAFinanciar" class="font-bold">${this.formatCurrency(this.transactionData.total)}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gestión de cuotas flexibles -->
+                <div id="gestionCuotasFlexibles" class="hidden col-span-2 mt-4 border p-4 rounded-lg bg-gray-50">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold">Gestión de Cuotas</h4>
+                        <button type="button" id="btnAgregarCuota" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                            <i class="fas fa-plus mr-1"></i> Agregar Cuota
+                        </button>
+                    </div>
+                    
+                    <div id="listaCuotasFlexibles" class="space-y-3">
+                        <!-- Aquí se añadirán dinámicamente las cuotas -->
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-4 pt-3 border-t">
+                        <div class="font-medium">Saldo restante:</div>
+                        <div id="saldoPendiente" class="font-bold text-xl text-brand-brown">${this.formatCurrency(this.transactionData.total)}</div>
+                    </div>
+                </div>
+                
+                <!-- Campo de observaciones -->
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                    <textarea id="ventaObservaciones" rows="4" placeholder="Observaciones adicionales..." 
+                              class="w-full px-3 py-2 border rounded"></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+    }
+    validateVentaStep3() {
+        const tipoPago = document.querySelector('input[name="TipoPago"]:checked')?.value;
+        this.transactionData.tipoPago = tipoPago;
+
+        if (tipoPago === 'ENCUOTAS') {
+            // Validar que haya un monto inicial (puede ser 0 si es todo financiado)
+            const montoInicial = parseFloat(document.getElementById('montoInicial').value);
+            if (isNaN(montoInicial)) {
+                window.showToast('Debe ingresar el monto inicial (puede ser 0)', 'error');
+                return false;
+            }
+
+            // Las cuotas ya no son obligatorias al inicio, solo hay que calcular el saldo pendiente
+            const saldoPendiente = this.actualizarSaldoPendiente();
+
+            // Si el saldo pendiente es negativo (pago excesivo), advertir
+            if (saldoPendiente < 0) {
+                if (!confirm(`El total de pagos excede el precio por ${this.formatCurrency(-saldoPendiente)}. ¿Desea continuar de todos modos?`)) {
+                    return false;
+                }
+            }
+
+            // Si no hay cuotas pero hay saldo pendiente, confirmar que es intencional
+            if (saldoPendiente > 0 && (!this.transactionData.cuotasFlexibles || this.transactionData.cuotasFlexibles.length === 0)) {
+                if (!confirm(`Hay un saldo pendiente de ${this.formatCurrency(saldoPendiente)} sin cuotas programadas. El cliente deberá completar el pago posteriormente. ¿Desea continuar?`)) {
+                    return false;
+                }
+            }
+
+            // Para pagos en cuotas con monto inicial, usar EFECTIVO para el primer pago
+            this.transactionData.metodoPago = 'EFECTIVO';
+        } else {
+            // Pago normal - código existente
+            const metodoPago = document.querySelector('input[name="ventaMetodoPago"]:checked')?.value;
+            if (!metodoPago) {
+                window.showToast('Selecciona un método de pago.', 'error');
+                return false;
+            }
+            this.transactionData.metodoPago = metodoPago;
+
+            if (metodoPago === 'TARJETA') {
+                // Usar la función actualizada para terminal físico en vez de web
+                this.processCardnetPayment();
+                return false; // Detener el flujo normal para que se maneje en la función de pago con tarjeta
+            }
+        }
+
         this.transactionData.observaciones = document.getElementById('ventaObservaciones')?.value || '';
         return true;
     }
+
     // PASO 3: Selección de productos a devolver con cantidad
     getDevolucionStep3Content() {
         const t = this.transactionData.transaccionOrigen;
@@ -1228,26 +1982,80 @@ export class TransactionWizard {
             `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido} (${this.transactionData.cliente.cedula})` :
             'Consumidor Final';
 
-        return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Confirmación de Venta</h3>
-                <div class="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <p><strong>Cliente:</strong> ${clienteInfo}</p>
-                    <p><strong>Método de Pago:</strong> ${this.transactionData.metodoPago}</p>
-                    <p><strong>Total de Productos:</strong> ${this.transactionData.lineas.length}</p>
-                    <p><strong>Subtotal:</strong> ${this.formatCurrency(this.transactionData.subtotal)}</p>
-                    <p><strong>Impuestos:</strong> ${this.formatCurrency(this.transactionData.impuestos)}</p>
-                    <p class="text-xl"><strong>Total a Cobrar:</strong> <span class="text-brand-brown">${this.formatCurrency(this.transactionData.total)}</span></p>
+        // Determinar si hay un plan de pagos en cuotas
+        let planPagosHTML = '';
+        if (this.transactionData.tipoPago === 'ENCUOTAS') {
+            const montoInicial = this.transactionData.montoInicial || 0;
+            const montoTotal = this.transactionData.total || 0;
+            const totalCuotas = this.transactionData.cuotasFlexibles?.reduce(
+                (sum, cuota) => sum + (parseFloat(cuota.monto) || 0), 0
+            ) || 0;
+            const saldoPendiente = montoTotal - montoInicial - totalCuotas;
+
+            planPagosHTML = `
+            <div class="mt-4 pt-4 border-t border-gray-300">
+                <h4 class="font-bold text-brand-brown mb-3">Plan de Pagos</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <p><strong>Tipo de pago:</strong> En cuotas</p>
+                        <p><strong>Pago inicial:</strong> ${this.formatCurrency(montoInicial)}</p>
+                        <p><strong>Total a financiar:</strong> ${this.formatCurrency(montoTotal - montoInicial)}</p>
+                    </div>
+                    <div>
+                        <p><strong>Número de cuotas:</strong> ${this.transactionData.cuotasFlexibles?.length || 0}</p>
+                        <p class="${saldoPendiente <= 0 ? 'text-green-600' : 'text-yellow-600'} font-medium">
+                            <strong>Saldo pendiente:</strong> ${this.formatCurrency(saldoPendiente)}
+                        </p>
+                    </div>
                 </div>
                 
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                    <p class="text-sm text-yellow-700">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        Revisa toda la información antes de procesar la venta. Una vez confirmada, no se podrá modificar.
-                    </p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-3 text-left text-sm font-medium text-gray-700">Cuota</th>
+                                <th class="py-2 px-3 text-left text-sm font-medium text-gray-700">Fecha</th>
+                                <th class="py-2 px-3 text-right text-sm font-medium text-gray-700">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${this.transactionData.cuotasFlexibles?.map(cuota => `
+                                <tr>
+                                    <td class="py-2 px-3 text-sm">${cuota.numero}</td>
+                                    <td class="py-2 px-3 text-sm">${new Date(cuota.fecha).toLocaleDateString()}</td>
+                                    <td class="py-2 px-3 text-sm text-right">${this.formatCurrency(cuota.monto)}</td>
+                                </tr>
+                            `).join('') || ''}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         `;
+        }
+
+        return `
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-brand-brown">Confirmación de Venta</h3>
+            <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+                <p><strong>Cliente:</strong> ${clienteInfo}</p>
+                <p><strong>Método de Pago:</strong> ${this.transactionData.metodoPago}</p>
+                <p><strong>Tipo de Pago:</strong> ${this.transactionData.tipoPago === 'ENCUOTAS' ? 'En cuotas' : 'Normal'}</p>
+                <p><strong>Total de Productos:</strong> ${this.transactionData.lineas.length}</p>
+                <p><strong>Subtotal:</strong> ${this.formatCurrency(this.transactionData.subtotal)}</p>
+                <p><strong>Impuestos:</strong> ${this.formatCurrency(this.transactionData.impuestos)}</p>
+                <p class="text-xl"><strong>Total a Cobrar:</strong> <span class="text-brand-brown">${this.formatCurrency(this.transactionData.total)}</span></p>
+                
+                ${planPagosHTML}
+            </div>
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                <p class="text-sm text-yellow-700">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Revisa toda la información antes de procesar la venta. Una vez confirmada, no se podrá modificar.
+                </p>
+            </div>
+        </div>
+    `;
     }
 
 

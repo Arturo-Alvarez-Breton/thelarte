@@ -1,5 +1,9 @@
 import { TransaccionService } from '../services/transaccionService.js';
 import { TableViewManager } from '../components/tableView.js';
+import { imprimirFactura } from '../printable/imprimirFactu.js';
+import { CardnetService } from '../services/cardnetService.js'; // Nueva importación
+import { TerminalPaymentProcessor } from '../components/TerminalPaymentProcessor.js'; // Nueva importación
+
 
 // --- MAIN CLASS ---
 class TransaccionesManager {
@@ -8,12 +12,17 @@ class TransaccionesManager {
         this.transactions = [];
         this.filteredTransactions = [];
         this.currentPage = 0;
-        this.transactionsPerPage = 25; // Usamos 25 para mobile/tablet
+        this.transactionsPerPage = 25;
         this.totalPages = 0;
         this.totalItems = 0;
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-        this.vista = 'tarjetas'; // 'tarjetas' o 'tabla'
+        this.vista = 'tarjetas';
+        // Inicializar servicios para el terminal de pago
+        this.cardnetService = new CardnetService();
+        this.terminalPaymentProcessor = new TerminalPaymentProcessor(this.cardnetService);
+
+
 
         // Responsive columns
         this.tableViewManager = new TableViewManager('#transaccionesListContainer', {
@@ -417,13 +426,9 @@ class TransaccionesManager {
                         <i class="fas fa-eye text-xs"></i>
                         <span>Ver Detalles</span>
                     </button>
-                    <button 
-                        onclick="transaccionesManager.imprimirFactura(${transaction.id})"
-                        class="flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        title="Imprimir factura"
-                        type="button"
-                    >
-                        <i class="fas fa-print text-xs"></i>
+                    <button onclick="transaccionesManager.imprimirFactura(document.getElementById('detallesTransaccion').getAttribute('data-transaction-id'))" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-print mr-2"></i>
+                        Imprimir
                     </button>
                 </div>
             </div>
@@ -618,14 +623,17 @@ class TransaccionesManager {
     renderTransactionDetailsModal(transaction) {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
+
+        detailsContainer.setAttribute('data-transaction-id', transaction.id);
+        // Información de la contraparte
         let contraparteInfo = '';
         if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
             contraparteInfo = `
-                <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
-                <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
-                <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
-                <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
-            `;
+        <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
+        <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
+        <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
+        <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
+    `;
         } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
             contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''} (${transaction.cliente.cedula || ''})</p>`;
         } else if (transaction.contraparteNombre) {
@@ -633,6 +641,8 @@ class TransaccionesManager {
         } else {
             contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
         }
+
+        // Lista de productos
         const productsList = transaction.lineas && transaction.lineas.length > 0
             ? transaction.lineas.map(line => `
         <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
@@ -646,53 +656,249 @@ class TransaccionesManager {
                 ${line.descuento ? `<p class="text-sm text-red-600">Desc: ${this.formatCurrency(line.descuento)}</p>` : ''}
             </div>
         </div>
-    `).join('') : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+    `).join('')
+            : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
+
+        // Selector de estado
         const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA','DEVUELTA','PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
-            <div class="flex items-center space-x-2">
-                <label class="font-bold">Estado:</label>
-                <select id="estadoTransaccion" class="border rounded px-2 py-1" onchange="transaccionesManager.cambiarEstadoTransaccion(${transaction.id}, this.value)">
-                    ${estadoOptions.map(estado =>
+    <div class="flex items-center space-x-2">
+        <label class="font-bold">Estado:</label>
+        <select id="estadoTransaccion" class="border rounded px-2 py-1" onchange="transaccionesManager.cambiarEstadoTransaccion(${transaction.id}, this.value)">
+            ${estadoOptions.map(estado =>
             `<option value="${estado}" ${transaction.estado === estado ? 'selected' : ''}>${estado}</option>`
         ).join('')}
-                </select>
-            </div>
-        `;
-        detailsContainer.innerHTML = `
-            <div class="space-y-4">
-                <div class="bg-blue-50 p-3 rounded-lg">
-                    <p><strong>Factura #:</strong> ${transaction.numeroFactura || 'N/A'}</p>
-                    <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipo)}</p>
-                    <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
-                    ${estadoSelect}
-                </div>
-                <div class="bg-gray-50 p-3 rounded-lg">
-                    <h4 class="font-bold mb-2">Información de Contraparte:</h4>
-                    ${contraparteInfo}
-                </div>
-                <div>
-                    <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
-                    <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
-                </div>
-                <div>
-                    <h4 class="font-bold mb-2">Muebles/Productos Registrados:</h4>
-                    <div class="border rounded p-3 max-h-64 overflow-y-auto">${productsList}</div>
-                </div>
-                <div class="bg-green-50 p-3 rounded-lg text-right">
-                    <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
-                    <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
-                    <p class="text-xl font-bold text-green-700">Total: ${this.formatCurrency(transaction.total)}</p>
-                </div>
-            </div>
-        `;
-    }
+        </select>
+    </div>
+`;
 
+        // Verificar si es venta en cuotas
+        let planPagosHTML = '';
+        if (transaction.tipoPago === 'ENCUOTAS' || transaction.planPagos) {
+            const planPagos = transaction.planPagos || {};
+            const montoInicial = planPagos.montoInicial || 0;
+            const montoTotal = planPagos.montoTotal || transaction.total || 0;
+            const saldoPendiente = planPagos.saldoPendiente || (transaction.total - montoInicial);
+            const cuotas = planPagos.cuotas || [];
+
+            planPagosHTML = `
+        <div class="mt-6 border-t pt-4">
+            <h4 class="text-lg font-bold text-brand-brown mb-3">Plan de Pagos</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-blue-50 p-4 rounded-lg">
+                <div>
+                    <p><strong>Tipo de pago:</strong> En cuotas</p>
+                    <p><strong>Pago inicial:</strong> ${this.formatCurrency(montoInicial)}</p>
+                    <p><strong>Total a financiar:</strong> ${this.formatCurrency(montoTotal - montoInicial)}</p>
+                </div>
+                <div>
+                    <p><strong>Número de cuotas:</strong> ${cuotas.length}</p>
+                    <p class="${saldoPendiente <= 0 ? 'text-green-600' : 'text-yellow-600'} font-bold">
+                        <strong>Saldo pendiente:</strong> ${this.formatCurrency(saldoPendiente)}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h5 class="font-semibold mb-2">Cuotas registradas:</h5>
+                ${cuotas.length > 0 ? `
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-3 text-left text-sm font-medium text-gray-700 border-b">Cuota</th>
+                                    <th class="py-2 px-3 text-left text-sm font-medium text-gray-700 border-b">Fecha</th>
+                                    <th class="py-2 px-3 text-right text-sm font-medium text-gray-700 border-b">Monto</th>
+                                    <th class="py-2 px-3 text-center text-sm font-medium text-gray-700 border-b">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                ${cuotas.map(cuota => `
+                                    <tr>
+                                        <td class="py-2 px-3 text-sm">${cuota.numero}</td>
+                                        <td class="py-2 px-3 text-sm">${new Date(cuota.fecha).toLocaleDateString()}</td>
+                                        <td class="py-2 px-3 text-sm text-right">${this.formatCurrency(cuota.monto)}</td>
+                                        <td class="py-2 px-3 text-sm text-center">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                                ${cuota.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' :
+                cuota.estado === 'PAGADA' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                                ${cuota.estado}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<p class="text-gray-500 italic">No hay cuotas registradas aún.</p>'}
+            </div>
+            
+            ${saldoPendiente > 0 ? `
+                <div class="mt-4">
+                    <button onclick="transaccionesManager.agregarPago(${transaction.id})" 
+                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        <i class="fas fa-plus mr-2"></i> Registrar Nuevo Pago
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+        }
+
+        // Añadir botón para pago con terminal si la transacción está pendiente
+        const isPendiente = transaction.estado === 'PENDIENTE';
+        const terminalPaymentButton = isPendiente ? `
+    <div class="mt-4 pt-4 border-t">
+        <h4 class="font-bold mb-3">Opciones de Pago</h4>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="procesarPagoTerminal(${transaction.id})" 
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-credit-card mr-2"></i>
+                Procesar Pago con Terminal
+            </button>
+        </div>
+    </div>` : '';
+
+        // Renderizar todo el contenido
+        detailsContainer.innerHTML = `
+    <div class="space-y-4">
+        <div class="bg-blue-50 p-3 rounded-lg">
+            <p><strong>Factura #:</strong> ${transaction.numeroFactura || transaction.id}</p>
+            <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipo)}</p>
+            <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
+            ${estadoSelect}
+        </div>
+        <div class="bg-gray-50 p-3 rounded-lg">
+            <h4 class="font-bold mb-2">Información de Contraparte:</h4>
+            ${contraparteInfo}
+        </div>
+        <div>
+            <p><strong>Método de Pago:</strong> ${transaction.metodoPago}</p>
+            <p><strong>Observaciones:</strong> ${transaction.observaciones || 'N/A'}</p>
+        </div>
+        <div>
+            <h4 class="font-bold mb-2">Muebles/Productos Registrados:</h4>
+            <div class="border rounded p-3 max-h-64 overflow-y-auto">${productsList}</div>
+        </div>
+        
+        ${planPagosHTML}
+        
+        ${terminalPaymentButton}
+        
+        <div class="bg-green-50 p-3 rounded-lg text-right">
+            <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
+            <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
+            <p class="text-xl font-bold text-green-700">Total: ${this.formatCurrency(transaction.total)}</p>
+        </div>
+    </div>
+`;
+    }
     cerrarModalVerTransaccion() {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
 
-    imprimirFactura(id) {
-        window.showToast('Funcionalidad de impresión en desarrollo.', 'info');
+    async agregarPago(transaccionId) {
+        // Obtener la transacción actualizada
+        const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+        const planPagos = transaccion.planPagos || {};
+        const saldoPendiente = planPagos.saldoPendiente || 0;
+
+        // Si no hay saldo pendiente, no permitir más pagos
+        if (saldoPendiente <= 0) {
+            window.showToast('Esta transacción ya está completamente pagada', 'info');
+            return;
+        }
+
+        // Crear modal para registrar nuevo pago
+        const modal = document.createElement('div');
+        modal.id = 'modalRegistrarPago';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">Registrar Nuevo Pago</h3>
+                <button id="cerrarModalPago" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+                    <input type="date" id="fechaPago" class="w-full border rounded-lg p-2" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                    <input type="number" id="montoPago" class="w-full border rounded-lg p-2" min="0" max="${saldoPendiente}" step="0.01" value="${saldoPendiente}">
+                    <p class="text-sm text-gray-500 mt-1">Saldo pendiente: ${this.formatCurrency(saldoPendiente)}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                    <select id="metodoPago" class="w-full border rounded-lg p-2">
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="TARJETA">Tarjeta</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                    <textarea id="observacionesPago" class="w-full border rounded-lg p-2" rows="2"></textarea>
+                </div>
+                <div class="pt-4">
+                    <button id="guardarPago" class="w-full bg-brand-brown text-white py-2 rounded-lg hover:bg-brand-light-brown">
+                        Registrar Pago
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        // Configurar eventos
+        document.getElementById('cerrarModalPago').onclick = () => {
+            modal.remove();
+        };
+
+        document.getElementById('guardarPago').onclick = async () => {
+            try {
+                const fechaPago = document.getElementById('fechaPago').value;
+                const montoPago = parseFloat(document.getElementById('montoPago').value);
+                const metodoPago = document.getElementById('metodoPago').value;
+                const observaciones = document.getElementById('observacionesPago').value;
+
+                // Validaciones
+                if (!fechaPago || isNaN(montoPago) || montoPago <= 0) {
+                    window.showToast('Ingrese una fecha y monto válidos', 'error');
+                    return;
+                }
+
+                if (montoPago > saldoPendiente) {
+                    window.showToast(`El monto no puede exceder el saldo pendiente (${this.formatCurrency(saldoPendiente)})`, 'error');
+                    return;
+                }
+
+                // Registrar el pago
+                await this.transaccionService.registrarPago({
+                    transaccionId,
+                    fecha: fechaPago,
+                    monto: montoPago,
+                    metodoPago,
+                    observaciones
+                });
+
+                // Cerrar modal y refrescar detalles
+                modal.remove();
+                window.showToast('Pago registrado exitosamente', 'success');
+
+                // Refrescar la vista de detalles
+                this.viewTransactionDetails(transaccionId);
+
+                // Opcionalmente, actualizar la lista de transacciones
+                await this.loadTransactions();
+            } catch (error) {
+                console.error('Error al registrar pago:', error);
+                window.showToast('Error al registrar el pago: ' + (error.message || error), 'error');
+            }
+        };
     }
 
     async eliminarTransaccion(id) {
@@ -726,14 +932,214 @@ class TransaccionesManager {
             }
         });
     }
-}
+    imprimirFactura(id) {
+        // Buscar la transacción primero
+        this.transaccionService.obtenerTransaccionPorId(id)
+            .then(transaccion => {
+                // Importa y usa la función directamente
+                imprimirFactura(transaccion);
+            })
+            .catch(error => {
+                console.error('Error al obtener la transacción:', error);
+                window.showToast('Error al generar la factura.', 'error');
+            });
+    }
 
+    // --- Funciones para el Terminal Verifone ---
+    async procesarPagoTerminal(transaccionId) {
+        try {
+            // 1. Obtener datos de la transacción
+            const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+            if (!transaccion) {
+                throw new Error("No se pudo obtener la transacción");
+            }
+
+            // 2. Mostrar modal de pago con terminal
+            document.getElementById('terminalPaymentModal').classList.remove('hidden');
+            document.getElementById('terminalPaymentStatus').classList.remove('hidden');
+            document.getElementById('terminalPaymentComplete').classList.add('hidden');
+            document.getElementById('terminalPaymentError').classList.add('hidden');
+            document.getElementById('terminalStatusMessage').textContent = 'Enviando transacción al terminal...';
+            document.getElementById('terminalInstructions').textContent = 'Por favor espere mientras se procesa la solicitud.';
+
+            // 3. Preparar datos para Cardnet
+            const paymentData = {
+                ordenId: `THELARTE-${transaccionId}`,
+                total: transaccion.total,
+                impuestos: transaccion.impuestos || 0,
+                nombre: transaccion.cliente?.nombre
+                    ? `${transaccion.cliente.nombre} ${transaccion.cliente.apellido || ''}`
+                    : 'Consumidor Final',
+                descripcion: `Factura #${transaccion.numeroFactura || transaccion.id}`
+            };
+
+            // 4. Crear sesión directamente indicando que es para terminal físico
+            const sessionData = await this.cardnetService.createSession(paymentData, true);
+
+            if (!sessionData || !sessionData.SESSION) {
+                throw new Error("No se pudo crear la sesión de pago para el terminal");
+            }
+
+            const sessionId = sessionData.SESSION;
+            const sessionKey = sessionData['session-key'];
+
+            // 5. Iniciar monitoreo del estado de la transacción
+            this.handleTerminalStatusChange({
+                status: 'CREATED',
+                message: 'Transacción enviada al terminal',
+                sessionId,
+                sessionKey
+            });
+
+            // 6. Iniciar polling para consultar estado
+            await this.startPollingTerminalStatus(
+                sessionId,
+                this.handleTerminalStatusChange.bind(this),
+                this.handleTerminalPaymentComplete.bind(this, transaccionId),
+                this.handleTerminalPaymentError.bind(this)
+            );
+
+        } catch (error) {
+            console.error('Error al procesar pago con terminal:', error);
+            this.handleTerminalPaymentError(error);
+        }
+    }
+
+// Método para manejar el polling de consulta de estado
+    async startPollingTerminalStatus(sessionId, onStatusChange, onComplete, onError) {
+        const startTime = Date.now();
+        const maxPollingTime = 300000; // 5 minutos máximo
+        const pollingInterval = 3000; // Consultar cada 3 segundos
+
+        // Función para consultar estado
+        const checkStatus = async () => {
+            try {
+                const statusData = await this.cardnetService.checkStatus(sessionId);
+
+                // Notificar cambio de estado
+                if (onStatusChange) {
+                    onStatusChange(statusData);
+                }
+
+                // Si la transacción está completada
+                if (statusData.isCompleted) {
+                    if (onComplete) {
+                        onComplete(statusData);
+                    }
+                    return true; // Terminar polling
+                }
+
+                // Si ha pasado el tiempo máximo, detener
+                if (Date.now() - startTime > maxPollingTime) {
+                    if (onError) {
+                        onError(new Error("Tiempo de espera agotado para la transacción"));
+                    }
+                    return true; // Terminar polling
+                }
+
+                return false; // Continuar polling
+            } catch (error) {
+                if (onError) {
+                    onError(error);
+                }
+                return true; // Terminar polling en caso de error
+            }
+        };
+
+        // Iniciar ciclo de polling
+        const poll = async () => {
+            const shouldStop = await checkStatus();
+            if (!shouldStop) {
+                setTimeout(poll, pollingInterval);
+            }
+        };
+
+        // Iniciar primer ciclo
+        poll();
+    }
+
+    handleTerminalStatusChange(statusData) {
+        const statusMessage = document.getElementById('terminalStatusMessage');
+        const instructions = document.getElementById('terminalInstructions');
+
+        if (statusData.status === 'CREATED') {
+            statusMessage.textContent = 'Transacción enviada al terminal';
+            instructions.textContent = 'Por favor, pida al cliente que presente su tarjeta en el terminal.';
+        } else if (statusData.status === 'PENDING') {
+            statusMessage.textContent = 'Esperando acción en terminal';
+            instructions.textContent = 'El terminal está procesando el pago.';
+        } else if (statusData.status === 'CANCELLED_BY_USER') {
+            this.handleTerminalPaymentError(new Error("Transacción cancelada por el usuario"));
+        } else {
+            statusMessage.textContent = statusData.message || 'Procesando...';
+        }
+    }
+
+    handleTerminalPaymentComplete(transaccionId, statusData) {
+        // Ocultar sección de estado y mostrar la de completado
+        document.getElementById('terminalPaymentStatus').classList.add('hidden');
+        document.getElementById('terminalPaymentComplete').classList.remove('hidden');
+
+        if (statusData.authCode) {
+            document.getElementById('terminalAuthCode').textContent =
+                `Código de autorización: ${statusData.authCode}`;
+        }
+
+        // Actualizar la transacción en base de datos
+        this.transaccionService.actualizarTransaccion(transaccionId, {
+            estado: 'COMPLETADA',
+            metodoPago: 'TARJETA',
+            observaciones: `Pago con tarjeta completado. Auth: ${statusData.authCode || 'N/A'}`
+        }).then(() => {
+            // Recargar transacciones después de 2 segundos
+            setTimeout(() => this.loadTransactions(), 2000);
+        });
+    }
+
+    handleTerminalPaymentError(error) {
+        document.getElementById('terminalPaymentStatus').classList.add('hidden');
+        document.getElementById('terminalPaymentError').classList.remove('hidden');
+        document.getElementById('terminalErrorMessage').textContent =
+            error.message || 'Error desconocido al procesar el pago';
+
+        console.error('Error en pago con terminal:', error);
+    }
+
+    cancelTerminalPayment() {
+        if (this.terminalPaymentProcessor) {
+            this.terminalPaymentProcessor.cancelTransaction();
+        }
+        this.closeTerminalPaymentModal();
+    }
+
+    closeTerminalPaymentModal() {
+        document.getElementById('terminalPaymentModal').classList.add('hidden');
+    }
+
+}
 // --- GLOBAL INSTANCE & EXPORTS ---
 const transaccionesManager = new TransaccionesManager();
 window.transaccionesManager = transaccionesManager;
 window.tableViewManager = transaccionesManager.tableViewManager;
 window.cerrarModalVerTransaccion = () => transaccionesManager.cerrarModalVerTransaccion();
 window.imprimirFactura = (id) => transaccionesManager.imprimirFactura(id);
+window.agregarPago = (id) => transaccionesManager.agregarPago(id);
+
+// Nuevas funciones para el terminal
+window.procesarPagoTerminal = (id) => transaccionesManager.procesarPagoTerminal(id);
+window.cancelTerminalPayment = () => transaccionesManager.cancelTerminalPayment();
+window.closeTerminalPaymentModal = () => transaccionesManager.closeTerminalPaymentModal();
+
+// En el archivo transacciones.js (al final donde defines funciones globales)
+window.imprimirFactura = () => {
+    // Obtener el ID de la transacción actual que se está viendo en el modal
+    const idTransaccion = document.getElementById('detallesTransaccion').getAttribute('data-transaction-id');
+    if (idTransaccion) {
+        transaccionesManager.imprimirFactura(idTransaccion);
+    } else {
+        window.showToast('No se puede imprimir la factura: ID de transacción no encontrado', 'error');
+    }
+};
 // --- SIDEBAR MOBILE/HAMBURGUESA ---
 document.getElementById('hamburgerBtn')?.addEventListener('click', () => {
     document.getElementById('sidebar').classList.remove('-translate-x-full');

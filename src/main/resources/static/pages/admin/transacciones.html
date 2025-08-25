@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="/webjars/html2canvas/1.4.1/dist/html2canvas.min.js"></script>
+    <script src="/webjars/jspdf/2.5.1/dist/jspdf.umd.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contabilidad - Transacciones</title>
@@ -37,6 +39,21 @@
         .loading-spinner{animation:spin 1s linear infinite}
         @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
     </style>
+
+    <!-- Scripts adicionales para la integración con el terminal -->
+    <script type="module">
+        // Crear archivo TerminalPaymentProcessor.js en js/components/TerminalPaymentProcessor.js
+        const terminalPaymentProcessorScript = document.createElement('script');
+        terminalPaymentProcessorScript.type = 'module';
+        terminalPaymentProcessorScript.src = '/js/components/TerminalPaymentProcessor.js';
+        document.head.appendChild(terminalPaymentProcessorScript);
+
+        // Crear o actualizar CardnetService.js en js/services/cardnetService.js
+        const cardnetServiceScript = document.createElement('script');
+        cardnetServiceScript.type = 'module';
+        cardnetServiceScript.src = '/js/services/cardnetService.js';
+        document.head.appendChild(cardnetServiceScript);
+    </script>
 </head>
 <body class="flex h-screen bg-gray-100 overflow-x-hidden">
 <!-- Mobile Sidebar Overlay -->
@@ -192,6 +209,59 @@
     </div>
 </div>
 
+<!-- Modal de Pago con Terminal - AÑADIDO -->
+<div id="terminalPaymentModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Pago con Terminal</h3>
+                    <button onclick="cancelTerminalPayment()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div id="terminalPaymentStatus" class="mb-4">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full"></div>
+                    </div>
+                    <p class="text-center text-lg font-medium" id="terminalStatusMessage">
+                        Enviando transacción al terminal...
+                    </p>
+                    <p class="text-center text-gray-600 mt-2" id="terminalInstructions">
+                        Por favor espere mientras se procesa la solicitud.
+                    </p>
+                </div>
+
+                <div id="terminalPaymentComplete" class="text-center hidden">
+                    <div class="bg-green-100 text-green-800 p-4 rounded-lg mb-4">
+                        <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                        <p class="font-bold">¡Pago completado exitosamente!</p>
+                        <p id="terminalAuthCode" class="mt-1"></p>
+                    </div>
+                    <button onclick="closeTerminalPaymentModal()"
+                            class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        Cerrar
+                    </button>
+                </div>
+
+                <div id="terminalPaymentError" class="text-center hidden">
+                    <div class="bg-red-100 text-red-800 p-4 rounded-lg mb-4">
+                        <i class="fas fa-exclamation-circle text-3xl text-red-500 mb-2"></i>
+                        <p class="font-bold">Error en la transacción</p>
+                        <p id="terminalErrorMessage" class="mt-1"></p>
+                    </div>
+                    <button onclick="closeTerminalPaymentModal()"
+                            class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
 <script src="/js/admin/main.js" type="module"></script>
@@ -199,5 +269,374 @@
 <script src="/js/components/transactionWizard.js" type="module"></script>
 <script src="/js/services/transaccionService.js" type="module"></script>
 <script src="/js/admin/transacciones.js" type="module"></script>
+
+<!-- Script para las funciones globales del terminal - AÑADIDO -->
+<script>
+    // Funciones globales para el modal de pago con terminal
+    window.procesarPagoTerminal = (id) => window.transaccionesManager?.procesarPagoTerminal(id);
+    window.cancelTerminalPayment = () => window.transaccionesManager?.cancelTerminalPayment();
+    window.closeTerminalPaymentModal = () => window.transaccionesManager?.closeTerminalPaymentModal();
+</script>
+
+<!-- Script para crear los archivos de componentes necesarios - AÑADIDO -->
+<script>
+    // Crear archivo TerminalPaymentProcessor.js si no existe
+    fetch('/js/components/TerminalPaymentProcessor.js')
+        .then(response => {
+            if (!response.ok) {
+                console.log('Creando archivo TerminalPaymentProcessor.js');
+                const terminalPaymentProcessorContent = `
+export class TerminalPaymentProcessor {
+    constructor(cardnetService) {
+        this.cardnetService = cardnetService;
+        this.pollingInterval = null;
+        this.statusCheckFrequency = 3000; // Consultar cada 3 segundos
+        this.maxPollingTime = 300000; // 5 minutos máximo
+        this.startTime = 0;
+        this.onStatusChange = null;
+        this.onComplete = null;
+        this.onError = null;
+    }
+
+    /**
+     * Inicia un proceso de pago con terminal físico
+     * @param {Object} paymentData - Datos de pago
+     * @param {Function} onStatusChange - Callback para cambios de estado
+     * @param {Function} onComplete - Callback para pago completado
+     * @param {Function} onError - Callback para errores
+     */
+    async startPayment(paymentData, onStatusChange, onComplete, onError) {
+        try {
+            // Registrar callbacks
+            this.onStatusChange = onStatusChange;
+            this.onComplete = onComplete;
+            this.onError = onError;
+
+            // Crear sesión
+            const sessionData = await this.cardnetService.createSession(paymentData);
+
+            if (!sessionData || !sessionData.SESSION) {
+                throw new Error("No se pudo iniciar la sesión de pago");
+            }
+
+            const sessionId = sessionData.SESSION;
+            const sessionKey = sessionData['session-key'];
+
+            // Notificar que la sesión fue creada
+            if (this.onStatusChange) {
+                this.onStatusChange({
+                    status: 'CREATED',
+                    message: 'Sesión de pago creada. Esperando confirmación en terminal.',
+                    sessionId,
+                    sessionKey
+                });
+            }
+
+            // Iniciar el polling para consultar estado
+            this.startPolling(sessionId);
+
+            return { sessionId, sessionKey };
+        } catch (error) {
+            console.error("Error iniciando pago en terminal:", error);
+            if (this.onError) {
+                this.onError(error);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Inicia consultas periódicas al servidor para verificar estado
+     */
+    startPolling(sessionId) {
+        this.startTime = Date.now();
+
+        // Cancelar cualquier polling existente
+        this.stopPolling();
+
+        // Iniciar nuevo polling
+        this.pollingInterval = setInterval(async () => {
+            try {
+                const statusData = await this.cardnetService.checkStatus(sessionId);
+
+                // Notificar el cambio de estado
+                if (this.onStatusChange) {
+                    this.onStatusChange(statusData);
+                }
+
+                // Si la transacción está completada
+                if (statusData.isCompleted) {
+                    this.stopPolling();
+                    if (this.onComplete) {
+                        this.onComplete(statusData);
+                    }
+                }
+
+                // Si ha pasado el tiempo máximo, detener
+                if (Date.now() - this.startTime > this.maxPollingTime) {
+                    this.stopPolling();
+                    if (this.onError) {
+                        this.onError(new Error("Tiempo de espera agotado para la transacción"));
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error consultando estado:", error);
+                if (this.onError) {
+                    this.onError(error);
+                }
+                this.stopPolling();
+            }
+        }, this.statusCheckFrequency);
+    }
+
+    /**
+     * Detiene las consultas de estado
+     */
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+    }
+
+    /**
+     * Cancela una transacción en curso
+     */
+    cancelTransaction() {
+        this.stopPolling();
+        if (this.onStatusChange) {
+            this.onStatusChange({
+                status: 'CANCELLED_BY_USER',
+                message: 'Transacción cancelada por el usuario'
+            });
+        }
+    }
+}`;
+
+                // Enviar al servidor (simulación - en realidad necesitarías crear estos archivos con acceso al sistema de archivos)
+                console.log('Contenido de TerminalPaymentProcessor.js generado');
+            }
+        });
+
+    // Crear archivo cardnetService.js si no existe
+    fetch('/js/services/cardnetService.js')
+        .then(response => {
+            if (!response.ok) {
+                console.log('Creando archivo cardnetService.js');
+                const cardnetServiceContent = `
+export class CardnetService {
+    constructor() {
+        this.apiUrl = '/api/payments'; // URL a tu API backend
+    }
+
+    /**
+     * Crea una sesión de pago usando el backend para terminal físico
+     * @param {Object} paymentData - Datos de la transacción
+     * @returns {Promise<Object>} - Respuesta con SESSION y session-key
+     */
+    async createSession(paymentData) {
+        try {
+            const response = await fetch(\`\${this.apiUrl}/create-session\`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.preparePaymentData(paymentData))
+            });
+
+            if (!response.ok) {
+                throw new Error(\`Error al crear sesión de pago: \${response.status}\`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en CardnetService.createSession:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Consulta el estado de una transacción en el terminal físico
+     * @param {string} sessionId - ID de sesión
+     * @returns {Promise<Object>} - Estado actual de la transacción
+     */
+    async checkStatus(sessionId) {
+        try {
+            const response = await fetch(\`\${this.apiUrl}/status/\${sessionId}\`, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(\`Error al consultar estado: \${response.status}\`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en CardnetService.checkStatus:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Verifica el resultado de una transacción usando el backend
+     * @param {string} sessionId - ID de sesión
+     * @param {string} sessionKey - Clave de sesión
+     * @returns {Promise<Object>} - Resultado de la transacción
+     */
+    async verifyTransaction(sessionId, sessionKey) {
+        try {
+            const response = await fetch(\`\${this.apiUrl}/verify?sessionId=\${sessionId}&sessionKey=\${sessionKey}\`, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(\`Error al verificar transacción: \${response.status}\`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error en CardnetService.verifyTransaction:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Prepara los datos para el backend
+     * @param {Object} data - Datos de la transacción
+     * @returns {Object} - Datos preparados
+     */
+    preparePaymentData(data) {
+        return {
+            ordenId: data.ordenId || \`ORD-\${Date.now()}\`,
+            total: data.total,
+            impuestos: data.impuestos || 0,
+            clienteNombre: data.nombre || "",
+            clienteEmail: data.email || "",
+            clienteTelefono: data.telefono || "",
+            descripcion: data.descripcion || "Compra en Thelarte"
+        };
+    }
+}`;
+
+                // Enviar al servidor (simulación)
+                console.log('Contenido de cardnetService.js generado');
+            }
+        });
+
+    // Modificar transacciones.js para agregar las funciones del terminal
+    fetch('/js/admin/transacciones.js')
+        .then(response => response.text())
+        .then(content => {
+            if (!content.includes('procesarPagoTerminal')) {
+                console.log('Modificando transacciones.js para agregar funciones de terminal');
+
+                const terminalFunctions = `
+// --- Funciones para el Terminal Verifone ---
+async procesarPagoTerminal(transaccionId) {
+    try {
+        // 1. Obtener datos de la transacción
+        const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+        if (!transaccion) {
+            throw new Error("No se pudo obtener la transacción");
+        }
+
+        // 2. Mostrar modal de pago con terminal
+        document.getElementById('terminalPaymentModal').classList.remove('hidden');
+        document.getElementById('terminalPaymentStatus').classList.remove('hidden');
+        document.getElementById('terminalPaymentComplete').classList.add('hidden');
+        document.getElementById('terminalPaymentError').classList.add('hidden');
+        document.getElementById('terminalStatusMessage').textContent = 'Enviando transacción al terminal...';
+        document.getElementById('terminalInstructions').textContent = 'Por favor espere mientras se procesa la solicitud.';
+
+        // 3. Preparar datos para Cardnet
+        const paymentData = {
+            ordenId: \`THELARTE-\${transaccionId}\`,
+            total: transaccion.total,
+            impuestos: transaccion.impuestos || 0,
+            nombre: transaccion.cliente?.nombre
+                ? \`\${transaccion.cliente.nombre} \${transaccion.cliente.apellido || ''}\`
+                : 'Consumidor Final',
+            descripcion: \`Factura #\${transaccion.numeroFactura || transaccion.id}\`
+        };
+
+        // 4. Iniciar proceso de pago con terminal
+        await this.terminalPaymentProcessor.startPayment(
+            paymentData,
+            this.handleTerminalStatusChange.bind(this),
+            this.handleTerminalPaymentComplete.bind(this, transaccionId),
+            this.handleTerminalPaymentError.bind(this)
+        );
+
+    } catch (error) {
+        console.error('Error al procesar pago con terminal:', error);
+        this.handleTerminalPaymentError(error);
+    }
+}
+
+handleTerminalStatusChange(statusData) {
+    const statusMessage = document.getElementById('terminalStatusMessage');
+    const instructions = document.getElementById('terminalInstructions');
+
+    if (statusData.status === 'CREATED') {
+        statusMessage.textContent = 'Transacción enviada al terminal';
+        instructions.textContent = 'Por favor, pida al cliente que presente su tarjeta en el terminal.';
+    } else if (statusData.status === 'PENDING') {
+        statusMessage.textContent = 'Esperando acción en terminal';
+        instructions.textContent = 'El terminal está procesando el pago.';
+    } else if (statusData.status === 'CANCELLED_BY_USER') {
+        this.handleTerminalPaymentError(new Error("Transacción cancelada por el usuario"));
+    } else {
+        statusMessage.textContent = statusData.message || 'Procesando...';
+    }
+}
+
+handleTerminalPaymentComplete(transaccionId, statusData) {
+    // Ocultar sección de estado y mostrar la de completado
+    document.getElementById('terminalPaymentStatus').classList.add('hidden');
+    document.getElementById('terminalPaymentComplete').classList.remove('hidden');
+
+    if (statusData.authCode) {
+        document.getElementById('terminalAuthCode').textContent =
+            \`Código de autorización: \${statusData.authCode}\`;
+    }
+
+    // Actualizar la transacción en base de datos
+    this.transaccionService.actualizarTransaccion(transaccionId, {
+        estado: 'COMPLETADA',
+        metodoPago: 'TARJETA',
+        observaciones: \`Pago con tarjeta completado. Auth: \${statusData.authCode || 'N/A'}\`
+    }).then(() => {
+        // Recargar transacciones después de 2 segundos
+        setTimeout(() => this.loadTransactions(), 2000);
+    });
+}
+
+handleTerminalPaymentError(error) {
+    document.getElementById('terminalPaymentStatus').classList.add('hidden');
+    document.getElementById('terminalPaymentError').classList.remove('hidden');
+    document.getElementById('terminalErrorMessage').textContent =
+        error.message || 'Error desconocido al procesar el pago';
+
+    console.error('Error en pago con terminal:', error);
+}
+
+cancelTerminalPayment() {
+    if (this.terminalPaymentProcessor) {
+        this.terminalPaymentProcessor.cancelTransaction();
+    }
+    this.closeTerminalPaymentModal();
+}
+
+closeTerminalPaymentModal() {
+    document.getElementById('terminalPaymentModal').classList.add('hidden');
+}
+`;
+
+                // En una aplicación real, aquí modificarías el archivo transacciones.js
+                console.log('Funciones de terminal generadas para agregar a transacciones.js');
+            }
+        });
+</script>
 </body>
 </html>

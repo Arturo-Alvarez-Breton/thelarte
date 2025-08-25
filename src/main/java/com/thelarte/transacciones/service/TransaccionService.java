@@ -1,9 +1,12 @@
 package com.thelarte.transacciones.service;
 
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
+import com.thelarte.transacciones.dto.PagoDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
+import com.thelarte.transacciones.model.Pago;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.model.LineaTransaccion;
+import com.thelarte.transacciones.repository.PagoRepository;
 import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.util.PaymentMetadataValidator;
 import com.thelarte.inventory.model.Producto;
@@ -16,8 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +42,9 @@ public class TransaccionService {
 
     @Autowired
     private ProductoRepository productoRepository;
+
+    @Autowired
+    private PagoRepository pagoRepository;
 
     @Autowired
     private PaymentMetadataValidator paymentMetadataValidator;
@@ -134,7 +147,30 @@ public class TransaccionService {
             }
         }
 
-        return transaccionRepository.save(transaccion);
+        // Guardar la transacción primero para obtener su ID
+        transaccion = transaccionRepository.save(transaccion);
+
+        // Si es una venta en cuotas con monto inicial, registrar el pago inicial
+        if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA &&
+                transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS &&
+                transaccion.getMontoInicial() != null &&
+                transaccion.getMontoInicial().compareTo(BigDecimal.ZERO) > 0) {
+
+            // Crear el registro del pago inicial
+            Pago pagoInicial = new Pago();
+            pagoInicial.setTransaccion(transaccion);
+            pagoInicial.setFecha(LocalDate.now());
+            pagoInicial.setMonto(transaccion.getMontoInicial());
+            pagoInicial.setMetodoPago(transaccion.getMetodoPago());
+            pagoInicial.setEstado(Pago.EstadoPago.COMPLETADO);
+            pagoInicial.setObservaciones("Pago inicial");
+            pagoInicial.setNumeroCuota(0); // 0 indica que es el pago inicial
+
+            // Guardar el pago inicial
+            pagoRepository.save(pagoInicial);
+        }
+
+        return transaccion;
     }
 
     public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
@@ -168,6 +204,17 @@ public class TransaccionService {
         existingTransaction.setFechaEntregaEsperada(transaccion.getFechaEntregaEsperada());
         existingTransaction.setFechaEntregaReal(transaccion.getFechaEntregaReal());
         existingTransaction.setNumeroTransaccion(transaccion.getNumeroTransaccion());
+
+        // Actualizar campos para pagos en cuotas si están presentes
+        if (transaccion.getTipoPago() != null) {
+            existingTransaction.setTipoPago(transaccion.getTipoPago());
+        }
+        if (transaccion.getMontoInicial() != null) {
+            existingTransaction.setMontoInicial(transaccion.getMontoInicial());
+        }
+        if (transaccion.getSaldoPendiente() != null) {
+            existingTransaction.setSaldoPendiente(transaccion.getSaldoPendiente());
+        }
 
         // Elimina las líneas viejas
         if (existingTransaction.getLineas() != null) {
@@ -212,6 +259,30 @@ public class TransaccionService {
         venta.setVendedorId(vendedorId);
         lineas.forEach(linea -> linea.setTransaccion(venta));
         venta.setLineas(lineas);
+        return crearTransaccion(venta);
+    }
+
+    // Método para crear venta en cuotas
+    public Transaccion crearVentaEnCuotas(Long clienteId, String clienteNombre, Long vendedorId,
+                                          List<LineaTransaccion> lineas, BigDecimal montoInicial) {
+        Transaccion venta = new Transaccion(
+                Transaccion.TipoTransaccion.VENTA,
+                clienteId,
+                Transaccion.TipoContraparte.CLIENTE,
+                clienteNombre
+        );
+        venta.setVendedorId(vendedorId);
+        venta.setTipoPago(Transaccion.TipoPago.ENCUOTAS);
+        lineas.forEach(linea -> linea.setTransaccion(venta));
+        venta.setLineas(lineas);
+
+        // Calcular totales primero para establecer el saldo pendiente correcto
+        calcularTotalesTransaccion(venta);
+
+        // Establecer monto inicial y saldo pendiente
+        venta.setMontoInicial(montoInicial);
+        venta.setSaldoPendiente(venta.getTotal().subtract(montoInicial));
+
         return crearTransaccion(venta);
     }
 
@@ -268,6 +339,19 @@ public class TransaccionService {
     @Transactional(readOnly = true)
     public List<Transaccion> obtenerVentas() {
         return transaccionRepository.findByTipoAndDeletedFalse(Transaccion.TipoTransaccion.VENTA);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerVentasEnCuotas() {
+        return transaccionRepository.findByTipoAndTipoPagoAndDeletedFalse(
+                Transaccion.TipoTransaccion.VENTA,
+                Transaccion.TipoPago.ENCUOTAS
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Transaccion> obtenerVentasConSaldoPendiente() {
+        return transaccionRepository.findVentasConSaldoPendiente();
     }
 
     @Transactional(readOnly = true)
@@ -383,6 +467,10 @@ public class TransaccionService {
             throw new IllegalStateException("Solo las ventas pueden marcarse como cobradas");
         }
         transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+        // Si es venta en cuotas, establecer saldo pendiente a cero
+        if (transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS) {
+            transaccion.setSaldoPendiente(BigDecimal.ZERO);
+        }
         return transaccionRepository.save(transaccion);
     }
 
@@ -671,6 +759,9 @@ public class TransaccionService {
         throw new IllegalArgumentException("No hay un usuario autenticado en la sesión");
     }
 
+    /**
+     * Convierte una entidad Transaccion a TransaccionDTO
+     */
     public TransaccionDTO toDTO(Transaccion transaccion) {
         if (transaccion == null) {
             return null;
@@ -685,6 +776,8 @@ public class TransaccionService {
                 transaccion.getContraparteNombre(),
                 transaccion.getTotal()
         );
+
+        // Campos básicos
         dto.setSubtotal(transaccion.getSubtotal());
         dto.setImpuestos(transaccion.getImpuestos());
         dto.setNumeroFactura(transaccion.getNumeroFactura());
@@ -703,6 +796,20 @@ public class TransaccionService {
         dto.setFechaCreacion(transaccion.getFechaCreacion());
         dto.setFechaActualizacion(transaccion.getFechaActualizacion());
 
+        // Campos para pagos en cuotas
+        dto.setTipoPago(transaccion.getTipoPago() != null ? transaccion.getTipoPago().toString() : null);
+        dto.setMontoInicial(transaccion.getMontoInicial());
+        dto.setSaldoPendiente(transaccion.getSaldoPendiente());
+
+        // Incluir información de pagos si es venta en cuotas
+        if (transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS && transaccion.getPagos() != null) {
+            List<PagoDTO> pagosDTO = transaccion.getPagos().stream()
+                    .map(this::pagoToDTO)
+                    .collect(Collectors.toList());
+            dto.setPagos(pagosDTO);
+        }
+
+        // Líneas de la transacción
         if (transaccion.getLineas() != null) {
             List<LineaTransaccionDTO> lineasDto = transaccion.getLineas().stream().map(linea -> {
                 LineaTransaccionDTO lDto = new LineaTransaccionDTO();
@@ -922,4 +1029,342 @@ public class TransaccionService {
         return marcarComoDevuelta(id, productosDevueltos, motivo, true);
     }
 
+    // --- NUEVOS MÉTODOS PARA GESTIÓN DE PAGOS ---
+
+    /**
+     * Registra un nuevo pago para una transacción con tipo de pago ENCUOTAS
+     * @param transaccionId ID de la transacción
+     * @param pagoDTO Datos del pago
+     * @return El pago registrado
+     */
+    @Transactional
+    public Pago registrarPago(Long transaccionId, PagoDTO pagoDTO) {
+        Transaccion transaccion = transaccionRepository.findById(transaccionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
+
+        // Verificar que la transacción sea de tipo VENTA y esté en modo ENCUOTAS
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
+            throw new IllegalStateException("Solo se pueden registrar pagos para transacciones de tipo VENTA");
+        }
+
+        if (transaccion.getTipoPago() != Transaccion.TipoPago.ENCUOTAS) {
+            throw new IllegalStateException("Solo se pueden registrar pagos para transacciones con tipo de pago ENCUOTAS");
+        }
+
+        // Verificar que el monto no exceda el saldo pendiente
+        if (transaccion.getSaldoPendiente() == null) {
+            // Si no tiene saldo pendiente registrado, calcularlo
+            BigDecimal montoInicial = transaccion.getMontoInicial() != null ? transaccion.getMontoInicial() : BigDecimal.ZERO;
+            BigDecimal saldoPendiente = transaccion.getTotal().subtract(montoInicial);
+
+            // Restar pagos existentes
+            if (transaccion.getPagos() != null && !transaccion.getPagos().isEmpty()) {
+                BigDecimal totalPagado = transaccion.getPagos().stream()
+                        .map(Pago::getMonto)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                saldoPendiente = saldoPendiente.subtract(totalPagado);
+            }
+
+            transaccion.setSaldoPendiente(saldoPendiente);
+        }
+
+        // Verificar que el monto del pago no exceda el saldo pendiente
+        if (pagoDTO.getMonto().compareTo(transaccion.getSaldoPendiente()) > 0) {
+            throw new IllegalArgumentException(
+                    "El monto del pago (" + pagoDTO.getMonto() + ") excede el saldo pendiente (" +
+                            transaccion.getSaldoPendiente() + ")");
+        }
+
+        // Crear el pago
+        Pago pago = new Pago();
+        pago.setTransaccion(transaccion);
+        pago.setFecha(pagoDTO.getFecha() != null ? pagoDTO.getFecha() : LocalDate.now());
+        pago.setMonto(pagoDTO.getMonto());
+        pago.setMetodoPago(pagoDTO.getMetodoPago());
+        pago.setEstado(Pago.EstadoPago.COMPLETADO);
+        pago.setObservaciones(pagoDTO.getObservaciones());
+        pago.setNumeroCuota(pagoDTO.getNumeroCuota());
+
+        // Actualizar el saldo pendiente de la transacción
+        BigDecimal nuevoSaldo = transaccion.getSaldoPendiente().subtract(pagoDTO.getMonto());
+        transaccion.setSaldoPendiente(nuevoSaldo);
+
+        // Si el saldo pendiente es 0 o negativo, actualizar el estado de la transacción
+        if (nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0) {
+            transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+        }
+
+        // Guardar transacción con el saldo actualizado
+        transaccionRepository.save(transaccion);
+
+        // Guardar y retornar el pago
+        return pagoRepository.save(pago);
+    }
+
+    /**
+     * Obtiene todos los pagos de una transacción
+     * @param transaccionId ID de la transacción
+     * @return Lista de pagos
+     */
+    @Transactional(readOnly = true)
+    public List<Pago> obtenerPagosPorTransaccion(Long transaccionId) {
+        Transaccion transaccion = transaccionRepository.findById(transaccionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
+
+        // Retornar los pagos ordenados por fecha
+        if (transaccion.getPagos() != null) {
+            return transaccion.getPagos().stream()
+                    .sorted((p1, p2) -> p1.getFecha().compareTo(p2.getFecha()))
+                    .collect(Collectors.toList());
+        }
+
+        return List.of();
+    }
+
+    /**
+     * Convierte una entidad Pago a DTO
+     */
+    public PagoDTO pagoToDTO(Pago pago) {
+        if (pago == null) return null;
+
+        PagoDTO dto = new PagoDTO();
+        dto.setId(pago.getId());
+        dto.setTransaccionId(pago.getTransaccion().getId());
+        dto.setFecha(pago.getFecha());
+        dto.setMonto(pago.getMonto());
+        dto.setMetodoPago(pago.getMetodoPago());
+        dto.setEstado(pago.getEstado().name());
+        dto.setNumeroCuota(pago.getNumeroCuota());
+        dto.setObservaciones(pago.getObservaciones());
+        dto.setFechaCreacion(pago.getFechaCreacion());
+
+        return dto;
+    }
+
+    /**
+     * Configura una transacción como pago en cuotas
+     */
+    @Transactional
+    public Transaccion configurarPagoEnCuotas(Long transaccionId, BigDecimal montoInicial) {
+        Transaccion transaccion = transaccionRepository.findById(transaccionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
+
+        if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
+            throw new IllegalStateException("Solo las ventas pueden configurarse para pago en cuotas");
+        }
+
+        // Validar que el monto inicial no sea mayor al total
+        if (montoInicial != null && montoInicial.compareTo(transaccion.getTotal()) > 0) {
+            throw new IllegalArgumentException("El monto inicial no puede ser mayor al total de la transacción");
+        }
+
+        // Configurar pago en cuotas
+        transaccion.setTipoPago(Transaccion.TipoPago.ENCUOTAS);
+        transaccion.setMontoInicial(montoInicial != null ? montoInicial : BigDecimal.ZERO);
+        transaccion.setSaldoPendiente(transaccion.getTotal().subtract(transaccion.getMontoInicial()));
+
+
+
+        // Guardar la transacción actualizada
+        return transaccionRepository.save(transaccion);
+    }
+
+    /**
+     * Actualiza el saldo pendiente de una transacción basado en los pagos registrados
+     */
+    @Transactional
+    public BigDecimal actualizarSaldoPendiente(Long transaccionId) {
+        Transaccion transaccion = transaccionRepository.findById(transaccionId)
+                .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + transaccionId));
+
+        if (transaccion.getTipoPago() != Transaccion.TipoPago.ENCUOTAS) {
+            return BigDecimal.ZERO; // No hay saldo pendiente para pagos normales
+        }
+
+        BigDecimal montoInicial = transaccion.getMontoInicial() != null ? transaccion.getMontoInicial() : BigDecimal.ZERO;
+        BigDecimal totalPagado = montoInicial;
+
+        // Sumar todos los pagos registrados
+        if (transaccion.getPagos() != null) {
+            totalPagado = totalPagado.add(
+                    transaccion.getPagos().stream()
+                            .filter(p -> p.getEstado() == Pago.EstadoPago.COMPLETADO)
+                            .map(Pago::getMonto)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            );
+        }
+
+        // Calcular saldo pendiente
+        BigDecimal saldoPendiente = transaccion.getTotal().subtract(totalPagado);
+
+        // Actualizar saldo en la transacción
+        transaccion.setSaldoPendiente(saldoPendiente);
+        transaccionRepository.save(transaccion);
+
+        return saldoPendiente;
+    }
+
+    // Sobrecarga del método crearTransaccion para manejar ventas con cuotas
+    public Transaccion crearTransaccion(Transaccion transaccion, BigDecimal montoInicial, List<Pago> cuotas) {
+        // Establecer tipo de pago a ENCUOTAS si se proporciona montoInicial
+        if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA && montoInicial != null) {
+            transaccion.setTipoPago(Transaccion.TipoPago.ENCUOTAS);
+            transaccion.setMontoInicial(montoInicial);
+
+            // El saldo pendiente inicial es el total menos el monto inicial
+            if (transaccion.getTotal() != null) {
+                transaccion.setSaldoPendiente(transaccion.getTotal().subtract(montoInicial));
+            }
+        }
+
+        // Crear la transacción base
+        Transaccion nuevaTransaccion = crearTransaccion(transaccion);
+
+        // Si hay cuotas programadas, guardarlas
+        if (cuotas != null && !cuotas.isEmpty()) {
+            for (Pago cuota : cuotas) {
+                cuota.setTransaccion(nuevaTransaccion);
+                pagoRepository.save(cuota);
+            }
+        }
+
+        return nuevaTransaccion;
+    }
+
+    /**
+     * Obtiene un pago específico por su ID
+     */
+    @Transactional(readOnly = true)
+    public Pago obtenerPagoPorId(Long pagoId) {
+        return pagoRepository.findById(pagoId)
+                .orElseThrow(() -> new EntityNotFoundException("Pago no encontrado con ID: " + pagoId));
+    }
+
+    /**
+     * Anula un pago existente
+     */
+    @Transactional
+    public Pago anularPago(Long pagoId, String motivo) {
+        Pago pago = obtenerPagoPorId(pagoId);
+
+        // Verificar que el pago no esté ya anulado
+        if (pago.getEstado() == Pago.EstadoPago.CANCELADO) {
+            throw new IllegalStateException("El pago ya está anulado");
+        }
+
+        // Actualizar estado del pago
+        pago.setEstado(Pago.EstadoPago.CANCELADO);
+
+        // Agregar motivo a observaciones
+        String observacionActual = pago.getObservaciones() != null ? pago.getObservaciones() : "";
+        String nuevaObservacion = observacionActual + (observacionActual.isEmpty() ? "" : " - ") +
+                "Anulado: " + (motivo != null ? motivo : "Sin motivo especificado");
+        pago.setObservaciones(nuevaObservacion);
+
+        // Actualizar saldo pendiente de la transacción
+        Transaccion transaccion = pago.getTransaccion();
+        if (transaccion.getSaldoPendiente() != null) {
+            transaccion.setSaldoPendiente(transaccion.getSaldoPendiente().add(pago.getMonto()));
+            transaccionRepository.save(transaccion);
+        }
+
+        return pagoRepository.save(pago);
+    }
+
+    /**
+     * Actualiza el método de pago de un pago
+     */
+    @Transactional
+    public Pago actualizarMetodoPagoDePago(Long pagoId, String metodoPago) {
+        if (metodoPago == null || metodoPago.trim().isEmpty()) {
+            throw new IllegalArgumentException("El método de pago no puede estar vacío");
+        }
+
+        Pago pago = obtenerPagoPorId(pagoId);
+
+        // Verificar que no esté anulado
+        if (pago.getEstado() == Pago.EstadoPago.CANCELADO) {
+            throw new IllegalStateException("No se puede modificar un pago anulado");
+        }
+
+        // Registrar método anterior en observaciones
+        String observacionActual = pago.getObservaciones() != null ? pago.getObservaciones() : "";
+        String nuevaObservacion = observacionActual + (observacionActual.isEmpty() ? "" : " - ") +
+                "Cambio de método de pago: " + pago.getMetodoPago() + " -> " + metodoPago;
+
+        pago.setObservaciones(nuevaObservacion);
+        pago.setMetodoPago(metodoPago);
+
+        return pagoRepository.save(pago);
+    }
+
+    /**
+     * Actualiza las observaciones de un pago
+     */
+    @Transactional
+    public Pago actualizarObservacionesDePago(Long pagoId, String observaciones) {
+        Pago pago = obtenerPagoPorId(pagoId);
+        pago.setObservaciones(observaciones);
+        return pagoRepository.save(pago);
+    }
+
+    /**
+     * Obtiene pagos realizados en un periodo específico
+     */
+    @Transactional(readOnly = true)
+    public List<Pago> obtenerPagosEnPeriodo(LocalDate fechaInicio, LocalDate fechaFin) {
+        return pagoRepository.findByFechaBetween(fechaInicio, fechaFin);
+    }
+
+    /**
+     * Obtiene pagos vencidos (con fecha anterior a hoy y estado PENDIENTE)
+     */
+    @Transactional(readOnly = true)
+    public List<Pago> obtenerPagosVencidos() {
+        return pagoRepository.findOverduePayments(LocalDate.now());
+    }
+
+    /**
+     * Obtiene estadísticas de pagos agrupadas por método de pago
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> obtenerEstadisticasPagosPorMetodo(LocalDate fechaInicio, LocalDate fechaFin) {
+        // Obtener pagos del período
+        List<Pago> pagos;
+        if (fechaInicio != null && fechaFin != null) {
+            pagos = pagoRepository.findByFechaBetween(fechaInicio, fechaFin);
+        } else {
+            pagos = pagoRepository.findAll();
+        }
+
+        // Filtrar solo pagos completados
+        pagos = pagos.stream()
+                .filter(p -> p.getEstado() == Pago.EstadoPago.COMPLETADO)
+                .collect(Collectors.toList());
+
+        // Agrupar por método de pago
+        Map<String, List<Pago>> pagosPorMetodo = pagos.stream()
+                .collect(Collectors.groupingBy(Pago::getMetodoPago));
+
+        // Calcular totales por método
+        Map<String, BigDecimal> totalesPorMetodo = new HashMap<>();
+        pagosPorMetodo.forEach((metodo, listaPagos) -> {
+            BigDecimal total = listaPagos.stream()
+                    .map(Pago::getMonto)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            totalesPorMetodo.put(metodo, total);
+        });
+
+        // Construir resultado
+        Map<String, Object> resultado = new HashMap<>();
+        resultado.put("totalPagos", pagos.size());
+        resultado.put("totalMonto", pagos.stream()
+                .map(Pago::getMonto)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        resultado.put("pagosPorMetodo", pagosPorMetodo.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().size())));
+        resultado.put("montoPorMetodo", totalesPorMetodo);
+
+        return resultado;
+    }
 }

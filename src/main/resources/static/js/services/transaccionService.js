@@ -297,6 +297,24 @@ export class TransaccionService {
             throw error;
         }
     }
+    // Añadir este método en TransaccionService.js
+    async registrarPago(datosPago) {
+        const url = `/api/transacciones/${datosPago.transaccionId}/pagos`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datosPago)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Error al registrar el pago');
+        }
+
+        return await response.json();
+    }
 
     async createCliente(clienteData) {
         console.log('Creating client:', clienteData);

@@ -65,6 +65,35 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     List<Transaccion> findByTransaccionOrigenIdAndDeletedFalse(Long transaccionOrigenId);
 
     /**
+     * Encuentra transacciones por tipo, tipo de pago y que no estén eliminadas
+     */
+    List<Transaccion> findByTipoAndTipoPagoAndDeletedFalse(
+            Transaccion.TipoTransaccion tipo,
+            Transaccion.TipoPago tipoPago
+    );
+
+    /**
+     * Encuentra ventas que tienen saldo pendiente (pagos en cuotas no completados)
+     */
+    @Query("SELECT t FROM Transaccion t WHERE t.tipo = 'VENTA' AND t.tipoPago = 'ENCUOTAS' " +
+            "AND t.saldoPendiente > 0 AND t.deleted = false " +
+            "ORDER BY t.fecha DESC")
+    List<Transaccion> findVentasConSaldoPendiente();
+
+    // También puedes agregar una versión alternativa con parámetros más flexibles
+    @Query("SELECT t FROM Transaccion t WHERE t.tipo = 'VENTA' AND t.tipoPago = 'ENCUOTAS' " +
+            "AND t.saldoPendiente > :montoMinimo AND t.estado <> 'COBRADA' AND t.deleted = false " +
+            "ORDER BY t.fecha DESC")
+    List<Transaccion> findVentasConSaldoPendienteMayorQue(java.math.BigDecimal montoMinimo);
+
+    // Método para buscar ventas pendientes por cliente
+    @Query("SELECT t FROM Transaccion t WHERE t.tipo = 'VENTA' AND t.tipoPago = 'ENCUOTAS' " +
+            "AND t.saldoPendiente > 0 AND t.contraparteId = :clienteId AND t.deleted = false " +
+            "ORDER BY t.fecha DESC")
+    List<Transaccion> findVentasConSaldoPendienteByCliente(Long clienteId);
+
+
+/**
      * Busca transacciones por fecha con paginación ordenadas por fecha descendente.
      * @param fechaInicio Fecha de inicio
      * @param fechaFin Fecha de fin
