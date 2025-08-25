@@ -1,11 +1,12 @@
 /* Financial Health Widget Styles */
 .financial-health-widget {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: white;
+    border: 1px solid #e5e7eb;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     padding: 24px;
     margin-bottom: 24px;
-    color: white;
+    color: #1f2937;
     position: relative;
     overflow: hidden;
 }
@@ -37,7 +38,7 @@
     align-items: center;
     gap: 8px;
     margin: 0;
-    color: white;
+    color: #1f2937;
 }
 
 .financial-health-widget .widget-title i {
@@ -62,7 +63,7 @@
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: #6b7280;
 }
 
 .financial-health-widget .widget-content {
@@ -78,16 +79,16 @@
 }
 
 .financial-health-widget .metric-card {
-    background: rgba(255, 255, 255, 0.15);
+    background: #f9fafb;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 20px;
     transition: all 0.3s ease;
 }
 
 .financial-health-widget .metric-card:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #f3f4f6;
     transform: translateY(-2px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
@@ -102,7 +103,7 @@
 .financial-health-widget .metric-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: #6b7280;
 }
 
 .financial-health-widget .balance-trend {
@@ -113,7 +114,7 @@
 .financial-health-widget .margin-indicator {
     width: 60px;
     height: 6px;
-    background: rgba(255, 255, 255, 0.3);
+    background: #e5e7eb;
     border-radius: 3px;
     overflow: hidden;
 }
@@ -150,37 +151,37 @@
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: 6px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
     transition: all 0.3s ease;
 }
 
 .financial-health-widget .metric-value.positive {
-    color: #86efac;
+    color: #059669;
 }
 
 .financial-health-widget .metric-value.negative {
-    color: #fca5a5;
+    color: #dc2626;
 }
 
 .financial-health-widget .metric-value.excellent {
-    color: #86efac;
+    color: #059669;
 }
 
 .financial-health-widget .metric-value.good {
-    color: #93c5fd;
+    color: #2563eb;
 }
 
 .financial-health-widget .metric-value.fair {
-    color: #fde047;
+    color: #d97706;
 }
 
 .financial-health-widget .metric-value.poor {
-    color: #fca5a5;
+    color: #dc2626;
 }
 
 .financial-health-widget .metric-subtitle {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #9ca3af;
 }
 
 .financial-health-widget .financial-secondary {
@@ -192,9 +193,9 @@
 
 .financial-health-widget .itbis-card,
 .financial-health-widget .trend-card {
-    background: rgba(255, 255, 255, 0.1);
+    background: #f9fafb;
     backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
     padding: 16px;
 }
@@ -210,20 +211,20 @@
 .financial-health-widget .trend-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: #6b7280;
 }
 
 .financial-health-widget .itbis-amount {
     font-size: 1.375rem;
     font-weight: 700;
-    color: #93c5fd;
+    color: #2563eb;
     margin-bottom: 4px;
 }
 
 .financial-health-widget .itbis-period,
 .financial-health-widget .trend-period {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: #9ca3af;
 }
 
 .financial-health-widget .trend-header {
@@ -290,13 +291,13 @@
 
 .financial-health-widget .indicator-label {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #6b7280;
     font-weight: 500;
 }
 
 .financial-health-widget .indicator-status {
     font-size: 0.75rem;
-    color: white;
+    color: #1f2937;
     font-weight: 600;
 }
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contabilidad - Inicio</title>
     <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="/css/stockAlertsWidget.css" rel="stylesheet">
     <link href="/css/inventoryDashboard.css" rel="stylesheet">
     <link href="/css/salesDashboard.css" rel="stylesheet">
     <link href="/css/employeeStatusDashboard.css" rel="stylesheet">
@@ -26,14 +27,96 @@
             }
         }
     </script>
+    <style>
+        /* Quick actions hover effects and responsive optimizations */
+        .quick-action {
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        /* Widget responsive adjustments - more compact */
+        .widget-container {
+            transition: all 0.3s ease;
+        }
+
+        /* Compact design for 1080p screens */
+        @media (min-width: 1024px) and (max-height: 1200px) {
+            .widget-container {
+                margin-bottom: 0.75rem;
+            }
+
+            .financial-health-widget,
+            .sales-dashboard,
+            .inventory-dashboard,
+            .employee-status-dashboard {
+                padding: 16px !important;
+            }
+
+            .dashboard-header,
+            .widget-header {
+                margin-bottom: 16px !important;
+                padding-bottom: 12px !important;
+            }
+
+            .metrics-row {
+                margin-bottom: 20px !important;
+                gap: 12px !important;
+            }
+
+            .metric-card {
+                padding: 16px !important;
+            }
+
+            .financial-metrics,
+            .financial-secondary {
+                margin-bottom: 16px !important;
+                gap: 16px !important;
+            }
+
+            .health-indicators {
+                gap: 16px !important;
+            }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .widget-container {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
 </head>
-<body class="flex h-screen bg-gray-100">
-<aside id="sidebar" class="w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col">
+<body class="flex h-screen bg-gray-100 overflow-x-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
     <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
     <nav class="flex-1">
         <ul class="space-y-2">
             <li>
-                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
                     <i class="fas fa-home flex-shrink-0 w-6 h-6"></i>
                     <span class="ml-3">Inicio Admin</span>
                 </a>
@@ -69,7 +152,7 @@
                 </a>
             </li>
             <li>
-                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
                     <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
                     <span class="ml-3">Productos</span>
                 </a>
@@ -96,234 +179,263 @@
     </div>
 </aside>
 
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <header class="bg-white shadow p-2 md:p-3 flex justify-between items-center">
+        <!-- Mobile hamburger and quick actions -->
+        <div class="flex items-center lg:hidden">
+            <button id="hamburgerBtn" class="mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
 
-<div class="flex-1 flex flex-col">
-        <header class="bg-white shadow p-4 flex justify-between items-center">
-            <!-- Quick Actions -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">
-                        <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                        <span class="text-sm font-medium text-green-800">Nueva Compra</span>
-                    </button>
+        <!-- Quick Actions - Full width on desktop -->
+        <div class="flex-1 max-w-full">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+                <button data-action="open-wizard" data-type="COMPRA" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
+                    <i class="fas fa-shopping-cart text-base sm:text-lg lg:text-xl text-green-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs sm:text-sm font-medium text-green-800 text-center">Nueva Compra</span>
+                </button>
 
-                    <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">
-                        <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                        <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>
-                    </button>
+                <button data-action="open-wizard" data-type="VENTA" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
+                    <i class="fas fa-cash-register text-base sm:text-lg lg:text-xl text-yellow-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs sm:text-sm font-medium text-yellow-800 text-center">Nueva Venta</span>
+                </button>
 
-                    <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">
-                        <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                        <span class="text-sm font-medium text-red-800">Devolución</span>
-                    </button>
+                <button data-action="open-wizard" data-type="DEVOLUCION" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
+                    <i class="fas fa-undo text-base sm:text-lg lg:text-xl text-red-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs sm:text-sm font-medium text-red-800 text-center">Devolución</span>
+                </button>
 
-                    <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">
-                        <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                        <span class="text-sm font-medium text-blue-800">Reportes</span>
-                    </a>
-                </div>
-        </header>
+                <a href="/pages/contabilidad/reportes.html" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
+                    <i class="fas fa-chart-line text-base sm:text-lg lg:text-xl text-blue-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs sm:text-sm font-medium text-blue-800 text-center">Reportes</span>
+                </a>
+            </div>
+        </div>
+    </header>
 
-        <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
-            <section class="p-4 bg-white rounded-lg shadow">
-                <h2 class="text-xl font-semibold text-gray-700 mb-4">Resumen General</h2>
-                <p class="text-gray-600 mb-6">Dashboard con las principales métricas de ventas, compras y balance general del negocio.</p>
+    <main id="cont-main-content" class="flex-1 p-2 md:p-3 overflow-auto">
+        <section class="p-2 md:p-3 bg-white rounded-lg shadow">
+            <!-- Financial Health Widget -->
+            <div id="financialHealthWidget" class="widget-container mb-3 md:mb-4 lg:mb-5">
+                <!-- Financial health widget will be rendered here -->
+            </div>
 
-<!--                &lt;!&ndash; Quick Actions &ndash;&gt;-->
-<!--                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">-->
-<!--                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Acciones Rápidas</h3>-->
-<!--                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">-->
-<!--                        <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">-->
-<!--                            <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
-<!--                            <span class="text-sm font-medium text-green-800">Nueva Compra</span>-->
-<!--                        </button>-->
-
-<!--                        <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">-->
-<!--                            <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
-<!--                            <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>-->
-<!--                        </button>-->
-
-<!--                        <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">-->
-<!--                            <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
-<!--                            <span class="text-sm font-medium text-red-800">Devolución</span>-->
-<!--                        </button>-->
-
-<!--                        <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">-->
-<!--                            <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
-<!--                            <span class="text-sm font-medium text-blue-800">Reportes</span>-->
-<!--                        </a>-->
-<!--                    </div>-->
-<!--                </div>-->
-
-                <!-- Financial Health Widget -->
-                <div id="financialHealthWidget" class="mb-8">
-                    <!-- Financial health widget will be rendered here -->
-                </div>
-
-                <!-- Inventory Dashboard Component -->
-                <div id="inventoryDashboard" class="mb-8">
-                    <!-- Inventory dashboard will be rendered here -->
+            <!-- Dashboard Widgets Grid -->
+            <div class="space-y-3 md:space-y-4 lg:space-y-5">
+                <!-- Stock Alerts Widget - First priority -->
+                <div id="stockAlertsWidget" class="widget-container">
+                    <!-- Stock alerts widget will be rendered here -->
                 </div>
 
                 <!-- Sales Dashboard Component -->
-                <div id="salesDashboard" class="mb-8">
+                <div id="salesDashboard" class="widget-container">
                     <!-- Sales dashboard will be rendered here -->
                 </div>
 
                 <!-- Employee Status Dashboard Component -->
-                <div id="employeeStatusDashboard" class="mb-8">
+                <div id="employeeStatusDashboard" class="widget-container">
                     <!-- Employee status dashboard will be rendered here -->
                 </div>
-            </section>
-        </main>
+            </div>
+        </section>
+    </main>
+</div>
 
-        <!-- Transaction Creation Wizard Modal -->
-        <div id="transactionWizard" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-hidden">
-                    <!-- Wizard Header -->
-                    <div class="bg-brand-brown text-white p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-xl font-bold">Crear Nueva Transacción</h3>
-                                <p class="text-brand-cream opacity-90" id="wizardSubtitle">Selecciona el tipo de transacción</p>
-                            </div>
-                            <button onclick="closeTransactionWizard()" class="text-white hover:text-gray-300">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                        </div>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
 
-                        <!-- Progress Steps -->
-                        <div class="flex items-center mt-6 space-x-4">
-                            <div class="wizard-step active flex items-center">
-                                <div class="w-8 h-8 bg-white text-brand-brown rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                                <span class="ml-2 text-sm">Tipo</span>
-                            </div>
-                            <div class="wizard-step flex items-center">
-                                <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                                <span class="ml-2 text-sm">Detalles</span>
-                            </div>
-                            <div class="wizard-step flex items-center">
-                                <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                                <span class="ml-2 text-sm">Productos</span>
-                            </div>
-                            <div class="wizard-step flex items-center">
-                                <div class="w-8 h-8 bg-brand-brown-light text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                                <span class="ml-2 text-sm">Confirmación</span>
-                            </div>
-                        </div>
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/components/stockAlertsWidget.js"></script>
+<script src="/js/components/inventoryDashboard.js"></script>
+<script src="/js/components/salesDashboard.js"></script>
+<script src="/js/components/employeeStatusDashboard.js"></script>
+<script src="/js/components/financialHealthWidget.js"></script>
+<script src="/js/contabilidad/main.js" type="module"></script>
+<script src="/js/components/notifications.js"></script>
+<script src="/js/components/transactionWizard.js" type="module"></script>
+<script src="/js/services/transaccionService.js" type="module"></script>
+
+<script>
+    // Mobile sidebar functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        // Toggle mobile sidebar
+        function toggleMobileSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
+            // Prevent body scroll when sidebar is open
+            document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+        }
+
+        // Close mobile sidebar
+        function closeMobileSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Event listeners
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', toggleMobileSidebar);
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeMobileSidebar);
+        }
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Close mobile sidebar on desktop resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Initialize the stock alerts widget
+        const stockAlertsWidget = new StockAlertsWidget('stockAlertsWidget');
+        window.stockAlerts = stockAlertsWidget; // Hacer accesible globalmente
+
+        // Initialize the inventory dashboard component
+        const inventoryDashboard = new InventoryDashboard('inventoryDashboard');
+
+        // Initialize the sales dashboard component
+        const salesDashboard = new SalesDashboard('salesDashboard');
+
+        // Initialize the employee status dashboard component
+        const employeeStatusDashboard = new EmployeeStatusDashboard('employeeStatusDashboard');
+
+        // Initialize the financial health widget
+        const financialHealthWidget = new FinancialHealthWidget('financialHealthWidget');
+
+        // Optional: Add refresh button functionality
+        window.refreshStockAlerts = () => {
+            if (stockAlertsWidget) {
+                stockAlertsWidget.refresh();
+            }
+        };
+
+        window.refreshInventory = () => {
+            if (inventoryDashboard) {
+                inventoryDashboard.refresh();
+            }
+        };
+
+        window.refreshSales = () => {
+            if (salesDashboard) {
+                salesDashboard.refresh();
+            }
+        };
+
+        window.refreshEmployees = () => {
+            if (employeeStatusDashboard) {
+                employeeStatusDashboard.refresh();
+            }
+        };
+
+        window.refreshFinancialHealth = () => {
+            if (financialHealthWidget) {
+                financialHealthWidget.refresh();
+            }
+        };
+
+        // Refresh all dashboards
+        window.refreshDashboards = () => {
+            if (inventoryDashboard) inventoryDashboard.refresh();
+            if (salesDashboard) salesDashboard.refresh();
+            if (employeeStatusDashboard) employeeStatusDashboard.refresh();
+            if (financialHealthWidget) financialHealthWidget.refresh();
+        };
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (inventoryDashboard) {
+                inventoryDashboard.destroy();
+            }
+            if (salesDashboard) {
+                salesDashboard.destroy();
+            }
+            if (employeeStatusDashboard) {
+                employeeStatusDashboard.destroy();
+            }
+            if (financialHealthWidget) {
+                financialHealthWidget.destroy();
+            }
+        });
+
+        // Make global references available
+        window.employeeStatus = employeeStatusDashboard;
+        window.financialHealth = financialHealthWidget;
+        window.salesDashboard = salesDashboard;
+        window.inventoryDashboard = inventoryDashboard;
+    });
+</script>
+<!-- Modal Ver Producto para Stock Alerts -->
+<div id="modalVerProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden">
+            <!-- Header -->
+            <div class="bg-brand-brown text-white p-5 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Detalles del Producto</h3>
+                <button onclick="stockAlerts.closeProductModal()" class="text-white hover:text-gray-300">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido -->
+            <div class="p-6">
+                <div id="detallesProducto" class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                    <!-- Imagen -->
+                    <div class="w-full md:w-1/2 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img id="detalleProductoImg" src="/images/product-placeholder.png"
+                             class="object-contain w-full h-full max-h-[400px]"
+                             alt="Foto producto">
                     </div>
 
-                    <!-- Wizard Content -->
-                    <div class="p-6 custom-scrollbar overflow-y-auto" style="max-height: 60vh;" id="wizardContent">
-                        <!-- Content will be loaded dynamically -->
-                    </div>
-
-                    <!-- Wizard Footer -->
-                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-                        <button id="wizardPrevBtn" onclick="wizardPrevStep()" class="px-4 py-2 text-gray-600 hover:text-gray-800 hidden">
-                            <i class="fas fa-arrow-left mr-1"></i>
-                            Anterior
-                        </button>
-                        <div class="flex space-x-3">
-                            <button onclick="closeTransactionWizard()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                                Cancelar
-                            </button>
-                            <button id="wizardNextBtn" onclick="wizardNextStep()" class="px-6 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-brown-light">
-                                Siguiente
-                                <i class="fas fa-arrow-right ml-1"></i>
-                            </button>
+                    <!-- Información -->
+                    <div class="w-full md:w-1/2 space-y-4">
+                        <h4 id="detalleProductoNombre" class="text-2xl font-bold text-brand-brown"></h4>
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div><span class="font-semibold text-gray-700">Tipo:</span> <span id="detalleProductoTipo" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Descripción:</span> <span id="detalleProductoDescripcion" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Venta:</span> <span id="detalleProductoPrecioVenta" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Compra:</span> <span id="detalleProductoPrecioCompra" class="text-gray-600"></span></div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 border-t border-gray-200">
+                <button onclick="stockAlerts.viewProductInAdmin('${productId}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                    <i class="fas fa-edit mr-2"></i> Ir a Editar
+                </button>
+                <button onclick="stockAlerts.closeProductModal()" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
-
-    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige" role="status">
-            <span class="visually-hidden">Cargando...</span>
-        </div>
-    </div>
-
-    <script src="/js/components/sidebar.js" type="module"></script>
-    <script src="/js/components/header.js" type="module"></script>
-    <script src="/js/components/inventoryDashboard.js"></script>
-    <script src="/js/components/salesDashboard.js"></script>
-    <script src="/js/components/employeeStatusDashboard.js"></script>
-    <script src="/js/components/financialHealthWidget.js"></script>
-    <script src="/js/contabilidad/main.js" type="module"></script>
-    <script src="/js/components/notifications.js"></script>
-    <script src="/js/components/transactionWizard.js" type="module"></script>
-    <script src="/js/services/transaccionService.js" type="module"></script>
-
-    <script>
-        // Initialize Dashboard Components when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the inventory dashboard component
-            const inventoryDashboard = new InventoryDashboard('inventoryDashboard');
-
-            // Initialize the sales dashboard component
-            const salesDashboard = new SalesDashboard('salesDashboard');
-
-            // Initialize the employee status dashboard component
-            const employeeStatusDashboard = new EmployeeStatusDashboard('employeeStatusDashboard');
-
-            // Initialize the financial health widget
-            const financialHealthWidget = new FinancialHealthWidget('financialHealthWidget');
-
-            // Optional: Add refresh button functionality
-            window.refreshInventory = () => {
-                if (inventoryDashboard) {
-                    inventoryDashboard.refresh();
-                }
-            };
-
-            window.refreshSales = () => {
-                if (salesDashboard) {
-                    salesDashboard.refresh();
-                }
-            };
-
-            window.refreshEmployees = () => {
-                if (employeeStatusDashboard) {
-                    employeeStatusDashboard.refresh();
-                }
-            };
-
-            window.refreshFinancialHealth = () => {
-                if (financialHealthWidget) {
-                    financialHealthWidget.refresh();
-                }
-            };
-
-            // Refresh all dashboards
-            window.refreshDashboards = () => {
-                if (inventoryDashboard) inventoryDashboard.refresh();
-                if (salesDashboard) salesDashboard.refresh();
-                if (employeeStatusDashboard) employeeStatusDashboard.refresh();
-                if (financialHealthWidget) financialHealthWidget.refresh();
-            };
-
-            // Clean up on page unload
-            window.addEventListener('beforeunload', function() {
-                if (inventoryDashboard) {
-                    inventoryDashboard.destroy();
-                }
-                if (salesDashboard) {
-                    salesDashboard.destroy();
-                }
-                if (employeeStatusDashboard) {
-                    employeeStatusDashboard.destroy();
-                }
-                if (financialHealthWidget) {
-                    financialHealthWidget.destroy();
-                }
-            });
-
-            // Make global references available
-            window.employeeStatus = employeeStatusDashboard;
-            window.financialHealth = financialHealthWidget;
-        });
-    </script>
+</div>
 </body>
 </html>

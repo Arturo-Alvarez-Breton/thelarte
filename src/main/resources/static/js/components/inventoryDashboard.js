@@ -60,16 +60,6 @@ class InventoryDashboard {
                                 <div class="metric-label">Total en Stock</div>
                             </div>
                         </div>
-                        
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value" id="bajoStock">-</div>
-                                <div class="metric-label">Bajo Stock</div>
-                            </div>
-                        </div>
                     </div>
                     
                     <!-- Gráfico y lista de productos -->
@@ -128,15 +118,17 @@ class InventoryDashboard {
             return sum + (product.cantidadDisponible || 0);
         }, 0);
 
-        // Productos con bajo stock (menos de 5 unidades disponibles)
-        const lowStockProducts = activeProducts.filter(product =>
-            (product.cantidadDisponible || 0) <= 5 && (product.cantidadDisponible || 0) > 0
-        );
-
         // Actualizar elementos del DOM
         document.getElementById('totalProductos').textContent = activeProducts.length;
         document.getElementById('totalStock').textContent = totalStock.toLocaleString();
-        document.getElementById('bajoStock').textContent = lowStockProducts.length;
+
+        // Calcular valor total del inventario (opcional)
+        const totalValue = activeProducts.reduce((sum, product) => {
+            const stock = (product.cantidadDisponible || 0) + (product.cantidadAlmacen || 0);
+            const price = product.precioCompra || 0;
+            return sum + (stock * price);
+        }, 0);
+        document.getElementById('valorInventario').textContent = this.formatCurrency(totalValue);
     }
 
     updateChart() {
@@ -347,4 +339,3 @@ class InventoryDashboard {
 
 // Exportar para uso global
 window.InventoryDashboard = InventoryDashboard;
-
