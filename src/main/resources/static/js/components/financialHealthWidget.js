@@ -43,58 +43,65 @@ class FinancialHealthWidget {
                 
                 <div class="widget-content">
                     <!-- Balance y Margen -->
-                    <div class="financial-metrics">
+                    <div class="financial-metrics single-row">
                         <div class="metric-card balance-card">
                             <div class="metric-header">
                                 <span class="metric-label">Balance Actual</span>
-                                <div class="balance-trend" id="balanceTrend">
-                                    <i class="fas fa-arrow-up text-green-500"></i>
-                                </div>
                             </div>
                             <div class="metric-value" id="currentBalance">RD$ 0.00</div>
-                            <div class="metric-subtitle" id="balanceSubtitle">Ingresos - Gastos</div>
                         </div>
-                        
                         <div class="metric-card margin-card">
                             <div class="metric-header">
                                 <span class="metric-label">Margen de Beneficio</span>
-                                <div class="margin-indicator" id="marginIndicator">
-                                    <div class="indicator-bar">
-                                        <div class="indicator-fill" id="marginFill"></div>
-                                    </div>
-                                </div>
                             </div>
                             <div class="metric-value" id="profitMargin">0%</div>
-                            <div class="metric-subtitle" id="marginStatus">Saludable</div>
                         </div>
-                    </div>
-                    
-                    <!-- ITBIS y Tendencia -->
-                    <div class="financial-secondary">
-                        <div class="itbis-card">
+                        <div class="metric-card itbis-card">
                             <div class="itbis-header">
                                 <i class="fas fa-receipt text-blue-500"></i>
                                 <span class="itbis-label">ITBIS por Declarar</span>
                             </div>
-                            <div class="itbis-content">
-                                <div class="itbis-amount" id="itbisAmount">RD$ 0.00</div>
-                                <div class="itbis-period">Este mes</div>
-                            </div>
+                            <div class="itbis-amount" id="itbisAmount">RD$ 0.00</div>
                         </div>
+                    </div>
+                    
+                    <!-- ITBIS y Tendencia -->
+<!--                    <div class="itbis-card">-->
+<!--                            <div class="itbis-header">-->
+<!--                                <i class="fas fa-receipt text-blue-500"></i>-->
+<!--                                <span class="itbis-label">ITBIS por Declarar</span>-->
+<!--                            </div>-->
+<!--                            <div class="itbis-content">-->
+<!--                                <div class="itbis-amount" id="itbisAmount">RD$ 0.00</div>-->
+<!--                                <div class="itbis-period">Este mes</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
                         
-                        <div class="trend-card">
-                            <div class="trend-header">
-                                <span class="trend-label">Tendencia de Ingresos</span>
-                                <div class="trend-period">Últimos 7 días</div>
-                            </div>
-                            <div class="trend-chart-container">
-                                <canvas id="incomeTrendChart"></canvas>
-                                <div id="noTrendData" class="no-trend-data hidden">
-                                    <i class="fas fa-chart-line text-gray-300"></i>
-                                    <span class="text-gray-400">Sin datos</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="financial-secondary">
+<!--                        <div class="itbis-card">-->
+<!--                            <div class="itbis-header">-->
+<!--                                <i class="fas fa-receipt text-blue-500"></i>-->
+<!--                                <span class="itbis-label">ITBIS por Declarar</span>-->
+<!--                            </div>-->
+<!--                            <div class="itbis-content">-->
+<!--                                <div class="itbis-amount" id="itbisAmount">RD$ 0.00</div>-->
+<!--                                <div class="itbis-period">Este mes</div>-->
+<!--                            </div>-->
+<!--                        </div>-->
+                        
+<!--                        <div class="trend-card">-->
+<!--                            <div class="trend-header">-->
+<!--                                <span class="trend-label">Tendencia de Ingresos</span>-->
+<!--                                <div class="trend-period">Últimos 7 días</div>-->
+<!--                            </div>-->
+<!--                            <div class="trend-chart-container">-->
+<!--                                <canvas id="incomeTrendChart"></canvas>-->
+<!--                                <div id="noTrendData" class="no-trend-data hidden">-->
+<!--                                    <i class="fas fa-chart-line text-gray-300"></i>-->
+<!--                                    <span class="text-gray-400">Sin datos</span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
                     </div>
                     
                     <!-- Indicadores de Estado -->
@@ -311,7 +318,6 @@ class FinancialHealthWidget {
         // Actualizar balance
         const balanceElement = document.getElementById('currentBalance');
         const balanceTrend = document.getElementById('balanceTrend');
-        const balanceSubtitle = document.getElementById('balanceSubtitle');
 
         if (balanceElement) {
             balanceElement.textContent = this.formatCurrency(balance);
@@ -325,14 +331,9 @@ class FinancialHealthWidget {
             `;
         }
 
-        if (balanceSubtitle) {
-            balanceSubtitle.textContent = balance >= 0 ? 'Beneficio del mes' : 'Pérdida del mes';
-        }
-
         // Actualizar margen de beneficio
         const marginElement = document.getElementById('profitMargin');
         const marginFill = document.getElementById('marginFill');
-        const marginStatus = document.getElementById('marginStatus');
 
         if (marginElement) {
             marginElement.textContent = `${profitMargin.toFixed(1)}%`;
@@ -343,10 +344,6 @@ class FinancialHealthWidget {
             const fillPercentage = Math.min(Math.max(profitMargin, 0), 100);
             marginFill.style.width = `${fillPercentage}%`;
             marginFill.className = `indicator-fill ${this.getMarginClass(profitMargin)}`;
-        }
-
-        if (marginStatus) {
-            marginStatus.textContent = this.getMarginStatus(profitMargin);
         }
 
         // Actualizar ITBIS
@@ -571,4 +568,3 @@ class FinancialHealthWidget {
 
 // Exportar para uso global
 window.FinancialHealthWidget = FinancialHealthWidget;
-

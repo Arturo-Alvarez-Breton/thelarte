@@ -43,9 +43,6 @@ class StockAlertsWidget {
                             <i class="fas fa-sync-alt text-gray-400"></i>
                             <span id="stockAlertsLastUpdated">Actualizando...</span>
                         </div>
-                        <button onclick="stockAlerts.refresh()" class="refresh-btn">
-                            <i class="fas fa-refresh"></i>
-                        </button>
                     </div>
                 </div>
                 
@@ -77,8 +74,8 @@ class StockAlertsWidget {
                                 <i class="fas fa-info-circle text-blue-500"></i>
                             </div>
                             <div class="metric-content">
-                                <div class="metric-value" id="totalAlertsCount">0</div>
-                                <div class="metric-label">Total Alertas</div>
+                                <div class="metric-value" id="soloAlmacenCount">0</div>
+                                <div class="metric-label">Solo en Almacen</div>
                             </div>
                         </div>
                     </div>
@@ -198,11 +195,12 @@ class StockAlertsWidget {
             return totalStock > 0 && totalStock <= 5;
         }).length;
 
-        const totalAlertas = this.data.length;
+        // Solo en almacen: productos con cantidadDisponible == 0 y cantidadAlmacen > 0
+        const soloAlmacen = this.data.filter(product => (product.cantidadDisponible === 0 || !product.cantidadDisponible) && product.cantidadAlmacen > 0).length;
 
         document.getElementById('sinStockCount').textContent = sinStock;
         document.getElementById('bajoStockCount').textContent = bajoStock;
-        document.getElementById('totalAlertsCount').textContent = totalAlertas;
+        document.getElementById('soloAlmacenCount').textContent = soloAlmacen;
     }
 
     applyFilters() {

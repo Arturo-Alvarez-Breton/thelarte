@@ -78,6 +78,20 @@
     margin-bottom: 24px;
 }
 
+.financial-health-widget .financial-metrics.single-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+    .financial-metrics.single-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
 .financial-health-widget .metric-card {
     background: #f9fafb;
     backdrop-filter: blur(10px);
@@ -200,6 +214,16 @@
     padding: 16px;
 }
 
+.financial-metrics .itbis-card {
+    padding: 20px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 .financial-health-widget .itbis-header {
     display: flex;
     align-items: center;
@@ -218,7 +242,7 @@
     font-size: 1.375rem;
     font-weight: 700;
     color: #2563eb;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 }
 
 .financial-health-widget .itbis-period,

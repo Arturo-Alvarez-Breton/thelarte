@@ -37,10 +37,6 @@ class EmployeeStatusDashboard {
                             <i class="fas fa-sync-alt text-gray-400"></i>
                             <span id="employeeLastUpdated">Actualizando...</span>
                         </div>
-                        <button onclick="employeeStatus.refresh()" class="refresh-btn">
-                            <i class="fas fa-refresh"></i>
-                            Actualizar
-                        </button>
                     </div>
                 </div>
                 
@@ -64,26 +60,6 @@ class EmployeeStatusDashboard {
                             <div class="metric-content">
                                 <div class="metric-value" id="topPerformer">-</div>
                                 <div class="metric-label">Mejor Vendedor</div>
-                            </div>
-                        </div>
-                        
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-dollar-sign text-green-600"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value" id="avgSalary">-</div>
-                                <div class="metric-label">Salario Promedio</div>
-                            </div>
-                        </div>
-                        
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-percentage text-orange-600"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value" id="avgCommission">-</div>
-                                <div class="metric-label">Comisión Promedio</div>
                             </div>
                         </div>
                     </div>
@@ -287,16 +263,6 @@ class EmployeeStatusDashboard {
         );
         document.getElementById('topPerformer').textContent =
             topPerformer.nombre ? `${topPerformer.nombre} ${topPerformer.apellido}` : '-';
-
-        // Salario promedio
-        const avgSalary = comerciales.length > 0 ?
-            comerciales.reduce((sum, emp) => sum + emp.salario, 0) / comerciales.length : 0;
-        document.getElementById('avgSalary').textContent = this.formatCurrency(avgSalary);
-
-        // Comisión promedio
-        const avgCommission = comerciales.length > 0 ?
-            comerciales.reduce((sum, emp) => sum + (emp.comision || 0), 0) / comerciales.length : 0;
-        document.getElementById('avgCommission').textContent = `${avgCommission.toFixed(1)}%`;
     }
 
     renderEmployeeTable() {
@@ -549,4 +515,3 @@ class EmployeeStatusDashboard {
 
 // Exportar para uso global
 window.EmployeeStatusDashboard = EmployeeStatusDashboard;
-
