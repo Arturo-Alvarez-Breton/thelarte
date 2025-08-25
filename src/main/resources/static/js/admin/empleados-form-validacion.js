@@ -53,7 +53,7 @@ function validateFormEmpleado(empleadoData) {
     if (!empleadoData.rol || empleadoData.rol.trim() === '') {
         showEmpleadoError('empleadoRolError', 'El rol es obligatorio');
         isValid = false;
-    } else if (!['ADMIN', 'COMERCIAL', 'CAJERO', 'USER'].includes(empleadoData.rol)) {
+    } else if (!['ADMINISTRADOR', 'TI', 'VENDEDOR', 'CAJERO', 'CONTABILIDAD'].includes(empleadoData.rol)) {
         showEmpleadoError('empleadoRolError', 'Rol inválido');
         isValid = false;
     }

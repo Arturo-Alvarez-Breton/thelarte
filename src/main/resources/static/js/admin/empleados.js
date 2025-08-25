@@ -809,10 +809,11 @@ class EmpleadosManager {
         // Mapeo de rol empleado → userRole para crear usuario
         function mapEmpleadoRolToUserRole(rol) {
             switch (rol) {
-                case "ADMIN": return "GERENTE";
-                case "USER": return "TI";
-                case "COMERCIAL": return "VENDEDOR";
-                case "CAJERO": return "CONTABILIDAD";
+                case "ADMINISTRADOR": return "ADMINISTRADOR";
+                case "TI": return "TI";
+                case "VENDEDOR": return "VENDEDOR";
+                case "CAJERO": return "CAJERO";
+                case "CONTABILIDAD": return "CONTABILIDAD";
                 default: return "VENDEDOR";
             }
         }

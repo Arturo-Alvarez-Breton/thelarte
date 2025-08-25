@@ -25,7 +25,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
 
     @Override
     public Empleado crearEmpleado(Empleado empleado) {
-        if (empleado.getRol() != Rol.COMERCIAL) {
+        if (empleado.getRol() != Rol.VENDEDOR) {
             empleado.setComision(null);
         }
         return empleadoRepository.save(empleado);
@@ -56,7 +56,7 @@ public class EmpleadoServiceImpl implements EmpleadoService {
         existente.setRol(datosActualizados.getRol());
         existente.setSalario(datosActualizados.getSalario());
 
-        if (datosActualizados.getRol() == Rol.COMERCIAL) {
+        if (datosActualizados.getRol() == Rol.VENDEDOR) {
             existente.setComision(datosActualizados.getComision());
         } else {
             existente.setComision(null);

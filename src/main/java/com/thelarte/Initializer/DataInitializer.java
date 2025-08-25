@@ -1,4 +1,4 @@
-package com.thelarte.config;
+package com.thelarte.Initializer;
 
 import com.thelarte.auth.entity.UserRole;
 import com.thelarte.auth.service.UserService;
@@ -103,7 +103,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Brito");
             emp.setTelefono("809-555-1001");
             emp.setEmail("edwin.brito@ejemplo.com");
-            emp.setRol(Rol.COMERCIAL);
+            emp.setRol(Rol.VENDEDOR);
             emp.setSalario(25000f);
             emp.setComision(10.0f);
             emp.setDeleted(false); // Empleado activo
@@ -118,7 +118,7 @@ public class DataInitializer implements CommandLineRunner {
                 );
                 logger.info("Usuario creado: edwinbrito (VENDEDOR, empleado: 40222022001)");
             }
-            
+
             if (!userService.existsByUsername("edwinb")) {
                 userService.createUser(
                     "edwinb",
@@ -138,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Garcia");
             emp.setTelefono("809-555-2002");
             emp.setEmail("ana.garcia@ejemplo.com");
-            emp.setRol(Rol.ADMIN);
+            emp.setRol(Rol.ADMINISTRADOR);
             emp.setSalario(40000f);
             emp.setComision(null);
             emp.setDeleted(false); // Empleado activo
@@ -148,7 +148,7 @@ public class DataInitializer implements CommandLineRunner {
                 userService.createUser(
                     "anagarcia",
                     "managerpass",
-                    Arrays.asList(UserRole.GERENTE),
+                    Arrays.asList(UserRole.ADMINISTRADOR),
                     emp.getCedula()
                 );
                 logger.info("Usuario creado: anagarcia (GERENTE, empleado: 40222022002)");
@@ -163,7 +163,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Pérez");
             emp.setTelefono("809-555-3003");
             emp.setEmail("juan.perez@ejemplo.com");
-            emp.setRol(Rol.COMERCIAL); // Cambiado de TI a USER
+            emp.setRol(Rol.VENDEDOR); // Cambiado de TI a USER
             emp.setSalario(32000f);
             emp.setComision(null);
             emp.setDeleted(false); // Empleado activo
@@ -178,7 +178,7 @@ public class DataInitializer implements CommandLineRunner {
                 );
                 logger.info("Usuario creado: juanperez (TI, empleado: 40222022003)");
             }
-            
+
             if (!userService.existsByUsername("jeanp")) {
                 userService.createUser(
                     "jeanp",
@@ -214,7 +214,7 @@ public class DataInitializer implements CommandLineRunner {
                 logger.info("Usuario creado: carlasantos (CONTABILIDAD, empleado: 40222022004)");
             }
         }
-        
+
         // Arturo Breton - Empleado adicional
         if (!empleadoRepository.existsById("40222022005")) {
             Empleado emp = new Empleado();
@@ -223,7 +223,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Breton");
             emp.setTelefono("809-555-5005");
             emp.setEmail("arturo.breton@ejemplo.com");
-            emp.setRol(Rol.COMERCIAL);
+            emp.setRol(Rol.VENDEDOR);
             emp.setSalario(24000f);
             emp.setComision(8.0f);
             emp.setDeleted(false); // Empleado activo
@@ -248,7 +248,7 @@ public class DataInitializer implements CommandLineRunner {
             emp.setApellido("Eliminado");
             emp.setTelefono("809-555-9999");
             emp.setEmail("carlos.eliminado@ejemplo.com");
-            emp.setRol(Rol.COMERCIAL);
+            emp.setRol(Rol.VENDEDOR);
             emp.setSalario(20000f);
             emp.setComision(null);
             emp.setDeleted(true); // Empleado eliminado lógicamente
@@ -311,7 +311,7 @@ public class DataInitializer implements CommandLineRunner {
             userService.createUser(
                 "adminroot",
                 "rootsecure",
-                Arrays.asList(UserRole.GERENTE),
+                Arrays.asList(UserRole.ADMINISTRADOR),
                 null
             );
             logger.info("Usuario creado: adminroot (GERENTE, sin empleado)");

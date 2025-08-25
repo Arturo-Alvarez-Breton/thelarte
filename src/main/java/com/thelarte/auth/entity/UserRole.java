@@ -1,8 +1,9 @@
 package com.thelarte.auth.entity;
 
 public enum UserRole {
-    GERENTE,
+    ADMINISTRADOR,
     TI,
     VENDEDOR,
+    CAJERO,
     CONTABILIDAD
 }

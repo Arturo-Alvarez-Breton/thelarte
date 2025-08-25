@@ -1,9 +1,9 @@
 package com.thelarte.user.util;
 
 public enum Rol {
-    ADMIN,
+    ADMINISTRADOR,
     TI,
-    COMERCIAL,
-    CAJERO
-
+    VENDEDOR,
+    CAJERO,
+    CONTABILIDAD
 }

@@ -110,7 +110,7 @@ public class Empleado {
             if (comision < 0 || comision > 100) {
                 throw new IllegalArgumentException("La comisión debe estar entre 0 y 100.");
             }
-            if (this.rol != com.thelarte.user.util.Rol.COMERCIAL) {
+            if (this.rol != com.thelarte.user.util.Rol.VENDEDOR) {
                 throw new IllegalArgumentException("La comisión solo aplica al rol COMERCIAL.");
             }
         }

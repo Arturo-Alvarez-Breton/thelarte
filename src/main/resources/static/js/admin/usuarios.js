@@ -865,6 +865,9 @@ function validateFormUsuario(data, isEdit = false) {
     if (!data.roles || !data.roles[0]) {
         showError('rol', 'El rol es obligatorio');
         valid = false;
+    } else if (!['ADMINISTRADOR', 'TI', 'VENDEDOR', 'CAJERO', 'CONTABILIDAD'].includes(data.roles[0])) {
+        showError('rol', 'Rol inválido');
+        valid = false;
     }
 
     return valid;
