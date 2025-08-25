@@ -8,7 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.Objects;
@@ -19,10 +25,98 @@ import java.util.stream.Collectors;
 public class ProductoService implements IProductoService {
 
     private final ProductoRepository productoRepository;
+    private static final String UPLOAD_DIR = "uploads/imagenes/";
 
     @Autowired
     public ProductoService(ProductoRepository productoRepository) {
         this.productoRepository = productoRepository;
+        // Crear directorio de uploads si no existe
+        createUploadDirectoryIfNotExists();
+    }
+
+    private void createUploadDirectoryIfNotExists() {
+        try {
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("No se pudo crear el directorio de uploads: " + e.getMessage());
+        }
+    }
+
+    private String saveImageFromBase64(String base64Data) {
+        if (base64Data == null || base64Data.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // Extraer el contenido base64 (remover el prefijo data:image/...)
+            String base64Content;
+            String fileExtension = "png"; // default
+
+            if (base64Data.contains(",")) {
+                String[] parts = base64Data.split(",");
+                if (parts.length == 2) {
+                    String header = parts[0];
+                    base64Content = parts[1];
+
+                    // Extraer la extensión del header
+                    if (header.contains("jpeg") || header.contains("jpg")) {
+                        fileExtension = "jpg";
+                    } else if (header.contains("png")) {
+                        fileExtension = "png";
+                    } else if (header.contains("gif")) {
+                        fileExtension = "gif";
+                    } else if (header.contains("webp")) {
+                        fileExtension = "webp";
+                    }
+                } else {
+                    base64Content = base64Data;
+                }
+            } else {
+                base64Content = base64Data;
+            }
+
+            // Decodificar base64
+            byte[] imageBytes = Base64.getDecoder().decode(base64Content);
+
+            // Generar nombre único para el archivo
+            String fileName = System.currentTimeMillis() + "." + fileExtension;
+            String filePath = UPLOAD_DIR + fileName;
+
+            // Guardar el archivo
+            try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                fos.write(imageBytes);
+            }
+
+            // Retornar la URL relativa
+            return "/uploads/imagenes/" + fileName;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al guardar la imagen: " + e.getMessage());
+        }
+    }
+
+    private void deleteImageFile(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return;
+        }
+
+        try {
+            // Extraer el nombre del archivo de la URL
+            if (imageUrl.startsWith("/uploads/imagenes/")) {
+                String fileName = imageUrl.substring("/uploads/imagenes/".length());
+                Path filePath = Paths.get(UPLOAD_DIR + fileName);
+
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+            }
+        } catch (IOException e) {
+            // Log el error pero no fallar la operación principal
+            System.err.println("Error al eliminar archivo de imagen: " + e.getMessage());
+        }
     }
 
     /**
@@ -69,6 +163,7 @@ public class ProductoService implements IProductoService {
     @Override
     public ProductoDTO guardar(ProductoDTO productoDTO) {
         Producto producto;
+        String oldImageUrl = null;
 
         // Cambia la condición a null o <= 0 para evitar problemas con id nulo
         if (productoDTO.getId() == null || productoDTO.getId() <= 0) {
@@ -78,6 +173,9 @@ public class ProductoService implements IProductoService {
             // Actualizar producto existente - buscar sin filtro de eliminado para permitir reactivación
             producto = productoRepository.findById(productoDTO.getId())
                     .orElseThrow(() -> new EntityNotFoundException("No se encontró el producto con ID: " + productoDTO.getId()));
+
+            // Guardar la URL de la imagen antigua para eliminarla si se actualiza
+            oldImageUrl = producto.getFotoURL();
         }
 
         // Validaciones adicionales
@@ -107,7 +205,33 @@ public class ProductoService implements IProductoService {
         producto.setItbis(productoDTO.getItbis() == null ? 0f : productoDTO.getItbis());
         producto.setPrecioCompra(productoDTO.getPrecioCompra());
         producto.setPrecioVenta(productoDTO.getPrecioVenta());
-        producto.setFotoURL(productoDTO.getFotoUrl());
+
+        // Manejar la imagen
+        String newImageUrl = null;
+        if (productoDTO.getFotoBase64() != null && !productoDTO.getFotoBase64().isEmpty()) {
+            // Si hay una nueva imagen en base64, guardarla
+            if (!productoDTO.getFotoBase64().equals(oldImageUrl)) {
+                // Solo procesar si es realmente una imagen base64 nueva
+                if (productoDTO.getFotoBase64().startsWith("data:image/")) {
+                    newImageUrl = saveImageFromBase64(productoDTO.getFotoBase64());
+                    // Eliminar imagen antigua si existe y es diferente
+                    if (oldImageUrl != null && !oldImageUrl.isEmpty()) {
+                        deleteImageFile(oldImageUrl);
+                    }
+                } else {
+                    // Si no es base64, mantener la URL existente
+                    newImageUrl = productoDTO.getFotoBase64();
+                }
+            } else {
+                // Mantener la imagen existente
+                newImageUrl = oldImageUrl;
+            }
+        } else if (productoDTO.getFotoUrl() != null && !productoDTO.getFotoUrl().isEmpty()) {
+            // Si no hay fotoBase64 pero hay fotoUrl, usar fotoUrl
+            newImageUrl = productoDTO.getFotoUrl();
+        }
+
+        producto.setFotoURL(newImageUrl);
 
         // Asigna 0 si viene NULL en cantidades
         producto.setCantidadDisponible(productoDTO.getCantidadDisponible() == null ? 0 : productoDTO.getCantidadDisponible());
@@ -136,6 +260,8 @@ public class ProductoService implements IProductoService {
             throw new IllegalStateException("El producto ya está eliminado");
         }
 
+        // No eliminar la imagen física al hacer borrado lógico
+        // La imagen se mantiene en caso de reactivación
         producto.setEliminado(true);
         productoRepository.save(producto);
     }
