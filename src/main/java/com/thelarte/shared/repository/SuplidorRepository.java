@@ -68,6 +68,12 @@ public interface SuplidorRepository extends JpaRepository<Suplidor, Long> {
      */
     List<Suplidor> findByCiudadAndActivoTrue(String ciudad);
 
+    /**
+     * Busca todos los suplidores inactivos.
+     * @return Lista de suplidores inactivos
+     */
+    List<Suplidor> findByActivoFalse();
+
     // Opcional: Búsquedas por país si deseas exponer filtros por país
     List<Suplidor> findByPaisAndActivoTrue(String pais);
 }

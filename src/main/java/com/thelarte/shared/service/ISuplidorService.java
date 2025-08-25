@@ -57,4 +57,28 @@ public interface ISuplidorService {
      * @return Lista de suplidores de la ciudad especificada
      */
     List<SuplidorDTO> listarPorCiudad(String ciudad);
+
+    /**
+     * Lista todos los suplidores (activos e inactivos)
+     * @return Lista de DTOs de todos los suplidores
+     */
+    List<SuplidorDTO> listarTodosConInactivos();
+
+    /**
+     * Lista solo los suplidores inactivos
+     * @return Lista de DTOs de suplidores inactivos
+     */
+    List<SuplidorDTO> listarInactivos();
+
+    /**
+     * Activa un suplidor (cambia activo a true)
+     * @param id ID del suplidor a activar
+     */
+    void activar(Long id);
+
+    /**
+     * Desactiva un suplidor (cambia activo a false)
+     * @param id ID del suplidor a desactivar
+     */
+    void desactivar(Long id);
 }

@@ -1,16 +1,23 @@
 // src/main/resources/static/js/contabilidad/suplidores.js
 
-import { TransaccionService } from '../services/transaccionService.js';
+import { SuplidorService } from '../services/suplidorService.js';
 import { TableViewManager } from '../components/tableView.js';
 
 class SuplidoresManager {
     constructor() {
-        this.transaccionService = new TransaccionService();
-        this.suplidores = [];
+        this.suplidorService = new SuplidorService();
+        this.allSuplidores = []; // Todos los suplidores (activos e inactivos)
+        this.suplidoresActivos = [];
+        this.suplidoresInactivos = [];
         this.filteredSuplidores = [];
-        this.currentPage = 0;
-        this.suplidoresPerPage = 10;
         this.currentSuplidor = null;
+        this.currentPage = 0;
+        this.suplidoresPerPage = 15;
+        this.totalPages = 1;
+        this.totalSuplidores = 0;
+        this.isMobile = window.innerWidth < 768;
+        this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+        this.currentView = 'activos'; // 'activos' o 'inactivos'
 
         // Geo cache
         this.countries = [];
@@ -21,28 +28,7 @@ class SuplidoresManager {
 
         // Initialize table view manager
         this.tableViewManager = new TableViewManager('#suplidoresListContainer', {
-            columns: [
-                { header: 'Nombre', field: 'nombre' },
-                {
-                    header: 'Ubicación',
-                    field: 'ciudad',
-                    formatter: (value, item) => {
-                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
-                    }
-                },
-                { header: 'RNC', field: 'rNC', formatter: (value) => value || 'N/A' },
-                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
-                {
-                    header: 'Teléfono',
-                    field: 'telefonos',
-                    formatter: (value) => {
-                        if (value && Array.isArray(value) && value.length > 0) {
-                            return value[0];
-                        }
-                        return 'N/A';
-                    }
-                }
-            ],
+            columns: this.getResponsiveColumns(),
             actions: [
                 {
                     icon: 'fas fa-eye',
@@ -57,10 +43,10 @@ class SuplidoresManager {
                     title: 'Editar'
                 },
                 {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'suplidoresManager.deleteSuplidor',
+                    icon: 'fas fa-user-slash',
+                    handler: 'suplidoresManager.toggleSuplidorStatus',
                     className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
+                    title: 'Desactivar/Activar suplidor'
                 }
             ],
             searchFields: ['nombre', 'ciudad', 'pais', 'email', 'rNC'],
@@ -73,6 +59,7 @@ class SuplidoresManager {
 
     async init() {
         this.setupEventListeners();
+        this.setupResponsiveHandlers();
         await this.loadCountries();
         await this.loadSuplidores();
     }
@@ -82,18 +69,20 @@ class SuplidoresManager {
         document.getElementById('suplidorSearchInput')?.addEventListener('input', () => this.filterSuplidores());
         document.getElementById('formSuplidor')?.addEventListener('submit', (e) => this.handleSubmitSuplidor(e));
 
+        // Filter buttons for active/inactive suppliers
+        document.getElementById('btnSuplidoresActivos')?.addEventListener('click', () => this.switchToActiveSuplidores());
+        document.getElementById('btnSuplidoresInactivos')?.addEventListener('click', () => this.switchToInactiveSuplidores());
+
         document.getElementById('suplidoresListContainer')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
+            const id = btn.dataset.id;
             if (btn.classList.contains('ver-btn')) {
-                const id = btn.dataset.id;
                 this.verSuplidor(id);
             } else if (btn.classList.contains('edit-btn')) {
-                const id = btn.dataset.id;
                 this.editSuplidor(id);
             } else if (btn.classList.contains('delete-btn')) {
-                const id = btn.dataset.id;
-                this.deleteSuplidor(id);
+                this.toggleSuplidorStatus(id);
             }
         });
 
@@ -136,6 +125,75 @@ class SuplidoresManager {
             this.initTelInput(input, iso2);
         };
         window.eliminarTelefono = (button) => this.eliminarTelefono(button);
+    }
+
+    setupResponsiveHandlers() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => this.toggleMobileSidebar());
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => this.closeMobileSidebar());
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => this.handleWindowResize());
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                this.closeMobileSidebar();
+            }
+        });
+    }
+
+    getResponsiveColumns() {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            return [
+                { header: 'Nombre', field: 'nombre' },
+                {
+                    header: 'Ubicación',
+                    field: 'ciudad',
+                    formatter: (value, item) => {
+                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
+                    }
+                }
+            ];
+        } else {
+            return [
+                { header: 'Nombre', field: 'nombre' },
+                {
+                    header: 'Ubicación',
+                    field: 'ciudad',
+                    formatter: (value, item) => {
+                        return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
+                    }
+                },
+                { header: 'RNC', field: 'rNC', formatter: (value) => value || 'N/A' },
+                { header: 'Email', field: 'email', formatter: (value) => value || 'N/A' },
+                {
+                    header: 'Teléfono',
+                    field: 'telefonos',
+                    formatter: (value) => {
+                        if (value && Array.isArray(value) && value.length > 0) {
+                            return value[0];
+                        }
+                        return 'N/A';
+                    }
+                }
+            ];
+        }
     }
 
     // ---------------- GEO ----------------
@@ -281,17 +339,64 @@ class SuplidoresManager {
     async loadSuplidores() {
         this.showLoading();
         try {
-            const searchTerm = document.getElementById('suplidorSearchInput')?.value || null;
-            this.suplidores = await this.transaccionService.getSuplidores(searchTerm);
-            this.filteredSuplidores = [...this.suplidores];
+            const busqueda = document.getElementById('suplidorSearchInput')?.value || null;
+            // Obtener todos los suplidores (activos e inactivos)
+            const allSuplidores = await this.suplidorService.getSuplidores();
 
-            // Update table view with all data
-            this.tableViewManager.setData(this.suplidores);
+            // Separar suplidores activos e inactivos basado en el campo 'activo'
+            this.suplidoresActivos = allSuplidores.filter(s => s.activo !== false);
+            this.suplidoresInactivos = allSuplidores.filter(s => s.activo === false);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué suplidores mostrar según la vista actual
+            const currentSuplidores = this.currentView === 'activos' ? this.suplidoresActivos : this.suplidoresInactivos;
+
+            // Aplicar filtro de búsqueda si existe
+            let filtered = currentSuplidores;
+            if (busqueda) {
+                filtered = currentSuplidores.filter(s =>
+                    (s.nombre && s.nombre.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.ciudad && s.ciudad.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.pais && s.pais.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.email && s.email.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.rNC && s.rNC.toLowerCase().includes(busqueda.toLowerCase()))
+                );
+            }
+
+            // Configurar paginación
+            this.totalSuplidores = filtered.length;
+            this.totalPages = Math.ceil(this.totalSuplidores / this.suplidoresPerPage) || 1;
+
+            // Aplicar paginación
+            const start = this.currentPage * this.suplidoresPerPage;
+            const end = start + this.suplidoresPerPage;
+            this.filteredSuplidores = filtered.slice(start, end);
+
+            // Guardar referencia a todos los suplidores
+            this.allSuplidores = allSuplidores;
+
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredSuplidores);
 
             this.renderSuplidores();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading suppliers:', error);
-            window.showToast?.('Error al cargar los suplidores.', 'error');
+            this.suplidoresActivos = [];
+            this.suplidoresInactivos = [];
+            this.filteredSuplidores = [];
+            this.totalSuplidores = 0;
+            this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons();
+            this.tableViewManager.setData([]);
+            this.renderSuplidores();
+            this.renderPagination();
         } finally {
             this.hideLoading();
         }
@@ -336,11 +441,19 @@ class SuplidoresManager {
             const ubicacion = [s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A';
             const ubicacionTrunc = truncate(ubicacion, 24);
             const emailTrunc = truncate(s.email || 'N/A', 24);
+
+            // Determinar si el suplidor está activo o inactivo
+            const isActive = s.activo !== false;
+            const actionButtonText = isActive ? 'Eliminar' : 'Restaurar';
+            const actionButtonIcon = isActive ? 'fas fa-trash-alt' : 'fas fa-undo';
+            const actionButtonClass = isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700';
+
             return `
-                <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto">
+                <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto ${!isActive ? 'opacity-75 border-l-4 border-red-400' : ''}">
                     <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
-                        <i class='fas fa-truck text-brand-brown'></i> 
+                        <i class='fas fa-truck ${isActive ? 'text-brand-brown' : 'text-gray-400'}'></i> 
                         ${truncate(s.nombre, 32)}
+                        ${!isActive ? '<span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full ml-2">Inactivo</span>' : ''}
                     </h3>
                     <div class="space-y-2 text-sm text-gray-600 mb-4">
                         <p title="${ubicacion}"><i class="fas fa-map-marker-alt w-4"></i> ${ubicacionTrunc}</p>
@@ -354,12 +467,14 @@ class SuplidoresManager {
                         <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
                             <i class="fas fa-eye"></i> Detalles
                         </button>
-                        <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button data-id="${s.id}" class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-xs">
-                            <i class="fas fa-trash-alt"></i> 
-                            <span>Eliminar</span>
+                        ${isActive ? `
+                            <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                        ` : ''}
+                        <button data-id="${s.id}" class="delete-btn flex items-center gap-2 ${actionButtonClass} text-white px-3 py-2 rounded-lg transition-colors shadow-sm text-xs">
+                            <i class="${actionButtonIcon}"></i> 
+                            <span>${actionButtonText}</span>
                         </button>
                     </div>
                 </div>
@@ -395,7 +510,7 @@ class SuplidoresManager {
 
     async verSuplidor(id) {
         try {
-            const suplidor = this.suplidores.find(s => String(s.id) === String(id));
+            const suplidor = this.allSuplidores.find(s => String(s.id) === String(id));
             if (!suplidor) {
                 window.showToast?.('Suplidor no encontrado.', 'error');
                 return;
@@ -440,6 +555,14 @@ class SuplidoresManager {
                         <label class="block text-sm font-medium text-gray-700">Dirección</label>
                         <p class="mt-1 text-sm text-gray-900">${suplidor.direccion || 'N/A'}</p>
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Estado</label>
+                        <p class="mt-1 text-sm text-gray-900">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${suplidor.activo !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${suplidor.activo !== false ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </p>
+                    </div>
                 </div>
             `;
 
@@ -452,7 +575,7 @@ class SuplidoresManager {
     }
 
     async editSuplidor(id) {
-        const suplidor = this.suplidores.find(s => String(s.id) === String(id));
+        const suplidor = this.allSuplidores.find(s => String(s.id) === String(id));
         if (!suplidor) {
             window.showToast?.('Suplidor no encontrado.', 'error');
             return;
@@ -507,10 +630,10 @@ class SuplidoresManager {
 
         try {
             if (this.currentSuplidor) {
-                await this.transaccionService.updateSuplidor(this.currentSuplidor.id, suplidorData);
+                await this.suplidorService.updateSuplidor(this.currentSuplidor.id, suplidorData);
                 window.showToast?.('Suplidor actualizado exitosamente.', 'success');
             } else {
-                await this.transaccionService.createSuplidor(suplidorData);
+                await this.suplidorService.createSuplidor(suplidorData);
                 window.showToast?.('Suplidor creado exitosamente.', 'success');
             }
             this.cerrarModalSuplidor();
@@ -682,14 +805,24 @@ class SuplidoresManager {
         }
     }
 
-    async deleteSuplidor(id) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este suplidor?')) return;
+    async toggleSuplidorStatus(id) {
+        if (!confirm('¿Estás seguro de que deseas cambiar el estado de este suplidor?')) return;
         try {
-            await this.transaccionService.deleteSuplidor(id);
-            window.showToast?.('Suplidor eliminado exitosamente.', 'success');
-            await this.loadSuplidores();
+            const suplidor = this.allSuplidores.find(s => String(s.id) === String(id));
+            if (!suplidor) throw new Error('Suplidor no encontrado');
+
+            const newStatus = suplidor.activo === false;
+            if (newStatus) {
+                await this.suplidorService.activarSuplidor(id);
+            } else {
+                await this.suplidorService.desactivarSuplidor(id);
+            }
+
+            window.showToast?.(`Suplidor ${newStatus ? 'activado' : 'desactivado'} exitosamente.`, 'success');
+            this.loadSuplidores();
         } catch (error) {
-            window.showToast?.('Error al eliminar el suplidor.', 'error');
+            console.error('Error toggling supplier status:', error);
+            window.showToast?.('Error al cambiar el estado del suplidor.', 'error');
         }
     }
 
@@ -698,6 +831,95 @@ class SuplidoresManager {
     }
 
     hideLoading() { }
+
+    updateCounters() {
+        const activos = this.suplidoresActivos.length;
+        const inactivos = this.suplidoresInactivos.length;
+
+        const countActivosEl = document.getElementById('countActivos');
+        const countInactivosEl = document.getElementById('countInactivos');
+
+        if (countActivosEl) {
+            countActivosEl.textContent = activos;
+        }
+        if (countInactivosEl) {
+            countInactivosEl.textContent = inactivos;
+        }
+    }
+
+    updateFilterButtons() {
+        const btnActivos = document.getElementById('btnSuplidoresActivos');
+        const btnInactivos = document.getElementById('btnSuplidoresInactivos');
+
+        if (!btnActivos || !btnInactivos) return;
+
+        if (this.currentView === 'activos') {
+            btnActivos.classList.add('active');
+            btnInactivos.classList.remove('active');
+        } else {
+            btnActivos.classList.remove('active');
+            btnInactivos.classList.add('active');
+        }
+    }
+
+    switchToActiveSuplidores() {
+        this.currentView = 'activos';
+        this.currentPage = 0;
+        this.loadSuplidores();
+    }
+
+    switchToInactiveSuplidores() {
+        this.currentView = 'inactivos';
+        this.currentPage = 0;
+        this.loadSuplidores();
+    }
+
+    renderPagination() {
+        const container = document.getElementById('paginationContainer');
+        if (!container) return;
+
+        // Limpiar contenido anterior
+        container.innerHTML = '';
+
+        // No renderizar si hay menos de 1 página
+        if (this.totalPages < 1) return;
+
+        // Botón "Anterior"
+        if (this.currentPage > 0) {
+            const btnAnterior = document.createElement('button');
+            btnAnterior.textContent = '« Anterior';
+            btnAnterior.className = 'px-4 py-2 bg-brand-brown text-white rounded-l-lg hover:bg-brand-light-brown';
+            btnAnterior.onclick = () => {
+                this.currentPage--;
+                this.loadSuplidores();
+            };
+            container.appendChild(btnAnterior);
+        }
+
+        // Paginación numérica
+        for (let i = 0; i < this.totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i + 1;
+            pageBtn.className = `px-4 py-2 border rounded-lg mx-1 transition-all duration-300 ease-in-out ${i === this.currentPage ? 'bg-brand-brown text-white' : 'bg-white text-brand-brown hover:bg-brand-light-brown'}`;
+            pageBtn.onclick = () => {
+                this.currentPage = i;
+                this.loadSuplidores();
+            };
+            container.appendChild(pageBtn);
+        }
+
+        // Botón "Siguiente"
+        if (this.currentPage < this.totalPages - 1) {
+            const btnSiguiente = document.createElement('button');
+            btnSiguiente.textContent = 'Siguiente »';
+            btnSiguiente.className = 'px-4 py-2 bg-brand-brown text-white rounded-r-lg hover:bg-brand-light-brown';
+            btnSiguiente.onclick = () => {
+                this.currentPage++;
+                this.loadSuplidores();
+            };
+            container.appendChild(btnSiguiente);
+        }
+    }
 }
 
 const suplidoresManager = new SuplidoresManager();
@@ -726,3 +948,4 @@ function formatCedulaRnc(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
+

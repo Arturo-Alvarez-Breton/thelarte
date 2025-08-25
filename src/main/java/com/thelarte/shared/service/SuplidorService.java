@@ -57,6 +57,7 @@ public class SuplidorService implements ISuplidorService {
         Suplidor suplidor;
         if (suplidorDTO.getId() == 0) {
             suplidor = new Suplidor();
+            suplidor.setActivo(true); // Set new suppliers as active by default
         } else {
             suplidor = suplidorRepository.findById(suplidorDTO.getId())
                     .orElseThrow(() -> new EntityNotFoundException("No se encontró el suplidor con ID: " + suplidorDTO.getId()));
@@ -72,6 +73,11 @@ public class SuplidorService implements ISuplidorService {
         suplidor.setTelefonos(suplidorDTO.getTelefonos());
         suplidor.setLongitud(suplidorDTO.getLongitud());
         suplidor.setLatitud(suplidorDTO.getLatitud());
+
+        // Only update activo field if it's explicitly provided in the DTO
+        if (suplidorDTO.getActivo() != null) {
+            suplidor.setActivo(suplidorDTO.getActivo());
+        }
 
         suplidor = suplidorRepository.save(suplidor);
         return toDto(suplidor);
@@ -114,7 +120,56 @@ public class SuplidorService implements ISuplidorService {
                 s.getNCF(),
                 s.getTelefonos(),
                 s.getLongitud(),
-                s.getLatitud()
+                s.getLatitud(),
+                s.getActivo()
         );
+    }
+
+    /**
+     * Lista todos los suplidores (activos e inactivos)
+     * @return Lista de DTOs de todos los suplidores
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<SuplidorDTO> listarTodosConInactivos() {
+        return suplidorRepository.findAll().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lista solo los suplidores inactivos
+     * @return Lista de DTOs de suplidores inactivos
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<SuplidorDTO> listarInactivos() {
+        return suplidorRepository.findByActivoFalse().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Activa un suplidor (cambia activo a true)
+     * @param id ID del suplidor a activar
+     */
+    @Override
+    public void activar(Long id) {
+        Suplidor suplidor = suplidorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el suplidor con ID: " + id));
+        suplidor.setActivo(true);
+        suplidorRepository.save(suplidor);
+    }
+
+    /**
+     * Desactiva un suplidor (cambia activo a false)
+     * @param id ID del suplidor a desactivar
+     */
+    @Override
+    public void desactivar(Long id) {
+        Suplidor suplidor = suplidorRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró el suplidor con ID: " + id));
+        suplidor.setActivo(false);
+        suplidorRepository.save(suplidor);
     }
 }

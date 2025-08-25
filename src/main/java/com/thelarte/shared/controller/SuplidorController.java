@@ -1,141 +1,180 @@
 package com.thelarte.shared.controller;
 
 import com.thelarte.shared.dto.SuplidorDTO;
-import com.thelarte.shared.exception.EntityNotFoundException;
-import com.thelarte.shared.service.ISuplidorService; // Import the interface
-import com.thelarte.shared.service.SuplidorService; // Keep for existing constructor if needed, or remove if fully switched
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.thelarte.shared.service.ISuplidorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controlador REST para operaciones CRUD sobre Suplidor.
- * Ruta base: /api/suplidores
- */
 @RestController
 @RequestMapping("/api/suplidores")
+@CrossOrigin(origins = "*")
 public class SuplidorController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SuplidorController.class);
-    private final ISuplidorService suplidorService; // Change to interface type
-    
-    @Autowired // Ensure Autowired is present if not already
-    public SuplidorController(ISuplidorService suplidorService) { // Change parameter to interface type
-        this.suplidorService = suplidorService;
-    }
-    
+    @Autowired
+    private ISuplidorService suplidorService;
+
     /**
-     * GET /api/suplidores
-     * Obtiene lista de todos los suplidores.
-     * @return Lista de DTOs de suplidores
+     * Obtiene todos los suplidores (solo activos por defecto)
      */
     @GetMapping
-    public ResponseEntity<List<SuplidorDTO>> listarSuplidores() {
-        List<SuplidorDTO> suplidorDTOs = suplidorService.listarTodos();
-        return ResponseEntity.ok(suplidorDTOs);
-    }    /**
-     * GET /api/suplidores/{id}
-     * Obtiene un suplidor por su ID.
-     * @param id ID del suplidor
-     * @return DTO del suplidor encontrado o 404 si no existe
+    public ResponseEntity<List<SuplidorDTO>> getAllSuplidores() {
+        try {
+            List<SuplidorDTO> suplidores = suplidorService.listarTodos();
+            return ResponseEntity.ok(suplidores);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Obtiene todos los suplidores (activos e inactivos)
+     */
+    @GetMapping("/todos")
+    public ResponseEntity<List<SuplidorDTO>> getAllSuplidoresConInactivos() {
+        try {
+            List<SuplidorDTO> suplidores = suplidorService.listarTodosConInactivos();
+            return ResponseEntity.ok(suplidores);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Obtiene solo los suplidores inactivos
+     */
+    @GetMapping("/inactivos")
+    public ResponseEntity<List<SuplidorDTO>> getSuplidoresInactivos() {
+        try {
+            List<SuplidorDTO> suplidores = suplidorService.listarInactivos();
+            return ResponseEntity.ok(suplidores);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Obtiene un suplidor por ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<SuplidorDTO> obtenerSuplidor(@PathVariable Long id) {
-        return suplidorService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<SuplidorDTO> getSuplidorById(@PathVariable Long id) {
+        try {
+            Optional<SuplidorDTO> suplidor = suplidorService.buscarPorId(id);
+            return suplidor.map(ResponseEntity::ok)
+                          .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
-    
+
     /**
-     * GET /api/suplidores/nombre/{nombre}
-     * Busca suplidores por nombre.
-     * @param nombre Nombre para filtrar
-     * @return DTO del suplidor encontrado o 404 si no existe
-     */
-    @GetMapping("/nombre/{nombre}")
-    public ResponseEntity<SuplidorDTO> buscarPorNombre(@PathVariable String nombre) {
-        return suplidorService.buscarPorNombre(nombre)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-    
-    /**
-     * GET /api/suplidores/rnc/{rnc}
-     * Busca suplidores por RNC.
-     * @param rnc RNC para filtrar
-     * @return DTO del suplidor encontrado o 404 si no existe
-     */
-    @GetMapping("/rnc/{rnc}")
-    public ResponseEntity<SuplidorDTO> buscarPorRNC(@PathVariable String rnc) {
-        return suplidorService.buscarPorRNC(rnc)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-    
-    /**
-     * GET /api/suplidores/ciudad/{ciudad}
-     * Lista suplidores por ciudad.
-     * @param ciudad Ciudad para filtrar
-     * @return Lista de suplidores filtrados por ciudad
-     */
-    @GetMapping("/ciudad/{ciudad}")
-    public ResponseEntity<List<SuplidorDTO>> listarPorCiudad(@PathVariable String ciudad) {
-        List<SuplidorDTO> suplidores = suplidorService.listarPorCiudad(ciudad);
-        return ResponseEntity.ok(suplidores);
-    }    /**
-     * POST /api/suplidores
-     * Crea un nuevo suplidor.
-     * @param suplidorDTO Datos del suplidor a crear
-     * @return DTO del suplidor creado
+     * Crea un nuevo suplidor
      */
     @PostMapping
-    public ResponseEntity<SuplidorDTO> crearSuplidor(@Valid @RequestBody SuplidorDTO suplidorDTO) {
+    public ResponseEntity<SuplidorDTO> createSuplidor(@RequestBody SuplidorDTO suplidorDTO) {
         try {
-            SuplidorDTO createdDto = suplidorService.guardar(suplidorDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdDto);
+            SuplidorDTO nuevoSuplidor = suplidorService.guardar(suplidorDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuevoSuplidor);
         } catch (Exception e) {
-            logger.error("Error al crear suplidor: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
+    /**
+     * Actualiza un suplidor existente
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<SuplidorDTO> actualizarSuplidor(@PathVariable Long id, @RequestBody SuplidorDTO suplidorDTO) {
+    public ResponseEntity<SuplidorDTO> updateSuplidor(@PathVariable Long id, @RequestBody SuplidorDTO suplidorDTO) {
         try {
-            // Asegurarse de que el ID en el DTO coincida con el ID en la ruta
             suplidorDTO.setId(id);
-            
-            // Verificar primero si existe
-            if (suplidorService.buscarPorId(id).isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            SuplidorDTO updatedDto = suplidorService.guardar(suplidorDTO);
-            return ResponseEntity.ok(updatedDto);
+            SuplidorDTO suplidorActualizado = suplidorService.guardar(suplidorDTO);
+            return ResponseEntity.ok(suplidorActualizado);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarSuplidor(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean logico) {
-        if (suplidorService.buscarPorId(id).isPresent()) {
-            if (logico) {
-                suplidorService.eliminarLogico(id);
-            } else {
-                suplidorService.eliminar(id);
-            }
+    /**
+     * Desactiva un suplidor (eliminación lógica)
+     */
+    @PutMapping("/{id}/desactivar")
+    public ResponseEntity<Void> desactivarSuplidor(@PathVariable Long id) {
+        try {
+            suplidorService.desactivar(id);
             return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
-        
-        return ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Activa un suplidor
+     */
+    @PutMapping("/{id}/activar")
+    public ResponseEntity<Void> activarSuplidor(@PathVariable Long id) {
+        try {
+            suplidorService.activar(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * Elimina físicamente un suplidor (solo para casos especiales)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSuplidor(@PathVariable Long id) {
+        try {
+            suplidorService.eliminar(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * Busca suplidores por nombre
+     */
+    @GetMapping("/buscar/nombre/{nombre}")
+    public ResponseEntity<SuplidorDTO> getSuplidorByNombre(@PathVariable String nombre) {
+        try {
+            Optional<SuplidorDTO> suplidor = suplidorService.buscarPorNombre(nombre);
+            return suplidor.map(ResponseEntity::ok)
+                          .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Busca suplidores por RNC
+     */
+    @GetMapping("/buscar/rnc/{rnc}")
+    public ResponseEntity<SuplidorDTO> getSuplidorByRNC(@PathVariable String rnc) {
+        try {
+            Optional<SuplidorDTO> suplidor = suplidorService.buscarPorRNC(rnc);
+            return suplidor.map(ResponseEntity::ok)
+                          .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Busca suplidores por ciudad
+     */
+    @GetMapping("/ciudad/{ciudad}")
+    public ResponseEntity<List<SuplidorDTO>> getSuplidoresByCiudad(@PathVariable String ciudad) {
+        try {
+            List<SuplidorDTO> suplidores = suplidorService.listarPorCiudad(ciudad);
+            return ResponseEntity.ok(suplidores);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

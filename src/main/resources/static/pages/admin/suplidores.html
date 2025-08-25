@@ -24,6 +24,57 @@
     <style>
         .suplidor-card {transition: all .3s ease; max-width:480px;}
         .suplidor-card:hover {transform: translateY(-4px); box-shadow:0 8px 25px rgba(0,0,0,.15)}
+
+        /* Filter buttons styling */
+        .filter-btn {
+            position: relative;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background: white;
+            color: black;
+            border: 2px solid #e5e7eb;
+        }
+
+        .filter-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .filter-btn:hover:before {
+            left: 100%;
+        }
+
+        .filter-btn:hover {
+            background: #f3f4f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn.active {
+            background: #8B4513 !important; /* Light brown */
+            color: white !important;
+            border-color: #8B4513;
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .count-badge {
+            transition: all 0.3s ease;
+            animation: pulse-count 0.5s ease-in-out;
+        }
+
+        @keyframes pulse-count {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
         @media (min-width:1280px){#suplidoresListContainer{justify-items:center;gap:1rem}}
         @media (min-width:1080px){#suplidoresListContainer{gap:.75rem!important}}
         @media (min-width:1536px){#suplidoresListContainer{gap:2rem}.suplidor-card{max-width:420px}}
@@ -64,15 +115,36 @@
                 <p class="text-xs md:text-sm text-gray-600 hidden sm:block">Gestión de proveedores y suplidores.</p>
             </div>
         </div>
-        <div class="flex space-x-2">
-            <button id="nuevoSuplidorBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base"><i class="fas fa-plus mr-2"></i><span>Nuevo</span></button>
-        </div>
+        <div id="cont-quick-actions" class="flex space-x-2">
+            <div class="text-gray-600 text-xs md:text-sm">
+                <i class="fas fa-pencil mr-2 hidden sm:inline"></i>
+                <span class="hidden sm:inline">Modo </span>Administrador
+            </div>
+        </div>z`
     </header>
     <main class="flex-1 p-2 md:p-4 overflow-auto">
         <section class="p-3 md:p-4 bg-white rounded-lg shadow">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Suplidores</h2>
-                <div class="w-full sm:w-auto"></div>
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <!-- Filtro de estado -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button id="btnSuplidoresActivos" class="filter-btn active px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-activos">
+                            <i class="fas fa-truck mr-1"></i>
+                            <span class="hidden sm:inline">Activos</span>
+                            <span id="countActivos" class="count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                        <button id="btnSuplidoresInactivos" class="filter-btn px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-inactivos">
+                            <i class="fas fa-truck-loading mr-1"></i>
+                            <span class="hidden sm:inline">Inactivos</span>
+                            <span id="countInactivos" class="count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                    </div>
+                    <button id="nuevoSuplidorBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base">
+                        <i class="fas fa-plus mr-2"></i>
+                        <span>Nuevo</span>
+                    </button>
+                </div>
             </div>
             <div class="mb-4"><input id="suplidorSearchInput" type="text" placeholder="Buscar suplidores..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base" /></div>
             <div id="suplidoresListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3"></div>
@@ -218,3 +290,4 @@
 <script src="/js/admin/suplidores.js" type="module"></script>
 </body>
 </html>
+

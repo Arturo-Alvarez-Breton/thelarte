@@ -18,10 +18,11 @@ public class SuplidorDTO {
     private List<String> telefonos;
     private Double longitud;
     private Double latitud;
+    private Boolean activo;
 
     public SuplidorDTO() {}
 
-    public SuplidorDTO(long id, String nombre, String ciudad, String pais, String direccion, String email, String RNC, String NCF, List<String> telefonos, Double longitud, Double latitud) {
+    public SuplidorDTO(long id, String nombre, String ciudad, String pais, String direccion, String email, String RNC, String NCF, List<String> telefonos, Double longitud, Double latitud, Boolean activo) {
         this.id = id;
         this.nombre = nombre;
         this.ciudad = ciudad;
@@ -33,6 +34,7 @@ public class SuplidorDTO {
         this.telefonos = telefonos;
         this.longitud = longitud;
         this.latitud = latitud;
+        this.activo = activo;
     }
 
     public long getId() { return id; }
@@ -46,6 +48,7 @@ public class SuplidorDTO {
     public List<String> getTelefonos() { return telefonos; }
     public Double getLongitud() { return longitud; }
     public Double getLatitud() { return latitud; }
+    public Boolean getActivo() { return activo; }
 
     public void setId(long id) { this.id = id; }
     public void setNombre(String nombre) { this.nombre = nombre; }
@@ -58,4 +61,5 @@ public class SuplidorDTO {
     public void setTelefonos(List<String> telefonos) { this.telefonos = telefonos; }
     public void setLongitud(Double longitud) { this.longitud = longitud; }
     public void setLatitud(Double latitud) { this.latitud = latitud; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
 }
