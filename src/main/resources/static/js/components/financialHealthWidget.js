@@ -65,7 +65,7 @@ class FinancialHealthWidget {
                         </div>
                     </div>
                     
-                    <!-- ITBIS y Tendencia -->
+                    <!-- ITBIS y Tendencia -->g --on
 <!--                    <div class="itbis-card">-->
 <!--                            <div class="itbis-header">-->
 <!--                                <i class="fas fa-receipt text-blue-500"></i>-->
