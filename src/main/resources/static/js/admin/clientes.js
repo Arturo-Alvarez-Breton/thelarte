@@ -679,9 +679,12 @@ class ClientesManager {
                 return;
             }
 
+            // Limpiar la cédula eliminando los guiones para buscar por ID
+            const cedulaLimpia = cedula.replace(/[-\s]/g, '');
+
             // Redirect to transactions page with client filter
             const transaccionesUrl = new URL('/pages/admin/transacciones.html', window.location.origin);
-            transaccionesUrl.searchParams.set('cliente', cedula);
+            transaccionesUrl.searchParams.set('cliente', cedulaLimpia); // Usamos cédula limpia sin guiones
             transaccionesUrl.searchParams.set('clienteNombre', `${cliente.nombre} ${cliente.apellido}`);
             window.location.href = transaccionesUrl.toString();
         } catch (error) {
@@ -689,7 +692,6 @@ class ClientesManager {
             window.showToast('Error al ver las transacciones del cliente.', 'error');
         }
     }
-
     editarClienteDesdeDetalle() {
         if (this.currentCliente) {
             this.cerrarModalVerCliente();

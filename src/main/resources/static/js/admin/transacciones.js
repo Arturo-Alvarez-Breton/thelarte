@@ -23,25 +23,16 @@ class TransaccionesManager {
         this.terminalPaymentProcessor = new TerminalPaymentProcessor(this.cardnetService);
 
 
-
-        // Responsive columns
         this.tableViewManager = new TableViewManager('#transaccionesListContainer', {
             columns: this.getResponsiveColumns(),
-            // Cambia este fragmento en el constructor:
-
             actions: [
                 {
                     icon: 'fas fa-eye',
                     handler: 'transaccionesManager.viewTransactionDetails',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-trash', // <----- CAMBIA el icono de print a trash
-                    handler: 'transaccionesManager.eliminarTransaccion', // <----- CAMBIA el handler!
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
                 }
+                // Acción de eliminar removida
             ],
             searchFields: ['numeroFactura', 'cliente.nombre', 'cliente.apellido', 'cliente.cedula', 'proveedor.nombre', 'tipoTransaccion', 'estado'],
             idField: 'id',
@@ -251,36 +242,102 @@ class TransaccionesManager {
         if (filterInfo) filterInfo.remove();
         this.filterTransactions();
     }
-
+    // 2. Mejorar el método de filtrado para manejar cédulas con formato dominicano
     filterTransactions() {
         const tipo = document.getElementById('transaccionTipoFilter')?.value || '';
         const estado = document.getElementById('transaccionEstadoFilter')?.value || '';
-        const busqueda = document.getElementById('transaccionSearchInput')?.value?.toLowerCase() || '';
+        const busquedaOriginal = document.getElementById('transaccionSearchInput')?.value || '';
+        const busqueda = busquedaOriginal.toLowerCase().trim();
         this.currentPage = 0;
 
+        console.log('Búsqueda iniciada:', busqueda);
+
+        // Normalizar búsqueda (quitar caracteres no numéricos)
+        const busquedaLimpia = busqueda.replace(/[^0-9]/g, '');
+        const esNumerica = /^\d+$/.test(busquedaLimpia);
+
+        console.log(`Búsqueda normalizada: "${busquedaLimpia}" (Es numérica: ${esNumerica})`);
+
+        // Función para formatear cédula (solo para clientes)
+        function formatearComoCedula(id) {
+            if (!id) return '';
+            let idStr = String(id).replace(/\D/g, '');
+            while (idStr.length < 11) idStr = '0' + idStr;
+            return idStr;
+        }
+
         this.filteredTransactions = this.transactions.filter(t => {
+            // Filtros básicos por tipo y estado
             let matchesTipo = tipo ? (t.tipo && t.tipo.toUpperCase() === tipo.toUpperCase()) : true;
             let matchesEstado = estado ? (t.estado && t.estado.toUpperCase() === estado.toUpperCase()) : true;
 
-            let matchesBusqueda = true;
-            if (busqueda) {
-                let cliente = t.cliente ? `${t.cliente.nombre || ''} ${t.cliente.apellido || ''}` : '';
-                let proveedor = t.proveedor ? `${t.proveedor.nombre || ''}` : '';
-                let contraparte = t.contraparteNombre || '';
-                let numFactura = t.numeroFactura || '';
-                let id = String(t.id || '');
-                let total = String(t.total || '').replace(/[\D]+/g, '');
-                matchesBusqueda = (
-                    cliente.toLowerCase().includes(busqueda) ||
-                    proveedor.toLowerCase().includes(busqueda) ||
-                    contraparte.toLowerCase().includes(busqueda) ||
-                    numFactura.toLowerCase().includes(busqueda) ||
-                    id.includes(busqueda) ||
-                    total.includes(busqueda)
-                );
+            // Si no hay búsqueda, solo aplicar filtros tipo/estado
+            if (!busqueda) return matchesTipo && matchesEstado;
+
+            // BÚSQUEDA POR NOMBRE (caso más simple)
+            const nombreContraparte = (t.contraparteNombre || '').toLowerCase();
+            if (nombreContraparte.includes(busqueda)) {
+                console.log(`✅ Coincidencia por NOMBRE en transacción #${t.id}`);
+                return matchesTipo && matchesEstado;
             }
-            return matchesTipo && matchesEstado && matchesBusqueda;
+
+            // BÚSQUEDA POR IDENTIFICACIÓN (cédula o RNC)
+            if (esNumerica) {
+                // 1. Para compras: buscar en RNC del proveedor (NUNCA en el contraparteId)
+                if (t.tipo === 'COMPRA' && t.proveedor && t.proveedor.rnc) {
+                    const rncLimpio = t.proveedor.rnc.replace(/[^0-9]/g, '');
+                    if (rncLimpio.includes(busquedaLimpia) || busquedaLimpia.includes(rncLimpio)) {
+                        console.log(`✅ Coincidencia por RNC en transacción #${t.id}`);
+                        return matchesTipo && matchesEstado;
+                    }
+                }
+
+                // 2. Para ventas: buscar en cédula del cliente
+                else if (t.tipo !== 'COMPRA') {
+                    // Buscar en la cédula del objeto cliente
+                    if (t.cliente && t.cliente.cedula) {
+                        const cedulaLimpia = t.cliente.cedula.replace(/[^0-9]/g, '');
+                        if (cedulaLimpia.includes(busquedaLimpia) || busquedaLimpia.includes(cedulaLimpia)) {
+                            console.log(`✅ Coincidencia por CÉDULA en transacción #${t.id}`);
+                            return matchesTipo && matchesEstado;
+                        }
+                    }
+
+                    // Buscar en el contraparteId SOLO para ventas (como respaldo, no para compras)
+                    else if (t.contraparteId) {
+                        const cedulaFormateada = formatearComoCedula(t.contraparteId);
+                        if (cedulaFormateada.includes(busquedaLimpia) ||
+                            busquedaLimpia.includes(cedulaFormateada) ||
+                            String(t.contraparteId).includes(busquedaLimpia)) {
+                            console.log(`✅ Coincidencia por CONTRAPARTE_ID en transacción #${t.id}`);
+                            return matchesTipo && matchesEstado;
+                        }
+                    }
+                }
+
+                // 3. Búsqueda directa por ID de transacción o contraparteId sin formatear
+                if (String(t.id).includes(busquedaLimpia) ||
+                    (t.contraparteId && String(t.contraparteId).includes(busquedaLimpia))) {
+                    console.log(`✅ Coincidencia por ID en transacción #${t.id}`);
+                    return matchesTipo && matchesEstado;
+                }
+            }
+
+            // BÚSQUEDA EN OTROS CAMPOS
+            const facturaNum = (t.numeroFactura || '').toLowerCase();
+
+            const matchesOtros = facturaNum.includes(busqueda);
+
+            if (matchesOtros) {
+                console.log(`✅ Coincidencia en OTROS CAMPOS para transacción #${t.id}`);
+            }
+
+            return matchesTipo && matchesEstado && matchesOtros;
         });
+
+        console.log(`Filtrado completado: ${this.filteredTransactions.length} de ${this.transactions.length} transacciones encontradas`);
+
+        // Actualizar la vista activa
         this.renderVista();
         this.updateTransactionCount();
     }
@@ -329,7 +386,6 @@ class TransaccionesManager {
 
         container.innerHTML = toShow.map(transaction => this.renderTransactionCard(transaction)).join('');
     }
-
 
     renderTransactionCard(transaction) {
         const stateColor = this.getStateColor(transaction.estado);
@@ -399,18 +455,37 @@ class TransaccionesManager {
                         <i class="fas fa-eye"></i>
                         <span>Detalles</span>
                     </button>
-                    <button
-                    onclick="transaccionesManager.eliminarTransaccion(${transaction.id})"
-                    class="flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Eliminar transacción"
-                    type="button"
-                    >
-                        <i class="fas fa-trash"></i>
-                    </button>
                 </div>
             </div>
         </div>
     `;
+    }
+    // Agregar un método para cambiar estados automáticamente
+    async cambiarEstadoAutomatico(transaccionId, nuevoEstado, motivoCambio = '') {
+        try {
+            await this.transaccionService.cambiarEstadoTransaccion(transaccionId, nuevoEstado);
+            // Actualizar la transacción en la lista y en detalles si está abierta
+            await this.loadTransactions();
+
+            // Si el modal de detalles está abierto y muestra esta transacción
+            const detallesContainer = document.getElementById('detallesTransaccion');
+            if (
+                detallesContainer &&
+                !document.getElementById('modalVerTransaccion').classList.contains('hidden') &&
+                detallesContainer.getAttribute('data-transaction-id') == transaccionId
+            ) {
+                const transaction = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+                this.renderTransactionDetailsModal(transaction);
+            }
+
+            // Mostrar notificación
+            const mensaje = motivoCambio
+                ? `Estado cambiado a: ${nuevoEstado} (${motivoCambio})`
+                : `Estado cambiado automáticamente a: ${nuevoEstado}`;
+            window.showToast(mensaje, 'info');
+        } catch (error) {
+            console.error('Error changing transaction state automatically:', error);
+        }
     }
 
     renderMobileButtons(transaction) {
@@ -490,8 +565,16 @@ class TransaccionesManager {
     }
 
     renderTableTransactions() {
-        // Aquí iría la lógica para la vista en tabla si la necesitas, puedes adaptar del renderTransactions.
+        // Usar el TableViewManager para mostrar datos filtrados
+        const filtered = this.getFilteredTransactions();
+        const start = this.currentPage * this.transactionsPerPage;
+        const end = start + this.transactionsPerPage;
+        const toShow = filtered.slice(start, end);
+
+        // Actualizar datos en el TableViewManager
+        this.tableViewManager.setData(toShow);
     }
+
 
     renderPagination() {
         if (this.vista !== 'tarjetas') return;
@@ -595,16 +678,28 @@ class TransaccionesManager {
         return new Date(dateString).toLocaleDateString('es-ES', options);
     }
 
+    // Mejorar el método getStateColor para tener colores más específicos
     getStateColor(state) {
+        if (!state) return 'gray';
+
         const colors = {
-            'PENDIENTE': 'yellow', 'CONFIRMADA': 'blue', 'PROCESANDO': 'orange',
-            'COMPLETADA': 'green', 'CANCELADA': 'red',
-            'FACTURADA': 'purple', 'RECIBIDA': 'indigo', 'PAGADA': 'green',
-            'ENTREGADA': 'teal', 'COBRADA': 'emerald',
-            'DEVUELTA': 'emerald', 'PARCIALMENTE_DEVUELTA': 'yellow'
+            'PENDIENTE': 'yellow',
+            'CONFIRMADA': 'blue',
+            'PROCESANDO': 'orange',
+            'COMPLETADA': 'green',
+            'CANCELADA': 'red',
+            'FACTURADA': 'purple',
+            'RECIBIDA': 'indigo',
+            'PAGADA': 'green',
+            'ENTREGADA': 'teal',
+            'COBRADA': 'emerald',
+            'DEVUELTA': 'emerald',
+            'PARCIALMENTE_DEVUELTA': 'yellow'
         };
-        return colors[state] || 'gray';
+
+        return colors[state.toUpperCase()] || 'gray';
     }
+
 
     // --- Transaction actions ---
     async viewTransactionDetails(id) {
@@ -619,29 +714,143 @@ class TransaccionesManager {
             window.showToast('Error al cargar los detalles de la transacción.', 'error');
         }
     }
-
     renderTransactionDetailsModal(transaction) {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
 
+        // Depuración: registrar la transacción para verificar su estructura
+        console.log('Datos de transacción:', transaction);
+
         detailsContainer.setAttribute('data-transaction-id', transaction.id);
-        // Información de la contraparte
-        let contraparteInfo = '';
-        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
-            contraparteInfo = `
-        <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
-        <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
-        <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
-        <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
-    `;
-        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''} (${transaction.cliente.cedula || ''})</p>`;
-        } else if (transaction.contraparteNombre) {
-            contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
-        } else {
-            contraparteInfo = `<p><strong>Cliente:</strong> Consumidor Final</p>`;
+
+        // Formatear cédula para clientes (solo para ventas)
+        function formatearComoCedula(id) {
+            if (!id) return '';
+
+            // Convertir a string y eliminar caracteres no numéricos
+            let idStr = String(id).replace(/\D/g, '');
+
+            // Si ya tiene guiones, no reformatear
+            if (idStr.includes('-')) return idStr;
+
+            // Rellenar con ceros al inicio si es necesario para llegar a 11 dígitos
+            while (idStr.length < 11) {
+                idStr = '0' + idStr;
+            }
+
+            // Aplicar formato de cédula dominicana: XXX-XXXXXXX-X
+            if (idStr.length === 11) {
+                return `${idStr.substring(0, 3)}-${idStr.substring(3, 10)}-${idStr.substring(10)}`;
+            }
+
+            return idStr; // Devolver sin formato si no tiene 11 dígitos
         }
 
+        // Añadir esta verificación para facturas grandes (superior a 250,000 pesos)
+        const esFacturaGrande = transaction.total >= 250000;
+
+        // Información de la contraparte
+        let contraparteInfo = '';
+
+        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
+            // CASO DE COMPRA: MOSTRAR INFORMACIÓN DEL PROVEEDOR
+            contraparteInfo = `
+        <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
+        <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>`;
+
+            // Mostrar ID del proveedor como información adicional (no formatear como RNC)
+            if (transaction.contraparteId) {
+                contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
+            }
+
+            contraparteInfo += `
+        <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
+        <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
+        `;
+        } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
+            // CASO DE VENTA CON CLIENTE: MOSTRAR INFORMACIÓN DEL CLIENTE
+            // Información básica del cliente
+            contraparteInfo = `
+        <p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''}</p>`;
+
+            // Mostrar cédula si existe
+            const tieneCedula = transaction.cliente.cedula && transaction.cliente.cedula.trim() !== '';
+            if (tieneCedula) {
+                contraparteInfo += `<p><strong>Cédula:</strong> ${transaction.cliente.cedula}</p>`;
+            }
+            // Si no hay cédula pero hay contraparteId, intentar formatearlo como cédula
+            else if (transaction.contraparteId) {
+                const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
+                contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
+            }
+
+            // Mostrar advertencia si es factura grande y no tiene cédula
+            if (esFacturaGrande && !tieneCedula) {
+                contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
+            }
+
+            // Añadir información de contacto si existe
+            if (transaction.cliente.telefono) {
+                contraparteInfo += `<p><strong>Teléfono:</strong> ${transaction.cliente.telefono}</p>`;
+            }
+            if (transaction.cliente.email) {
+                contraparteInfo += `<p><strong>Email:</strong> ${transaction.cliente.email}</p>`;
+            }
+
+            // Mostrar ID del cliente como información adicional
+            if (transaction.contraparteId) {
+                contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
+            }
+        } else if (transaction.contraparteNombre) {
+            // CASO CON SOLO NOMBRE DE CONTRAPARTE
+            if (transaction.tipo === 'COMPRA') {
+                // Para compras - mostrar nombre del proveedor y RNC si disponible
+                contraparteInfo = `<p><strong>Proveedor:</strong> ${transaction.contraparteNombre}</p>`;
+
+                // Mostrar el ID como información adicional (no como RNC)
+                if (transaction.contraparteId) {
+                    contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
+                }
+            } else {
+                // Para ventas - mostrar nombre del cliente y cédula si disponible
+                contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
+
+                // Intentar formatear el contraparteId como cédula para ventas
+                if (transaction.contraparteId) {
+                    const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
+                    contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
+                }
+
+                // Mostrar advertencia si es factura grande
+                if (esFacturaGrande) {
+                    contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
+                }
+            }
+        } else {
+            // CASO SIN INFORMACIÓN DE CONTRAPARTE
+            const etiqueta = transaction.tipo === 'COMPRA' ? 'Proveedor' : 'Cliente';
+            contraparteInfo = `<p><strong>${etiqueta}:</strong> <span class="italic">Sin nombre registrado</span></p>`;
+
+            if (transaction.tipo === 'COMPRA') {
+                // Para compras - mostrar el ID como información adicional
+                if (transaction.contraparteId) {
+                    contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
+                }
+            } else {
+                // Para ventas - intentar formatear como cédula
+                if (transaction.contraparteId) {
+                    const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
+                    contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
+                }
+
+                // Mostrar advertencia si es factura grande
+                if (esFacturaGrande) {
+                    contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
+                }
+            }
+        }
+
+        // El resto de la función permanece igual...
         // Lista de productos
         const productsList = transaction.lineas && transaction.lineas.length > 0
             ? transaction.lineas.map(line => `
@@ -660,7 +869,7 @@ class TransaccionesManager {
             : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
 
         // Selector de estado
-        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA','DEVUELTA','PARCIALMENTE_DEVUELTA'];
+        const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA', 'DEVUELTA', 'PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
     <div class="flex items-center space-x-2">
         <label class="font-bold">Estado:</label>
@@ -670,7 +879,13 @@ class TransaccionesManager {
         ).join('')}
         </select>
     </div>
-`;
+    `;
+
+        // Calcular unidades totales
+        let totalUnidades = 0;
+        if (transaction.lineas && transaction.lineas.length > 0) {
+            totalUnidades = transaction.lineas.reduce((sum, line) => sum + (parseInt(line.cantidad) || 0), 0);
+        }
 
         // Verificar si es venta en cuotas
         let planPagosHTML = '';
@@ -731,15 +946,6 @@ class TransaccionesManager {
                     </div>
                 ` : '<p class="text-gray-500 italic">No hay cuotas registradas aún.</p>'}
             </div>
-            
-            ${saldoPendiente > 0 ? `
-                <div class="mt-4">
-                    <button onclick="transaccionesManager.agregarPago(${transaction.id})" 
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                        <i class="fas fa-plus mr-2"></i> Registrar Nuevo Pago
-                    </button>
-                </div>
-            ` : ''}
         </div>
     `;
         }
@@ -756,7 +962,15 @@ class TransaccionesManager {
                 Procesar Pago con Terminal
             </button>
         </div>
-    </div>` : '';
+    </div>
+    ` : '';
+
+        // Calcular los impuestos correctamente
+        const impuestosFormateados = transaction.impuestos
+            ? this.formatCurrency(transaction.impuestos)
+            : (transaction.lineas && transaction.lineas.length > 0)
+                ? this.formatCurrency(transaction.lineas.reduce((sum, line) => sum + (line.impuestoMonto || 0), 0))
+                : this.formatCurrency(0);
 
         // Renderizar todo el contenido
         detailsContainer.innerHTML = `
@@ -766,9 +980,10 @@ class TransaccionesManager {
             <p><strong>Tipo:</strong> ${this.formatTransactionType(transaction.tipo)}</p>
             <p><strong>Fecha:</strong> ${this.formatDate(transaction.fecha)}</p>
             ${estadoSelect}
+            <p class="mt-1"><strong>Unidades totales:</strong> ${totalUnidades}</p>
         </div>
         <div class="bg-gray-50 p-3 rounded-lg">
-            <h4 class="font-bold mb-2">Información de Contraparte:</h4>
+            <h4 class="font-bold mb-2">Información del ${transaction.tipo === 'COMPRA' ? 'Proveedor' : 'Cliente'}:</h4>
             ${contraparteInfo}
         </div>
         <div>
@@ -786,11 +1001,21 @@ class TransaccionesManager {
         
         <div class="bg-green-50 p-3 rounded-lg text-right">
             <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
-            <p><strong>Impuestos:</strong> ${this.formatCurrency(transaction.impuestos || 0)}</p>
+            <p><strong>Impuestos:</strong> ${impuestosFormateados}</p>
             <p class="text-xl font-bold text-green-700">Total: ${this.formatCurrency(transaction.total)}</p>
         </div>
+        
+        <!-- Botón de abonar al final, solo para ventas en cuotas con saldo pendiente -->
+        ${(transaction.tipoPago === 'ENCUOTAS' && transaction.planPagos?.saldoPendiente > 0) ? `
+            <div class="flex justify-end mt-4">
+                <button onclick="transaccionesManager.agregarPago(${transaction.id})" 
+                        class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                        <i class="fas fa-money-bill-wave mr-2"></i> Abonar
+                </button>
+            </div>
+        ` : ''}
     </div>
-`;
+    `;
     }
     cerrarModalVerTransaccion() {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
@@ -1091,8 +1316,29 @@ class TransaccionesManager {
             metodoPago: 'TARJETA',
             observaciones: `Pago con tarjeta completado. Auth: ${statusData.authCode || 'N/A'}`
         }).then(() => {
-            // Recargar transacciones después de 2 segundos
-            setTimeout(() => this.loadTransactions(), 2000);
+            // Cambiar el estado automáticamente con notificación
+            this.cambiarEstadoAutomatico(transaccionId, 'COMPLETADA', 'Pago confirmado con tarjeta');
+
+            // Cerrar el modal automáticamente después de 3 segundos
+            setTimeout(() => {
+                this.closeTerminalPaymentModal();
+                // Actualizar los detalles si están abiertos
+                const detallesContainer = document.getElementById('detallesTransaccion');
+                if (detallesContainer &&
+                    !document.getElementById('modalVerTransaccion').classList.contains('hidden') &&
+                    detallesContainer.getAttribute('data-transaction-id') == transaccionId) {
+                    this.viewTransactionDetails(transaccionId);
+                }
+            }, 3000);
+
+            // Recargar transacciones
+            this.loadTransactions();
+        }).catch(error => {
+            console.error('Error al actualizar transacción:', error);
+            window.showToast('El pago fue procesado pero hubo un error al actualizar la transacción', 'warning');
+
+            // Recargar transacciones de todos modos
+            this.loadTransactions();
         });
     }
 

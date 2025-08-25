@@ -303,16 +303,22 @@ export class TransactionWizard {
         return `
     <div class="space-y-4">
         <h3 class="text-lg font-semibold text-brand-brown">Información del Cliente</h3>
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-2">
+            <p class="text-sm text-yellow-700">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>Debe seleccionar un cliente para continuar. "Consumidor Final" no está permitido.</strong>
+            </p>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Cliente <span class="text-red-500">*</span></label>
                 <input type="text" id="ventaClienteSearch" placeholder="Buscar por nombre o cédula..." 
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                <select id="ventaClienteSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    <option value="">Consumidor Final</option>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cliente <span class="text-red-500">*</span></label>
+                <select id="ventaClienteSelect" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Seleccione un cliente</option>
                 </select>
             </div>
         </div>
@@ -326,28 +332,48 @@ export class TransactionWizard {
             <h4 class="text-md font-bold mb-2">Registrar Nuevo Cliente</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cédula *</label>
-                    <input type="text" id="nuevoClienteCedula" class="w-full px-3 py-2 border rounded" required>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cédula <span class="text-red-500">*</span></label>
+                    <input type="text" id="nuevoClienteCedula" 
+                           placeholder="000-0000000-0"
+                           maxlength="13"
+                           oninput="restrictToNumbersOnly(this); formatCedulaRnc(this);"
+                           class="w-full px-3 py-2 border rounded" required>
+                    <p class="text-xs text-gray-500 mt-1">Formato: 000-0000000-0</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                    <input type="text" id="nuevoClienteNombre" class="w-full px-3 py-2 border rounded" required>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre <span class="text-red-500">*</span></label>
+                    <input type="text" id="nuevoClienteNombre" 
+                           placeholder="Nombre del cliente"
+                           oninput="restrictToLettersOnly(this);"
+                           class="w-full px-3 py-2 border rounded" required>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-                    <input type="text" id="nuevoClienteApellido" class="w-full px-3 py-2 border rounded" required>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Apellido <span class="text-red-500">*</span></label>
+                    <input type="text" id="nuevoClienteApellido" 
+                           placeholder="Apellido del cliente"
+                           oninput="restrictToLettersOnly(this);"
+                           class="w-full px-3 py-2 border rounded" required>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
-                    <input type="text" id="nuevoClienteTelefono" class="w-full px-3 py-2 border rounded" required>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono <span class="text-red-500">*</span></label>
+                    <input type="tel" id="nuevoClienteTelefono" 
+                           placeholder="809-000-0000"
+                           maxlength="12"
+                           oninput="restrictToNumbersOnly(this); formatTelefono(this);"
+                           class="w-full px-3 py-2 border rounded" required>
+                    <p class="text-xs text-gray-500 mt-1">Formato: 809-000-0000</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="nuevoClienteEmail" class="w-full px-3 py-2 border rounded">
+                    <input type="email" id="nuevoClienteEmail" 
+                           placeholder="cliente@ejemplo.com"
+                           class="w-full px-3 py-2 border rounded">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                    <input type="text" id="nuevoClienteDireccion" class="w-full px-3 py-2 border rounded">
+                    <input type="text" id="nuevoClienteDireccion" 
+                           placeholder="Dirección completa"
+                           class="w-full px-3 py-2 border rounded">
                 </div>
             </div>
             <div class="mt-4 flex space-x-2">
@@ -403,6 +429,7 @@ export class TransactionWizard {
 
             // Guardar el nuevo cliente
             if (guardarBtn && select && nuevoClienteForm) {
+                // En la función loadVentaStep1Data(), modifica la parte de guardarBtn.onclick:
                 guardarBtn.onclick = async () => {
                     const cedula = document.getElementById('nuevoClienteCedula').value.trim();
                     const nombre = document.getElementById('nuevoClienteNombre').value.trim();
@@ -411,8 +438,27 @@ export class TransactionWizard {
                     const email = document.getElementById('nuevoClienteEmail').value.trim();
                     const direccion = document.getElementById('nuevoClienteDireccion').value.trim();
 
+                    // Validaciones
                     if (!cedula || !nombre || !apellido || !telefono) {
                         window.showToast('Completa los campos obligatorios (*) del cliente.', 'error');
+                        return;
+                    }
+
+                    if (!validateCedula(cedula)) {
+                        window.showToast('La cédula debe tener el formato correcto: 000-0000000-0', 'error');
+                        document.getElementById('nuevoClienteCedula').focus();
+                        return;
+                    }
+
+                    if (!validateTelefono(telefono)) {
+                        window.showToast('El teléfono debe tener el formato correcto: 809-000-0000', 'error');
+                        document.getElementById('nuevoClienteTelefono').focus();
+                        return;
+                    }
+
+                    if (email && !validateEmail(email)) {
+                        window.showToast('El email debe tener un formato válido', 'error');
+                        document.getElementById('nuevoClienteEmail').focus();
                         return;
                     }
 
@@ -421,7 +467,7 @@ export class TransactionWizard {
                             cedula, nombre, apellido, telefono, email, direccion
                         });
                         window.showToast('Cliente creado exitosamente.', 'success');
-                        // Añade el nuevo cliente al select y selecciónalo
+
                         const option = document.createElement('option');
                         option.value = nuevoCliente.cedula;
                         option.textContent = `${nuevoCliente.nombre} ${nuevoCliente.apellido} (${nuevoCliente.cedula})`;
@@ -494,13 +540,20 @@ export class TransactionWizard {
 
     getDevolucionStep2Content() {
         return `
-            <div class="space-y-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Transacción origen:</label>
-                <div id="devolucionTransaccionesContainer">
-                    <div class="text-gray-500">Cargando transacciones...</div>
-                </div>
+        <div class="space-y-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Transacción origen:</label>
+            
+            <!-- Añadir buscador -->
+            <div class="mb-4">
+                <input type="text" id="devolucionSearchInput" placeholder="Buscar por ID, cliente o fecha..." 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
             </div>
-        `;
+            
+            <div id="devolucionTransaccionesContainer">
+                <div class="text-gray-500">Cargando transacciones...</div>
+            </div>
+        </div>
+    `;
     }
 
     async loadDevolucionStep2Data() {
@@ -512,23 +565,140 @@ export class TransactionWizard {
             this.transaccionesFiltradas = this.transacciones.filter(
                 t => t.tipo === tipo && t.estado !== 'CANCELADA'
             );
+
             const container = document.getElementById('devolucionTransaccionesContainer');
             if (!container) return;
-            if (!this.transaccionesFiltradas.length) {
-                container.innerHTML = `<div class="text-gray-500">No hay transacciones para devolución.</div>`;
-                return;
+
+            // Crear el buscador primero
+            container.innerHTML = `
+            <div class="mb-4">
+                <input type="text" id="devolucionSearchInput" placeholder="Buscar por ID, cliente o fecha..." 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+            </div>
+            <div id="devolucionTransaccionesLista" class="max-h-96 overflow-y-auto">
+                <div class="text-gray-500 text-center p-4">Cargando transacciones...</div>
+            </div>
+        `;
+
+            // Configurar el buscador
+            const searchInput = document.getElementById('devolucionSearchInput');
+            const listaContainer = document.getElementById('devolucionTransaccionesLista');
+
+            if (!listaContainer) return;
+
+            // Función para renderizar las transacciones filtradas
+            const renderTransacciones = (transacciones) => {
+                if (!transacciones.length) {
+                    listaContainer.innerHTML = `<div class="text-gray-500 text-center p-4">No hay transacciones para devolución.</div>`;
+                    return;
+                }
+
+                listaContainer.innerHTML = transacciones.map((t) => {
+                    const stateColor = this.getStateColor(t.estado);
+                    const isSelected = this.transactionData.transaccionOrigen && this.transactionData.transaccionOrigen.id === t.id;
+
+                    return `
+                    <div class="border-l-4 border-${stateColor}-500 rounded px-4 py-2 mb-2 cursor-pointer 
+                        ${isSelected ? "bg-brand-light-brown text-white" : "bg-white hover:bg-gray-50"}"
+                        onclick="window.transactionWizard.selectTransaccionOrigen(${t.id})">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <strong>${t.contraparteNombre || 'Sin nombre'}</strong> 
+                                <span class="ml-1 text-xs font-semibold">#${t.id}</span>
+                                <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
+                                    ${t.estado || 'N/A'}
+                                </span>
+                            </div>
+                            <span class="text-xs ${isSelected ? 'text-white' : 'text-gray-500'}">
+                                ${new Date(t.fecha).toLocaleDateString('es-DO')}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-sm ${isSelected ? 'text-white' : 'text-gray-600'}">
+                                <i class="fas fa-cubes mr-1"></i>
+                                ${t.lineas ? t.lineas.reduce((sum, line) => sum + (parseInt(line.cantidad) || 0), 0) : 0} unidades
+                            </span>
+                            <span class="text-sm font-bold ${isSelected ? 'text-white' : 'text-brand-brown'}">
+                                ${this.formatCurrency(t.total)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            };
+
+            // Renderizar inicialmente todas las transacciones
+            renderTransacciones(this.transaccionesFiltradas);
+
+            // Configurar búsqueda
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase().trim();
+
+                    if (!searchTerm) {
+                        renderTransacciones(this.transaccionesFiltradas);
+                        return;
+                    }
+
+                    const filtradas = this.transaccionesFiltradas.filter(t => {
+                        // Buscar en ID
+                        if (t.id.toString().includes(searchTerm)) return true;
+
+                        // Buscar en nombre de contraparte
+                        if (t.contraparteNombre && t.contraparteNombre.toLowerCase().includes(searchTerm)) return true;
+
+                        // Buscar en fecha
+                        const fecha = new Date(t.fecha).toLocaleDateString('es-DO').toLowerCase();
+                        if (fecha.includes(searchTerm)) return true;
+
+                        // Buscar en total
+                        const total = this.formatCurrency(t.total).toLowerCase();
+                        if (total.includes(searchTerm)) return true;
+
+                        return false;
+                    });
+
+                    renderTransacciones(filtradas);
+                });
             }
-            container.innerHTML = this.transaccionesFiltradas.map((t, idx) => `
-                <div class="border rounded px-4 py-2 mb-2 cursor-pointer ${this.transactionData.transaccionOrigen && this.transactionData.transaccionOrigen.id === t.id ? "bg-brand-light-brown text-white" : ""}"
-                    onclick="window.transactionWizard.selectTransaccionOrigen(${t.id})">
-                    <strong>${t.contraparteNombre}</strong> #${t.id} - ${t.estado} <span class="ml-2 text-xs text-gray-500">${new Date(t.fecha).toLocaleDateString('es-DO')}</span>
-                    <br>
-                    <span class="text-sm text-gray-600">Total: ${this.formatCurrency(t.total)}</span>
-                </div>
-            `).join('');
+
         } catch (e) {
+            console.error('Error cargando transacciones:', e);
             window.showToast('Error cargando transacciones.', 'error');
+
+            const container = document.getElementById('devolucionTransaccionesContainer');
+            if (container) {
+                container.innerHTML = `
+                <div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 text-center">
+                    <i class="fas fa-exclamation-triangle text-xl mb-2"></i>
+                    <p>Error al cargar las transacciones.</p>
+                    <button onclick="window.transactionWizard.loadDevolucionStep2Data()" 
+                            class="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">
+                        Reintentar
+                    </button>
+                </div>
+            `;
+            }
         }
+    }
+    renderDevolucionTransacciones(transacciones) {
+        const container = document.getElementById('devolucionTransaccionesContainer');
+        if (!container) return;
+
+        if (!transacciones.length) {
+            container.innerHTML = `<div class="text-gray-500">No hay transacciones que coincidan con los criterios.</div>`;
+            return;
+        }
+
+        container.innerHTML = transacciones.map((t) => `
+        <div class="border-l-4 border-${this.getStateColor(t.estado)}-500 rounded px-4 py-2 mb-2 cursor-pointer ${this.transactionData.transaccionOrigen && this.transactionData.transaccionOrigen.id === t.id ? "bg-brand-light-brown text-white" : "bg-white"}
+            hover:bg-gray-100"
+            onclick="window.transactionWizard.selectTransaccionOrigen(${t.id})">
+            <strong>${t.contraparteNombre || 'Sin nombre'}</strong> #${t.id} - ${t.estado} <span class="ml-2 text-xs text-gray-500">${new Date(t.fecha).toLocaleDateString('es-DO')}</span>
+            <br>
+            <span class="text-sm text-gray-600">Total: ${this.formatCurrency(t.total)}</span>
+        </div>
+    `).join('');
     }
 
     selectTransaccionOrigen(id) {
@@ -607,7 +777,7 @@ export class TransactionWizard {
                     ? (this.transactionData.cliente.nombre + " " + this.transactionData.cliente.apellido)
                     : null,
                 tipoContraparte: "CLIENTE",
-                vendedorId: 1,
+                vendedorId: window.currentUser ? window.currentUser.id : null,
             };
 
             // Añadir información del tipo de pago y si es en cuotas
@@ -873,6 +1043,8 @@ export class TransactionWizard {
         if (modal) modal.remove();
     }
 
+
+
     /**
      * Inicia consultas periódicas al servidor para verificar estado
      */
@@ -985,7 +1157,8 @@ export class TransactionWizard {
                 })),
                 subtotal: this.transactionData.subtotal,
                 impuestos: this.transactionData.impuestos,
-                total: this.transactionData.total
+                total: this.transactionData.total,
+                vendedorId: window.currentUser ? window.currentUser.id : null,
             };
 
             // Depuración: muestra el payload
@@ -1053,24 +1226,27 @@ export class TransactionWizard {
 
     // =============== VENTA WIZARD METHODS ===============
     async validateVentaStep1() {
-        // Cliente is optional for sales (can be "Consumidor Final")
         const clienteCedula = document.getElementById('ventaClienteSelect')?.value;
-        if (clienteCedula) {
-            try {
-                // Get full client data
-                const cliente = await this.transaccionService.getClienteByCedula(clienteCedula);
-                if (cliente) {
-                    this.transactionData.cliente = cliente;
-                } else {
-                    this.transactionData.cliente = {cedula: clienteCedula};
-                }
-            } catch (error) {
-                console.error('Error loading client:', error);
+
+        // Validar que se haya seleccionado un cliente
+        if (!clienteCedula || clienteCedula === '') {
+            window.showToast('Debe seleccionar un cliente para continuar', 'error');
+            return false;
+        }
+
+        // Si se ha seleccionado un cliente, cargamos sus datos completos
+        try {
+            const cliente = await this.transaccionService.getClienteByCedula(clienteCedula);
+            if (cliente) {
+                this.transactionData.cliente = cliente;
+            } else {
                 this.transactionData.cliente = {cedula: clienteCedula};
             }
-        } else {
-            this.transactionData.cliente = null;
+        } catch (error) {
+            console.error('Error loading client:', error);
+            this.transactionData.cliente = {cedula: clienteCedula};
         }
+
         return true;
     }
 
@@ -1785,12 +1961,25 @@ export class TransactionWizard {
     }
 
 // Modifica la estructura de productosADevolver para guardar objetos: [{ idx, cantidad }]
+    // En loadDevolucionStep3Data
     async loadDevolucionStep3Data() {
         const container = document.getElementById('productosADevolverContainer');
         const trans = this.transactionData.transaccionOrigen;
         if (!trans || !container) return;
 
         if (!Array.isArray(this.transactionData.productosADevolver)) this.transactionData.productosADevolver = [];
+
+        // Agregar buscador para productos
+        const searchHTML = `
+    <div class="mb-4">
+        <input type="text" id="productosDevolucionSearch" placeholder="Buscar productos..." 
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown mb-3">
+    </div>`;
+
+        container.innerHTML = searchHTML + '<div id="productosDevolucionList"></div>';
+
+        const productosList = document.getElementById('productosDevolucionList');
+        if (!productosList) return;
 
         // Helpers
         const isSelected = (idx) => this.transactionData.productosADevolver.some(obj => obj.idx === idx);
@@ -1799,26 +1988,67 @@ export class TransactionWizard {
             return found ? found.cantidad : 1;
         };
 
-        container.innerHTML = trans.lineas.map((linea, idx) => {
-            const maxCantidad = linea.cantidad;
-            const checked = isSelected(idx) ? 'checked' : '';
-            const cantidad = getCantidad(idx, maxCantidad);
+        // Función para renderizar la lista filtrada
+        const renderProductos = (filtro = '') => {
+            const lineasFiltradas = trans.lineas.filter(linea => {
+                if (!filtro) return true;
+                const nombre = (linea.nombreProducto || linea.productoNombre || '').toLowerCase();
+                const codigo = (linea.codigoProducto || '').toLowerCase();
+                return nombre.includes(filtro.toLowerCase()) || codigo.includes(filtro.toLowerCase());
+            });
 
-            return `
-            <div class="flex items-center mb-2">
-                <input type="checkbox" id="prodADevolver-${idx}" ${checked} onchange="window.transactionWizard.toggleProductoADevolver(${idx})">
-                <label for="prodADevolver-${idx}" class="ml-2">${linea.nombreProducto || linea.productoNombre} (x${maxCantidad})</label>
-                <input type="number"
-                    min="1"
-                    max="${maxCantidad}"
-                    value="${cantidad}"
-                    id="cantidadADevolver-${idx}"
-                    style="width:60px;margin-left:10px;"
-                    ${!isSelected(idx) ? "disabled" : ""}
-                    onchange="window.transactionWizard.setCantidadADevolver(${idx}, this.value)">
+            if (lineasFiltradas.length === 0) {
+                productosList.innerHTML = '<p class="text-gray-500 text-center">No hay productos que coincidan con la búsqueda</p>';
+                return;
+            }
+
+            productosList.innerHTML = lineasFiltradas.map((linea, idx) => {
+                const maxCantidad = linea.cantidad;
+                const checked = isSelected(idx) ? 'checked' : '';
+                const cantidad = getCantidad(idx, maxCantidad);
+                const stateColor = checked ? 'green' : 'gray';
+
+                return `
+            <div class="flex items-center mb-3 p-3 border border-${stateColor}-300 rounded-lg ${checked ? 'bg-green-50' : 'bg-white'}">
+                <div class="mr-3">
+                    <input type="checkbox" id="prodADevolver-${idx}" ${checked} 
+                           onchange="window.transactionWizard.toggleProductoADevolver(${idx})"
+                           class="w-5 h-5 text-brand-brown">
+                </div>
+                <div class="flex-grow">
+                    <label for="prodADevolver-${idx}" class="block font-medium text-gray-700">
+                        ${linea.nombreProducto || linea.productoNombre || 'Producto sin nombre'}
+                    </label>
+                    <div class="text-sm text-gray-600">
+                        ${linea.codigoProducto ? `Código: ${linea.codigoProducto} | ` : ''}
+                        Precio: ${this.formatCurrency(linea.precioUnitario)} | 
+                        Disponible: ${maxCantidad}
+                    </div>
+                </div>
+                <div class="ml-4 flex items-center">
+                    <label class="mr-2 text-sm text-gray-600">Cantidad:</label>
+                    <input type="number"
+                        min="1"
+                        max="${maxCantidad}"
+                        value="${cantidad}"
+                        id="cantidadADevolver-${idx}"
+                        class="w-16 px-2 py-1 border rounded-md ${checked ? '' : 'bg-gray-100'}"
+                        ${!checked ? "disabled" : ""}
+                        onchange="window.transactionWizard.setCantidadADevolver(${idx}, this.value)">
+                </div>
             </div>
-        `;
-        }).join('');
+            `;
+            }).join('');
+        };
+
+        // Inicializar con todos los productos
+        renderProductos();
+
+        // Configurar el buscador
+        const searchInput = document.getElementById('productosDevolucionSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => renderProductos(e.target.value));
+        }
     }
 
 // Actualiza la selección y pone cantidad=1 por defecto
@@ -2063,54 +2293,73 @@ export class TransactionWizard {
     // =============== COMPRA WIZARD METHODS ===============
     getCompraStep1Content() {
         return `
-        <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-brand-brown">Información del Proveedor</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Suplidor</label>
-                    <input type="text" id="compraSuplidorSearch" placeholder="Buscar por nombre o RNC/Cédula..." 
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Suplidor</label>
-                    <select id="compraSuplidorSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <option value="">Seleccione un suplidor</option>
-                    </select>
-                </div>
+    <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-brand-brown">Información del Proveedor</h3>
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-2">
+            <p class="text-sm text-yellow-700">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>Debe seleccionar un suplidor o completar los datos de un nuevo proveedor para continuar.</strong>
+            </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Suplidor <span class="text-red-500">*</span></label>
+                <input type="text" id="compraSuplidorSearch" placeholder="Buscar por nombre o RNC..." 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
             </div>
             <div>
-                <button type="button" id="btnNuevoSuplidor" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-                    <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
-                </button>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Suplidor <span class="text-red-500">*</span></label>
+                <select id="compraSuplidorSelect" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Seleccione un suplidor</option>
+                </select>
             </div>
-            <div id="compraProveedorForm" class="hidden space-y-4 border-t pt-4 mt-4">
-                <p class="text-sm text-gray-600">Complete la información del proveedor para esta compra.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proveedor *</label>
-                        <input type="text" id="compraNombreProveedor" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula</label>
-                        <input type="text" id="compraRncProveedor"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                        <input type="tel" id="compraTelefonoProveedor"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="compraEmailProveedor"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
+        </div>
+        <div>
+            <button type="button" id="btnNuevoSuplidor" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
+            </button>
+        </div>
+        <div id="compraProveedorForm" class="hidden space-y-4 border-t pt-4 mt-4">
+            <p class="text-sm text-gray-600">Complete la información del proveedor para esta compra.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proveedor <span class="text-red-500">*</span></label>
+                    <input type="text" id="compraNombreProveedor" 
+                           placeholder="Nombre de la empresa o persona"
+                           oninput="restrictToLettersOnly(this);"
+                           required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">RNC</label>
+                    <input type="text" id="compraRncProveedor"
+                           placeholder="00-0000000"
+                           maxlength="10"
+                           oninput="restrictToNumbersOnly(this); formatCedulaRnc(this);"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <p class="text-xs text-gray-500 mt-1">Formato RNC: 00-0000000 (opcional)</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                    <input type="tel" id="compraTelefonoProveedor"
+                           placeholder="809-000-0000"
+                           maxlength="12"
+                           oninput="restrictToNumbersOnly(this); formatTelefono(this);"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <p class="text-xs text-gray-500 mt-1">Formato: 809-000-0000</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="compraEmailProveedor"
+                           placeholder="proveedor@ejemplo.com"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                 </div>
             </div>
         </div>
+    </div>
     `;
     }
+
     async loadCompraStep1Data() {
         try {
             const suplidores = await this.transaccionService.getSuplidores();
@@ -2157,11 +2406,16 @@ export class TransactionWizard {
     validateCompraStep1() {
         const suplidorSelect = document.getElementById('compraSuplidorSelect');
         const nombreInput = document.getElementById('compraNombreProveedor');
-        const rncInput = document.getElementById('compraRncProveedor');
-        const telefonoInput = document.getElementById('compraTelefonoProveedor');
-        const emailInput = document.getElementById('compraEmailProveedor');
 
-        if (suplidorSelect.value && suplidorSelect.value !== 'new') {
+        const suplidorSeleccionado = suplidorSelect && suplidorSelect.value && suplidorSelect.value !== '';
+        const nombreProveedorIngresado = nombreInput && nombreInput.value && nombreInput.value.trim() !== '';
+
+        if (!suplidorSeleccionado && !nombreProveedorIngresado) {
+            window.showToast('Debe seleccionar un suplidor o ingresar los datos de un nuevo proveedor', 'error');
+            return false;
+        }
+
+        if (suplidorSeleccionado) {
             const selectedOption = suplidorSelect.options[suplidorSelect.selectedIndex];
             this.transactionData.proveedor = {
                 id: suplidorSelect.value,
@@ -2170,24 +2424,39 @@ export class TransactionWizard {
                 telefono: '',
                 email: ''
             };
-        } else {
-            const nombre = nombreInput?.value;
-            if (!nombre || !nombre.trim()) {
-                window.showToast('El nombre del proveedor es requerido.', 'error');
+        } else if (nombreProveedorIngresado) {
+            const nombre = nombreInput.value.trim();
+            const rncInput = document.getElementById('compraRncProveedor');
+            const telefonoInput = document.getElementById('compraTelefonoProveedor');
+            const emailInput = document.getElementById('compraEmailProveedor');
+
+            // Validaciones para nuevo proveedor
+            if (rncInput.value && !validateRNC(rncInput.value)) {
+                window.showToast('El RNC debe tener el formato correcto: 00-0000000', 'error');
+                rncInput.focus();
                 return false;
             }
+
+            if (telefonoInput.value && !validateTelefono(telefonoInput.value)) {
+                window.showToast('El teléfono debe tener el formato correcto: 809-000-0000', 'error');
+                telefonoInput.focus();
+                return false;
+            }
+
+            if (emailInput.value && !validateEmail(emailInput.value)) {
+                window.showToast('El email debe tener un formato válido', 'error');
+                emailInput.focus();
+                return false;
+            }
+
             this.transactionData.proveedor = {
-                nombre: nombre.trim(),
+                nombre: nombre,
                 rnc: rncInput?.value || '',
                 telefono: telefonoInput?.value || '',
                 email: emailInput?.value || ''
             };
         }
 
-        console.log('=== DEBUG: Proveedor data saved ===');
-        console.log('Proveedor completo:', this.transactionData.proveedor);
-        console.log('Nombre:', this.transactionData.proveedor?.nombre);
-        console.log('ID:', this.transactionData.proveedor?.id);
         return true;
     }
 
@@ -2503,6 +2772,19 @@ export class TransactionWizard {
             </div>
         `;
     }
+    // Agrega esta función dentro de la clase TransactionWizard
+    getStateColor(estado) {
+        const stateColors = {
+            'COMPLETADA': 'green',
+            'PENDIENTE': 'yellow',
+            'CANCELADA': 'red',
+            'PROCESANDO': 'blue',
+            'FINALIZADA': 'green',
+            'ACTIVA': 'green',
+            'INACTIVA': 'gray'
+        };
+        return stateColors[estado] || 'gray';
+    }
 }
 
 function cedulaToLong(cedula) {
@@ -2512,6 +2794,67 @@ function cedulaToLong(cedula) {
     // Si está vacío, regresa null
     if (!soloNumeros) return null;
     return Number(soloNumeros);
+}
+
+// Funciones de validación y formato
+function formatCedulaRnc(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 9) {
+        // Formato RNC: XX-XXXXXXX
+        if (digits.length > 2) {
+            input.value = digits.slice(0, 2) + '-' + digits.slice(2);
+        } else {
+            input.value = digits;
+        }
+        return;
+    }
+    // Formato Cédula: XXX-XXXXXXX-X
+    let part1 = digits.slice(0, 3);
+    let part2 = digits.slice(3, 10);
+    let part3 = digits.slice(10, 11);
+    let formatted = part1;
+    if (part2) formatted += '-' + part2;
+    if (part3) formatted += '-' + part3;
+    input.value = formatted;
+}
+
+function formatTelefono(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length >= 10) {
+        input.value = digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+    } else if (digits.length >= 6) {
+        input.value = digits.slice(0, 3) + '-' + digits.slice(3);
+    } else {
+        input.value = digits;
+    }
+}
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function validateCedula(cedula) {
+    const digits = cedula.replace(/\D/g, '');
+    return digits.length === 11;
+}
+
+function validateRNC(rnc) {
+    const digits = rnc.replace(/\D/g, '');
+    return digits.length === 9;
+}
+
+function validateTelefono(telefono) {
+    const digits = telefono.replace(/\D/g, '');
+    return digits.length === 10;
+}
+
+function restrictToLettersOnly(input) {
+    input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+}
+
+function restrictToNumbersOnly(input) {
+    input.value = input.value.replace(/[^0-9-]/g, '');
 }
 
 // Make wizard globally accessible for HTML onclicks
