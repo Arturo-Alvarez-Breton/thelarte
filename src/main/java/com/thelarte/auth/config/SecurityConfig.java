@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -37,29 +38,54 @@ public class SecurityConfig {
         JwtFilter jwtFilter = new JwtFilter(tokenProvider);
 
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()  // TEMPORARY: Allow all requests for debugging
-            )
-//            .cors(cors -> cors.configurationSource(corsConfigurationSource()))            .authorizeHttpRequests(auth -> auth
-//                .requestMatchers("/login", "/login.html", "/register", "/h2-console/**", "/", "/static/**", "/frontend/**", "/css/**", "/js/**", "/pages/**").permitAll()
-//                .requestMatchers("*.html", "*.css", "*.js").permitAll()
-//                .requestMatchers("/dashboard", "/dashboard.html").permitAll()  // Allow access, JS will handle auth
-//                .requestMatchers("/suplidor/**").permitAll()  // Make suplidor pages public
-//                .requestMatchers("/api/dashboard/validate").hasAnyRole("VENDEDOR", "GERENTE", "TI", "CONTABILIDAD")  // All roles can access dashboard
-//                .requestMatchers("/api/suplidores/**").permitAll()  // Make suplidor API public
-//                .requestMatchers("/api/productos/**").permitAll()
-//                .requestMatchers("/producto/**").permitAll()
-//                .requestMatchers("/uploads/**").permitAll()
-//                .requestMatchers("/api/unidades/**").permitAll()
-//                .requestMatchers("/unidades/**").permitAll()
-//                .anyRequest().authenticated())
+                // Public routes - no authentication required
+                .requestMatchers("/login", "/register", "/pages/login.html", "/pages/payment-success.html").permitAll()
+                .requestMatchers("/", "/static/**", "/css/**", "/js/**", "/images/**", "/uploads/**").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
+
+                // Role-based page access
+                .requestMatchers("/pages/admin/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/pages/ti/**").hasRole("TI")
+                .requestMatchers("/pages/vendedor/**").hasRole("VENDEDOR")
+                .requestMatchers("/pages/cajero/**").hasRole("CAJERO")
+                .requestMatchers("/pages/contabilidad/**").hasRole("CONTABILIDAD")
+
+                // API endpoints - role-based access
+                .requestMatchers("/api/usuarios/**").hasAnyRole("ADMINISTRADOR", "TI")
+                .requestMatchers("/api/empleados/**").hasAnyRole("ADMINISTRADOR", "TI")
+                .requestMatchers("/api/suplidores/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR")
+                .requestMatchers("/api/productos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO")
+                .requestMatchers("/api/transacciones/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD", "CAJERO")
+                .requestMatchers("/api/reportes/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD")
+                .requestMatchers("/api/dashboard/validate").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
+
+                // All other requests require authentication
+                .anyRequest().authenticated())
             .userDetailsService(userService)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    String requestURI = request.getRequestURI();
+                    if (requestURI.startsWith("/pages/") && !requestURI.equals("/pages/login.html")) {
+                        response.sendRedirect("/pages/login.html");
+                    } else {
+                        response.sendError(401, "Unauthorized");
+                    }
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    String requestURI = request.getRequestURI();
+                    if (requestURI.startsWith("/pages/")) {
+                        response.sendRedirect("/pages/login.html");
+                    } else {
+                        response.sendError(403, "Access Denied");
+                    }
+                }));
 
-        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        http.headers(headers -> headers.frameOptions().sameOrigin());
 
         return http.build();
     }
