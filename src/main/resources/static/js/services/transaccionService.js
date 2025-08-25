@@ -364,6 +364,25 @@ export class TransaccionService {
         }
     }
 
+    async reactivateCliente(cedula) {
+        console.log('Reactivating client:', cedula);
+        try {
+            const authToken = this.getAuthToken();
+            const response = await fetch(`/api/clientes/${cedula}/restaurar`, {
+                method: 'POST',
+                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('Error reactivating client:', error);
+            throw error;
+        }
+    }
+
     // Producto Methods
     async createProducto(productoData) {
         console.log('Creating product:', productoData);
