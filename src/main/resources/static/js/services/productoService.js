@@ -156,4 +156,23 @@ export class ProductoService {
             throw error;
         }
     }
+
+    // Método para obtener tipos únicos de productos
+    async getTiposProductos() {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/productos/tipos`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching tipos productos:', error);
+            // Si falla la petición al backend, devolver tipos por defecto
+            return ['silla', 'mueble', 'mesa', 'otoman'];
+        }
+    }
 }

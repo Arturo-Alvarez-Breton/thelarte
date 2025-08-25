@@ -267,13 +267,15 @@
                         <select id="productoTipo" name="tipo" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                             <option value="">Seleccione un tipo</option>
-                            <option value="silla">Silla</option>
-                            <option value="mueble">Mueble</option>
-                            <option value="mesa">Mesa</option>
-                            <option value="otoman">Otoman</option>
-                            <option value="otro">Otro</option>
+                            <!-- Los tipos se cargarán dinámicamente -->
                         </select>
                         <p id="productoTipoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                        <!-- Campo para tipo personalizado que aparece cuando se selecciona "otro" -->
+                        <div id="otroTipoContainer" class="mt-2 hidden">
+                            <input type="text" id="otroTipoInput" name="otroTipo" placeholder="Especifique el tipo de producto"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm">
+                            <p class="text-xs text-gray-500 mt-1">Ingrese el nuevo tipo de producto</p>
+                        </div>
                     </div>
                 </div>
                 <div>

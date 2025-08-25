@@ -16,6 +16,7 @@ class ProductosManager {
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
         this.currentView = 'activos'; // 'activos' o 'eliminados'
+        this.tiposProductos = []; // Array para almacenar los tipos únicos
 
         // Initialize table view manager with responsive columns
         this.tableViewManager = new TableViewManager('#productosListContainer', {
@@ -84,7 +85,74 @@ class ProductosManager {
     async init() {
         this.setupEventListeners();
         this.setupResponsiveHandlers();
+        await this.loadTiposProductos();
         await this.loadProductos();
+    }
+
+    // Nuevo método para cargar tipos de productos dinámicamente
+    async loadTiposProductos() {
+        try {
+            this.tiposProductos = await this.productoService.getTiposProductos();
+            this.populateTipoSelects();
+        } catch (error) {
+            console.error('Error loading tipos productos:', error);
+            // Usar tipos por defecto en caso de error
+            this.tiposProductos = ['silla', 'mueble', 'mesa', 'otoman'];
+            this.populateTipoSelects();
+        }
+    }
+
+    // Método para poblar los selects de tipo con los tipos únicos
+    populateTipoSelects() {
+        // Poblar select del modal
+        const productoTipoSelect = document.getElementById('productoTipo');
+        if (productoTipoSelect) {
+            // Limpiar opciones existentes excepto la primera
+            productoTipoSelect.innerHTML = '<option value="">Seleccione un tipo</option>';
+
+            // Agregar tipos únicos ordenados alfabéticamente
+            const tiposOrdenados = [...new Set(this.tiposProductos)].sort();
+            tiposOrdenados.forEach(tipo => {
+                if (tipo && tipo.trim()) {
+                    const option = document.createElement('option');
+                    option.value = tipo.toLowerCase();
+                    option.textContent = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+                    productoTipoSelect.appendChild(option);
+                }
+            });
+
+            // Agregar opción "Otro"
+            const otroOption = document.createElement('option');
+            otroOption.value = 'otro';
+            otroOption.textContent = 'Otro (especificar)';
+            productoTipoSelect.appendChild(otroOption);
+        }
+
+        // Poblar filtro de búsqueda
+        const productoTipoFilter = document.getElementById('productoTipoFilter');
+        if (productoTipoFilter) {
+            // Guardar el valor actual
+            const currentValue = productoTipoFilter.value;
+
+            // Limpiar opciones existentes excepto la primera
+            productoTipoFilter.innerHTML = '<option value="">Todos los tipos</option>';
+
+            // Agregar tipos únicos ordenados alfabéticamente
+            const tiposOrdenados = [...new Set(this.tiposProductos)].sort();
+            tiposOrdenados.forEach(tipo => {
+                if (tipo && tipo.trim()) {
+                    const option = document.createElement('option');
+                    option.value = tipo.toLowerCase();
+                    option.textContent = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+                    productoTipoFilter.appendChild(option);
+                }
+            });
+
+            // Restaurar valor si aún existe
+            if (currentValue && [...productoTipoFilter.options].some(opt => opt.value === currentValue)) {
+                productoTipoFilter.value = currentValue;
+            }
+        }
     }
 
     setupEventListeners() {
@@ -92,6 +160,9 @@ class ProductosManager {
         document.getElementById('productoSearchInput')?.addEventListener('input', () => this.filterProductos());
         document.getElementById('productoTipoFilter')?.addEventListener('change', () => this.filterProductos());
         document.getElementById('formProducto')?.addEventListener('submit', (e) => this.handleSubmitProducto(e));
+
+        // Event listener para el campo tipo de producto
+        document.getElementById('productoTipo')?.addEventListener('change', (e) => this.handleTipoChange(e));
 
         // Filter buttons for active/deleted products
         document.getElementById('btnProductosActivos')?.addEventListener('click', () => this.switchToActiveProducts());
@@ -115,6 +186,22 @@ class ProductosManager {
         });
 
         document.getElementById('productoFoto')?.addEventListener('change', (e) => this.previewFoto(e));
+    }
+
+    // Nuevo método para manejar el cambio en el select de tipo
+    handleTipoChange(e) {
+        const otroTipoContainer = document.getElementById('otroTipoContainer');
+        const otroTipoInput = document.getElementById('otroTipoInput');
+
+        if (e.target.value === 'otro') {
+            otroTipoContainer.classList.remove('hidden');
+            otroTipoInput.required = true;
+            otroTipoInput.focus();
+        } else {
+            otroTipoContainer.classList.add('hidden');
+            otroTipoInput.required = false;
+            otroTipoInput.value = '';
+        }
     }
 
     setupResponsiveHandlers() {
@@ -363,6 +450,22 @@ class ProductosManager {
                            this.isTablet ? this.renderTabletButtons(producto) :
                            this.renderDesktopButtons(producto);
 
+        // Manejar la imagen del producto
+        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+        const imageHtml = hasImage ?
+            `<img src="${producto.fotoUrl}" 
+                 class="object-cover w-full h-full" 
+                 alt="${producto.nombre || 'Producto'}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="hidden absolute inset-0 bg-gray-50 flex flex-col items-center justify-center text-gray-400">
+                 <i class="fas fa-image text-3xl mb-2"></i>
+                 <span class="text-sm">Sin imagen</span>
+             </div>` :
+            `<div class="absolute inset-0 bg-gray-50 flex flex-col items-center justify-center text-gray-400">
+                 <i class="fas fa-image text-3xl mb-2"></i>
+                 <span class="text-sm">Sin imagen</span>
+             </div>`;
+
         return `
             <div class="producto-card flex flex-col h-full w-full bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 min-h-[280px] 
                 sm:min-h-[300px] md:min-h-[320px] lg:min-h-[340px] xl:min-h-[360px] 
@@ -372,10 +475,7 @@ class ProductosManager {
                 <div class="flex-1 flex flex-col">
                     <!-- Imagen del producto -->
                     <div class="w-full aspect-[16/9] bg-gray-100 rounded-t-xl border-b border-gray-200 overflow-hidden flex items-center justify-center relative">
-                        <img src="${producto.fotoUrl || '/images/product-placeholder.png'}" 
-                             class="object-cover w-full h-full" 
-                             alt="${producto.nombre || 'Producto'}"
-                             onerror="this.src='/images/product-placeholder.png'">
+                        ${imageHtml}
                         ${producto.eliminado ? `
                             <div class="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center">
                                 <span class="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">ELIMINADO</span>
@@ -691,8 +791,32 @@ class ProductosManager {
             return;
         }
 
+        // Manejar la imagen del producto en el modal de detalles
+        const detalleImg = document.getElementById('detalleProductoImg');
+        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+
+        if (hasImage) {
+            detalleImg.src = producto.fotoUrl;
+            detalleImg.alt = producto.nombre || 'Producto';
+            detalleImg.onerror = function() {
+                this.style.display = 'none';
+                this.parentElement.innerHTML = `
+                    <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                        <i class="fas fa-image text-6xl mb-4"></i>
+                        <span class="text-lg">Sin imagen disponible</span>
+                    </div>
+                `;
+            };
+        } else {
+            detalleImg.parentElement.innerHTML = `
+                <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                    <i class="fas fa-image text-6xl mb-4"></i>
+                    <span class="text-lg">Sin imagen disponible</span>
+                </div>
+            `;
+        }
+
         // Llenar datos
-        document.getElementById('detalleProductoImg').src = producto.fotoUrl || '/images/product-placeholder.png';
         document.getElementById('detalleProductoNombre').textContent = producto.nombre || 'Sin nombre';
         document.getElementById('detalleProductoTipo').textContent = producto.tipo || 'N/A';
         document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
@@ -747,9 +871,22 @@ class ProductosManager {
     async handleSubmitProducto(e) {
         e.preventDefault();
         const formData = new FormData(e.target);
+
+        // Determinar el tipo final del producto
+        let tipoFinal = formData.get('tipo');
+        if (tipoFinal === 'otro') {
+            const otroTipo = formData.get('otroTipo');
+            if (otroTipo && otroTipo.trim()) {
+                tipoFinal = otroTipo.trim().toLowerCase();
+            } else {
+                showError('productoTipo', 'Debe especificar el tipo de producto');
+                return;
+            }
+        }
+
         const productoData = {
             nombre: formData.get('nombre'),
-            tipo: formData.get('tipo'),
+            tipo: tipoFinal,
             descripcion: formData.get('descripcion'),
             precioVenta: formData.get('precioVenta') ? parseFloat(formData.get('precioVenta')) : null,
             precioCompra: formData.get('precioCompra') ? parseFloat(formData.get('precioCompra')) : null,
@@ -776,6 +913,8 @@ class ProductosManager {
                 window.showToast('Producto creado exitosamente.', 'success');
             }
             this.cerrarModalProducto();
+            // Recargar tipos de productos para incluir el nuevo tipo si se agregó uno
+            await this.loadTiposProductos();
             await this.loadProductos();
         } catch (error) {
             window.showToast('Error al guardar el producto.', 'error');
@@ -786,6 +925,17 @@ class ProductosManager {
         document.getElementById('formProducto').reset();
         document.getElementById('productoFotoPreview').src = "#";
         document.getElementById('productoFotoPreview').classList.add('hidden');
+
+        // Resetear el campo "otro tipo" específicamente
+        const otroTipoContainer = document.getElementById('otroTipoContainer');
+        const otroTipoInput = document.getElementById('otroTipoInput');
+
+        if (otroTipoContainer && otroTipoInput) {
+            otroTipoContainer.classList.add('hidden');
+            otroTipoInput.required = false;
+            otroTipoInput.value = '';
+        }
+
         [
             'productoNombreError', 'productoTipoError', 'productoDescripcionError',
             'productoPrecioVentaError', 'productoPrecioCompraError'
@@ -800,10 +950,38 @@ class ProductosManager {
 
     fillForm(producto) {
         document.getElementById('productoNombre').value = producto.nombre || '';
-        document.getElementById('productoTipo').value = producto.tipo || '';
+
+        // Manejar el tipo de producto correctamente
+        const productoTipoSelect = document.getElementById('productoTipo');
+        const otroTipoContainer = document.getElementById('otroTipoContainer');
+        const otroTipoInput = document.getElementById('otroTipoInput');
+
+        // Verificar si el tipo existe en las opciones del select
+        const tipoProducto = producto.tipo ? producto.tipo.toLowerCase() : '';
+        const existeEnSelect = [...productoTipoSelect.options].some(option => option.value === tipoProducto);
+
+        if (existeEnSelect) {
+            productoTipoSelect.value = tipoProducto;
+            otroTipoContainer.classList.add('hidden');
+            otroTipoInput.required = false;
+            otroTipoInput.value = '';
+        } else if (tipoProducto) {
+            // Si el tipo no existe en el select, usar "otro"
+            productoTipoSelect.value = 'otro';
+            otroTipoContainer.classList.remove('hidden');
+            otroTipoInput.required = true;
+            otroTipoInput.value = producto.tipo;
+        } else {
+            productoTipoSelect.value = '';
+            otroTipoContainer.classList.add('hidden');
+            otroTipoInput.required = false;
+            otroTipoInput.value = '';
+        }
+
         document.getElementById('productoDescripcion').value = producto.descripcion || '';
         document.getElementById('productoPrecioVenta').value = producto.precioVenta || '';
         document.getElementById('productoPrecioCompra').value = producto.precioCompra || '';
+
         if (producto.fotoUrl) {
             document.getElementById('productoFotoPreview').src = producto.fotoUrl;
             document.getElementById('productoFotoPreview').classList.remove('hidden');

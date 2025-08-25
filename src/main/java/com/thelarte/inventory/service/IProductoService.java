@@ -49,4 +49,11 @@ public interface IProductoService {
      * @return Lista de productos del tipo especificado
      */
     List<ProductoDTO> listarPorTipo(String tipo);
+
+    /**
+     * Obtiene todos los tipos únicos de productos existentes
+     * @return Lista de tipos únicos de productos
+     */
+    @Transactional(readOnly = true)
+    List<String> obtenerTiposUnicos();
 }

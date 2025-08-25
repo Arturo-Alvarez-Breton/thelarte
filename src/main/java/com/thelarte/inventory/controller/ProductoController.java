@@ -2,6 +2,7 @@ package com.thelarte.inventory.controller;
 
 import com.thelarte.inventory.dto.ProductoDTO;
 import com.thelarte.inventory.service.IProductoService;
+import com.thelarte.inventory.service.ProductoService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,10 +18,12 @@ public class ProductoController {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductoController.class);
     private final IProductoService productoService;
+    private final ProductoService productoServiceImpl;
 
     @Autowired
-    public ProductoController(IProductoService productoService) {
+    public ProductoController(IProductoService productoService, ProductoService productoServiceImpl) {
         this.productoService = productoService;
+        this.productoServiceImpl = productoServiceImpl;
     }
 
     @GetMapping
@@ -29,8 +32,26 @@ public class ProductoController {
         return ResponseEntity.ok(productoDTOs);
     }
 
+    @GetMapping("/all-inclusive")
+    public ResponseEntity<List<ProductoDTO>> listarTodosInclusiveEliminados() {
+        List<ProductoDTO> productoDTOs = productoServiceImpl.listarTodosInclusiveEliminados();
+        return ResponseEntity.ok(productoDTOs);
+    }
+
+    @GetMapping("/deleted")
+    public ResponseEntity<List<ProductoDTO>> listarEliminados() {
+        List<ProductoDTO> productoDTOs = productoServiceImpl.listarEliminados();
+        return ResponseEntity.ok(productoDTOs);
+    }
+
+    @GetMapping("/tipos")
+    public ResponseEntity<List<String>> obtenerTiposUnicos() {
+        List<String> tipos = productoService.obtenerTiposUnicos();
+        return ResponseEntity.ok(tipos);
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<ProductoDTO> obtenerProducto(@PathVariable long id) {
+    public ResponseEntity<ProductoDTO> obtenerProducto(@PathVariable Long id) {
         return productoService.buscarPorId(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -51,101 +72,52 @@ public class ProductoController {
 
     @PostMapping
     public ResponseEntity<ProductoDTO> crearProducto(@RequestBody ProductoDTO productoDTO) {
-        // Procesar imagen si viene en base64
-        if (productoDTO.getFotoBase64() != null && !productoDTO.getFotoBase64().isBlank()) {
-            String url = guardarImagenBase64(productoDTO.getFotoBase64());
-            productoDTO.setFotoUrl(url);
+        try {
+            ProductoDTO nuevoProducto = productoService.guardar(productoDTO);
+            return ResponseEntity.ok(nuevoProducto);
+        } catch (IllegalArgumentException e) {
+            logger.error("Error al crear producto: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
-        productoDTO.setFotoBase64(null); // Limpia para no guardar base64 en la BD ni devolverlo
-        ProductoDTO saved = productoService.guardar(productoDTO);
-        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ProductoDTO> actualizarProducto(@PathVariable Long id, @RequestBody ProductoDTO productoDTO) {
-        // Si hay fotoBase64, procesa y actualiza la imagen
-        if (productoDTO.getFotoBase64() != null && !productoDTO.getFotoBase64().isBlank()) {
-            String url = guardarImagenBase64(productoDTO.getFotoBase64());
-            productoDTO.setFotoUrl(url);
-        } else {
-            // Si NO hay fotoBase64, NO cambies el campo fotoUrl:
-            // Recupéralo del producto original
-            ProductoDTO original = productoService.buscarPorId(id).orElse(null);
-            if (original != null) {
-                productoDTO.setFotoUrl(original.getFotoUrl());
-            }
-        }
-        productoDTO.setId(id);
-        productoDTO.setFotoBase64(null);
-        ProductoDTO updated = productoService.guardar(productoDTO);
-        return ResponseEntity.ok(updated);
-    }
-
-    private String guardarImagenBase64(String base64Data) {
         try {
-            // Validación robusta para evitar errores de índice
-            if (base64Data == null || base64Data.isEmpty() || !base64Data.contains(",")) {
-                // Si no hay coma, el formato es inválido o no hay imagen nueva
-                return null;
-            }
-            String[] parts = base64Data.split(",");
-            if (parts.length < 2) {
-                throw new RuntimeException("Formato de imagen Base64 inválido");
-            }
-            String metadata = parts[0]; // data:image/png;base64
-            String extension = "png";
-            if (metadata.contains("jpeg")) extension = "jpg";
-            else if (metadata.contains("gif")) extension = "gif";
-            byte[] data = java.util.Base64.getDecoder().decode(parts[1]);
-            String fileName = System.currentTimeMillis() + "." + extension;
-            java.nio.file.Path dir = java.nio.file.Paths.get("uploads/imagenes");
-            java.nio.file.Files.createDirectories(dir);
-            java.nio.file.Path path = dir.resolve(fileName);
-            java.nio.file.Files.write(path, data);
-            return "/uploads/imagenes/" + fileName;
+            productoDTO.setId(id);
+            ProductoDTO productoActualizado = productoService.guardar(productoDTO);
+            return ResponseEntity.ok(productoActualizado);
+        } catch (IllegalArgumentException e) {
+            logger.error("Error al actualizar producto: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            throw new RuntimeException("Error guardando imagen", e);
+            logger.error("Error al actualizar producto con ID {}: {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarProducto(@PathVariable long id) {
-        if (productoService.buscarPorId(id).isPresent()) {
+    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
+        try {
             productoService.eliminar(id);
             return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            logger.error("Error al eliminar producto con ID {}: {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
     }
 
-    /**
-     * Obtener todos los productos incluyendo eliminados (para administración)
-     */
-    @GetMapping("/all-inclusive")
-    public ResponseEntity<List<ProductoDTO>> listarTodosInclusiveEliminados() {
-        List<ProductoDTO> productos = ((com.thelarte.inventory.service.ProductoService) productoService).listarTodosInclusiveEliminados();
-        return ResponseEntity.ok(productos);
-    }
-
-    /**
-     * Obtener solo productos eliminados lógicamente
-     */
-    @GetMapping("/deleted")
-    public ResponseEntity<List<ProductoDTO>> listarEliminados() {
-        List<ProductoDTO> productos = ((com.thelarte.inventory.service.ProductoService) productoService).listarEliminados();
-        return ResponseEntity.ok(productos);
-    }
-
-    /**
-     * Reactivar un producto eliminado lógicamente
-     */
     @PostMapping("/{id}/reactivate")
     public ResponseEntity<ProductoDTO> reactivarProducto(@PathVariable Long id) {
         try {
-            ProductoDTO producto = ((com.thelarte.inventory.service.ProductoService) productoService).reactivar(id);
-            return ResponseEntity.ok(producto);
-        } catch (Exception e) {
-            logger.error("Error reactivating product with id {}: {}", id, e.getMessage());
+            ProductoDTO productoReactivado = productoServiceImpl.reactivar(id);
+            return ResponseEntity.ok(productoReactivado);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            logger.error("Error al reactivar producto: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            logger.error("Error al reactivar producto con ID {}: {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
         }
     }
 }

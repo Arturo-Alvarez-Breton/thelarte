@@ -924,21 +924,33 @@ window.cerrarModalVerSuplidor = () => suplidoresManager.cerrarModalVerSuplidor()
 window.editarSuplidorDesdeDetalle = () => suplidoresManager.editarSuplidorDesdeDetalle();
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('suplidorRNC')?.addEventListener('input', formatCedulaRnc);
+        document.getElementById('suplidorRNC')?.addEventListener('input', formatCedula);
 });
 
-function formatCedulaRnc(e) {
+function formatCedula(e) {
     const input = e.target;
-    let digits = input.value.replace(/\D/g, '').slice(0, 11);
+    let digits = input.value.replace(/\D/g, '');
+
+    // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
     if (digits.length <= 9) {
-        input.value = digits;
-        return;
+        // Formato RNC: XXX-XXXXX-X
+        digits = digits.slice(0, 9);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 8);
+        let part3 = digits.slice(8, 9);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    } else {
+        // Formato Cédula: XXX-XXXXXXX-X
+        digits = digits.slice(0, 11);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 10);
+        let part3 = digits.slice(10, 11);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
     }
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 10);
-    let part3 = digits.slice(10, 11);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
 }

@@ -200,6 +200,21 @@ public class ProductoService implements IProductoService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Obtiene todos los tipos únicos de productos existentes
+     * @return Lista de tipos únicos de productos
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> obtenerTiposUnicos() {
+        return productoRepository.findAllActive().stream()
+                .map(Producto::getTipo)
+                .filter(tipo -> tipo != null && !tipo.trim().isEmpty())
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
     private ProductoDTO toDto(Producto p) {
         return new ProductoDTO(
                 p.getId(),
