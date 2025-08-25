@@ -99,29 +99,60 @@
 
 <div class="flex-1 flex flex-col">
         <header class="bg-white shadow p-4 flex justify-between items-center">
-            <div>
-                <h1 id="cont-header-title" class="text-2xl font-bold text-gray-800">Inicio Contabilidad</h1>
-                <p id="cont-header-subtitle" class="text-sm text-gray-600">Bienvenido al módulo de contabilidad</p>
-            </div>
-            <div id="cont-quick-actions" class="flex space-x-2">
-                <!-- Botones de acción rápida específicos de la página -->
-                <button data-action="open-wizard" data-type="VENTA" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-plus mr-2"></i>Nueva Venta
-                </button>
-            </div>
+            <!-- Quick Actions -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">
+                        <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-medium text-green-800">Nueva Compra</span>
+                    </button>
+
+                    <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">
+                        <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>
+                    </button>
+
+                    <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">
+                        <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-medium text-red-800">Devolución</span>
+                    </button>
+
+                    <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">
+                        <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-medium text-blue-800">Reportes</span>
+                    </a>
+                </div>
         </header>
 
         <main id="cont-main-content" class="flex-1 p-4 overflow-auto">
             <section class="p-4 bg-white rounded-lg shadow">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Resumen General</h2>
                 <p class="text-gray-600 mb-6">Dashboard con las principales métricas de ventas, compras y balance general del negocio.</p>
-                <!-- Statistics Cards -->
-                <div id="statisticsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Statistics will be loaded dynamically by main.js -->
-                    <div class="flex items-center justify-center py-12">
-                        <div class="animate-spin h-8 w-8 border-4 border-brand-brown border-t-transparent rounded-full"></div>
-                    </div>
-                </div>
+
+<!--                &lt;!&ndash; Quick Actions &ndash;&gt;-->
+<!--                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">-->
+<!--                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Acciones Rápidas</h3>-->
+<!--                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">-->
+<!--                        <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">-->
+<!--                            <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
+<!--                            <span class="text-sm font-medium text-green-800">Nueva Compra</span>-->
+<!--                        </button>-->
+
+<!--                        <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">-->
+<!--                            <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
+<!--                            <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>-->
+<!--                        </button>-->
+
+<!--                        <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">-->
+<!--                            <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
+<!--                            <span class="text-sm font-medium text-red-800">Devolución</span>-->
+<!--                        </button>-->
+
+<!--                        <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">-->
+<!--                            <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>-->
+<!--                            <span class="text-sm font-medium text-blue-800">Reportes</span>-->
+<!--                        </a>-->
+<!--                    </div>-->
+<!--                </div>-->
 
                 <!-- Financial Health Widget -->
                 <div id="financialHealthWidget" class="mb-8">
@@ -141,32 +172,6 @@
                 <!-- Employee Status Dashboard Component -->
                 <div id="employeeStatusDashboard" class="mb-8">
                     <!-- Employee status dashboard will be rendered here -->
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                    <h3 class="text-lg font-semibold text-brand-brown mb-4">Acciones Rápidas</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button data-action="open-wizard" data-type="COMPRA" class="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group">
-                            <i class="fas fa-shopping-cart text-2xl text-green-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-sm font-medium text-green-800">Nueva Compra</span>
-                        </button>
-
-                        <button data-action="open-wizard" data-type="VENTA" class="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group">
-                            <i class="fas fa-cash-register text-2xl text-yellow-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-sm font-medium text-yellow-800">Nueva Venta</span>
-                        </button>
-
-                        <button data-action="open-wizard" data-type="DEVOLUCION" class="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group">
-                            <i class="fas fa-undo text-2xl text-red-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-sm font-medium text-red-800">Devolución</span>
-                        </button>
-
-                        <a href="/pages/contabilidad/reportes.html" class="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group">
-                            <i class="fas fa-chart-line text-2xl text-blue-600 mb-2 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-sm font-medium text-blue-800">Reportes</span>
-                        </a>
-                    </div>
                 </div>
             </section>
         </main>
