@@ -301,7 +301,7 @@
 }
 
 .employee-status-dashboard .commission-rate {
-    font-weight: 600;
+    font-weight: 700;
     color: #7c3aed;
     margin-bottom: 2px;
 }
@@ -312,36 +312,34 @@
 }
 
 .employee-status-dashboard .performance-info {
-    min-width: 150px;
+    min-width: 140px;
 }
 
 .employee-status-dashboard .performance-score {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     margin-bottom: 4px;
 }
 
 .employee-status-dashboard .score-bar {
-    flex: 1;
-    height: 6px;
+    width: 100px;
+    height: 8px;
     background: #e5e7eb;
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
+    margin-bottom: 4px;
 }
 
 .employee-status-dashboard .score-fill {
     height: 100%;
-    background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e);
-    border-radius: 3px;
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+    border-radius: 4px;
+    transition: width 0.5s ease;
 }
 
 .employee-status-dashboard .score-text {
     font-size: 0.75rem;
     font-weight: 600;
     color: #374151;
-    min-width: 40px;
+    margin-left: 8px;
 }
 
 .employee-status-dashboard .performance-details {
@@ -351,6 +349,7 @@
 
 .employee-status-dashboard .status-info {
     min-width: 100px;
+    text-align: center;
 }
 
 .employee-status-dashboard .status-badge {
@@ -360,27 +359,27 @@
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.employee-status-dashboard .status-badge.status-new {
-    background: #dbeafe;
-    color: #1d4ed8;
+.employee-status-dashboard .status-new {
+    background: #ddd6fe;
+    color: #7c3aed;
 }
 
-.employee-status-dashboard .status-badge.status-top {
+.employee-status-dashboard .status-top {
     background: #fef3c7;
-    color: #92400e;
+    color: #d97706;
 }
 
-.employee-status-dashboard .status-badge.status-good {
+.employee-status-dashboard .status-good {
     background: #d1fae5;
-    color: #065f46;
+    color: #059669;
 }
 
-.employee-status-dashboard .status-badge.status-regular {
+.employee-status-dashboard .status-regular {
     background: #f3f4f6;
-    color: #374151;
+    color: #6b7280;
 }
 
 .employee-status-dashboard .no-data,
@@ -398,27 +397,27 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 150px;
+    padding: 60px 20px;
     color: #9ca3af;
 }
 
 .employee-status-dashboard .retry-btn {
-    margin-top: 12px;
+    margin-top: 16px;
     padding: 8px 16px;
-    background: #ef4444;
+    background: #3b82f6;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    font-size: 0.875rem;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.875rem;
     transition: background-color 0.2s ease;
 }
 
 .employee-status-dashboard .retry-btn:hover {
-    background: #dc2626;
+    background: #2563eb;
 }
 
 /* Color personalizado para gold */
@@ -430,21 +429,13 @@
 @media (max-width: 768px) {
     .employee-status-dashboard {
         padding: 16px;
-    }
-
-    .employee-status-dashboard .metrics-row {
-        grid-template-columns: 1fr;
-    }
-
-    .employee-status-dashboard .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+        margin-bottom: 16px;
     }
 
     .employee-status-dashboard .table-header {
         flex-direction: column;
         align-items: flex-start;
+        gap: 12px;
     }
 
     .employee-status-dashboard .table-filters {
@@ -454,7 +445,11 @@
 
     .employee-status-dashboard .filter-select {
         flex: 1;
-        min-width: 0;
+        min-width: auto;
+    }
+
+    .employee-status-dashboard .employee-table-grid {
+        font-size: 0.8rem;
     }
 
     .employee-status-dashboard .employee-table-grid th,
@@ -462,34 +457,45 @@
         padding: 12px 8px;
     }
 
-    .employee-status-dashboard .employee-info {
-        min-width: 160px;
+    .employee-status-dashboard .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 24px;
     }
 
-    .employee-status-dashboard .contact-info {
-        min-width: 180px;
+    .employee-status-dashboard .metric-card {
+        padding: 16px;
     }
 }
 
-@media (max-width: 640px) {
-    .employee-status-dashboard .metric-card {
+@media (max-width: 480px) {
+    .employee-status-dashboard .dashboard-header {
         flex-direction: column;
-        text-align: center;
-        padding: 16px;
+        align-items: flex-start;
+        gap: 12px;
     }
 
-    .employee-status-dashboard .metric-icon {
-        margin-bottom: 8px;
+    .employee-status-dashboard .dashboard-title {
+        font-size: 1.25rem;
     }
 
-    /* Hacer la tabla más compacta en móviles */
-    .employee-status-dashboard .employee-table-grid {
-        font-size: 0.8rem;
+    .employee-status-dashboard .employee-info {
+        min-width: 150px;
     }
 
-    .employee-status-dashboard .employee-table-grid th,
-    .employee-status-dashboard .employee-table-grid td {
-        padding: 10px 6px;
+    .employee-status-dashboard .contact-info {
+        min-width: 160px;
+    }
+
+    .employee-status-dashboard .experience-info,
+    .employee-status-dashboard .salary-info,
+    .employee-status-dashboard .commission-info,
+    .employee-status-dashboard .performance-info {
+        min-width: 100px;
+    }
+
+    .employee-status-dashboard .status-info {
+        min-width: 80px;
     }
 }
 

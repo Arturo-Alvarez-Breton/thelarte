@@ -8,7 +8,9 @@ class EmployeeStatusDashboard {
         this.container = document.getElementById(containerId);
         this.refreshInterval = null;
         this.employeesData = [];
-        this.salesData = []; // Para calcular comisiones
+        this.filteredEmployeesData = [];
+        this.salesData = [];
+        this.isLoading = false;
 
         if (!this.container) {
             console.error(`Container with id ${containerId} not found`);
@@ -22,6 +24,7 @@ class EmployeeStatusDashboard {
         this.render();
         this.loadData();
         this.startAutoRefresh();
+        console.log('EmployeeStatusDashboard initialized successfully');
     }
 
     render() {
@@ -33,9 +36,13 @@ class EmployeeStatusDashboard {
                         Estado de Empleados Comerciales
                     </h3>
                     <div class="dashboard-actions">
+                        <button onclick="employeeStatus.refresh()" class="refresh-btn">
+                            <i class="fas fa-sync-alt"></i>
+                            Actualizar
+                        </button>
                         <div class="last-updated">
-                            <i class="fas fa-sync-alt text-gray-400"></i>
-                            <span id="employeeLastUpdated">Actualizando...</span>
+                            <i class="fas fa-clock text-gray-400"></i>
+                            <span id="employeeLastUpdated">Cargando...</span>
                         </div>
                     </div>
                 </div>
@@ -100,15 +107,21 @@ class EmployeeStatusDashboard {
     }
 
     async loadData() {
+        if (this.isLoading) return;
+
         try {
-            // Cargar empleados
-            await this.loadEmployees();
+            this.isLoading = true;
+            this.showLoading();
 
-            // Cargar datos de ventas para calcular métricas
-            await this.loadSalesData();
+            // Cargar empleados y datos de ventas en paralelo
+            await Promise.all([
+                this.loadEmployees(),
+                this.loadSalesData()
+            ]);
 
-            // Calcular y mostrar métricas
+            // Calcular métricas y renderizar
             this.calculateMetrics();
+            this.filteredEmployeesData = [...this.employeesData];
             this.updateMetrics();
             this.renderEmployeeTable();
             this.updateTimestamp();
@@ -116,6 +129,20 @@ class EmployeeStatusDashboard {
         } catch (error) {
             console.error('Error loading employee data:', error);
             this.showError('Error al cargar los datos de empleados');
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    showLoading() {
+        const tableContainer = document.getElementById('employeeTable');
+        if (tableContainer) {
+            tableContainer.innerHTML = `
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+                    <p class="text-gray-500 mt-2">Cargando empleados...</p>
+                </div>
+            `;
         }
     }
 
@@ -134,7 +161,7 @@ class EmployeeStatusDashboard {
             );
 
         } catch (error) {
-            console.error('Error loading employees:', error);
+            console.warn('API not available, using simulated data:', error);
             // Generar datos simulados en caso de error
             this.employeesData = this.generateSimulatedEmployees();
         }
@@ -142,16 +169,16 @@ class EmployeeStatusDashboard {
 
     async loadSalesData() {
         try {
-            const response = await fetch('/api/transacciones/ventas');
+            const response = await fetch('/api/transacciones?tipo=VENTA');
             if (response.ok) {
-                this.salesData = await response.json();
+                const transactions = await response.json();
+                this.salesData = transactions.filter(t => t.tipo === 'VENTA' && t.estado === 'COMPLETADA');
             } else {
-                // Si no hay datos de ventas, usar array vacío
                 this.salesData = [];
             }
         } catch (error) {
             console.warn('Could not load sales data for metrics calculation:', error);
-            this.salesData = [];
+            this.salesData = this.generateSimulatedSales();
         }
     }
 
@@ -193,8 +220,39 @@ class EmployeeStatusDashboard {
                 comision: 6.0,
                 fechaContratacion: '2021-03-10',
                 deleted: false
+            },
+            {
+                cedula: '001-4567890-1',
+                nombre: 'Ana Sofía',
+                apellido: 'Martínez',
+                telefono: '809-456-7890',
+                email: 'ana.martinez@thelarte.com',
+                rol: 'COMERCIAL',
+                salario: 41000,
+                comision: 4.5,
+                fechaContratacion: '2023-08-12',
+                deleted: false
             }
         ];
+    }
+
+    generateSimulatedSales() {
+        // Generar datos de ventas simulados para calcular métricas
+        const salesData = [];
+        const employeeIds = this.employeesData.map(emp => emp.cedula.replace(/-/g, ''));
+
+        for (let i = 0; i < 50; i++) {
+            salesData.push({
+                id: i + 1,
+                tipo: 'VENTA',
+                estado: 'COMPLETADA',
+                total: Math.random() * 50000 + 10000,
+                vendedorId: employeeIds[Math.floor(Math.random() * employeeIds.length)],
+                fecha: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString()
+            });
+        }
+
+        return salesData;
     }
 
     calculateMetrics() {
@@ -202,12 +260,13 @@ class EmployeeStatusDashboard {
             // Calcular tiempo de servicio
             const hireDate = new Date(employee.fechaContratacion);
             const now = new Date();
-            const monthsWorked = Math.floor((now - hireDate) / (1000 * 60 * 60 * 24 * 30));
-            employee.monthsWorked = monthsWorked;
+            const monthsWorked = Math.floor((now - hireDate) / (1000 * 60 * 60 * 24 * 30.44));
+            employee.monthsWorked = Math.max(0, monthsWorked);
 
-            // Calcular ventas del empleado (si hay datos de ventas)
+            // Calcular ventas del empleado
+            const employeeId = employee.cedula.replace(/-/g, '');
             const employeeSales = this.salesData.filter(sale =>
-                sale.vendedorId && sale.vendedorId.toString() === employee.cedula.replace(/-/g, '')
+                sale.vendedorId && sale.vendedorId.toString() === employeeId
             );
 
             const totalSales = employeeSales.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
@@ -241,7 +300,7 @@ class EmployeeStatusDashboard {
         const countScore = Math.min(employee.salesCount / 20, 1) * 30;
         score += countScore;
 
-        return Math.round(score);
+        return Math.round(Math.max(0, score));
     }
 
     determineEmployeeStatus(employee) {
@@ -255,20 +314,26 @@ class EmployeeStatusDashboard {
         const comerciales = this.employeesData;
 
         // Total comerciales
-        document.getElementById('totalComerciales').textContent = comerciales.length;
+        const totalElement = document.getElementById('totalComerciales');
+        if (totalElement) {
+            totalElement.textContent = comerciales.length;
+        }
 
         // Mejor vendedor
-        const topPerformer = comerciales.reduce((best, current) =>
-            (current.performanceScore > best.performanceScore) ? current : best, comerciales[0] || {}
-        );
-        document.getElementById('topPerformer').textContent =
-            topPerformer.nombre ? `${topPerformer.nombre} ${topPerformer.apellido}` : '-';
+        const topPerformerElement = document.getElementById('topPerformer');
+        if (topPerformerElement && comerciales.length > 0) {
+            const topPerformer = comerciales.reduce((best, current) =>
+                (current.performanceScore > best.performanceScore) ? current : best, comerciales[0]
+            );
+            topPerformerElement.textContent = `${topPerformer.nombre} ${topPerformer.apellido}`;
+        }
     }
 
     renderEmployeeTable() {
         const tableContainer = document.getElementById('employeeTable');
+        if (!tableContainer) return;
 
-        if (this.employeesData.length === 0) {
+        if (this.filteredEmployeesData.length === 0) {
             tableContainer.innerHTML = `
                 <div class="no-data">
                     <i class="fas fa-user-slash text-gray-400 text-4xl"></i>
@@ -293,7 +358,7 @@ class EmployeeStatusDashboard {
                         </tr>
                     </thead>
                     <tbody>
-                        ${this.employeesData.map(employee => this.renderEmployeeRow(employee)).join('')}
+                        ${this.filteredEmployeesData.map(employee => this.renderEmployeeRow(employee)).join('')}
                     </tbody>
                 </table>
             </div>
@@ -308,8 +373,8 @@ class EmployeeStatusDashboard {
         const statusText = this.getStatusText(employee.status);
 
         const experienceText = employee.monthsWorked >= 12 ?
-            `${Math.floor(employee.monthsWorked / 12)} años` :
-            `${employee.monthsWorked} meses`;
+            `${Math.floor(employee.monthsWorked / 12)} año${Math.floor(employee.monthsWorked / 12) > 1 ? 's' : ''}` :
+            `${employee.monthsWorked} mes${employee.monthsWorked !== 1 ? 'es' : ''}`;
 
         return `
             <tr class="employee-row" data-employee-id="${employee.cedula}">
@@ -325,7 +390,7 @@ class EmployeeStatusDashboard {
                 <td class="contact-info">
                     <div class="contact-item">
                         <i class="fas fa-phone text-gray-400"></i>
-                        <span>${employee.telefono}</span>
+                        <span>${employee.telefono || 'No registrado'}</span>
                     </div>
                     <div class="contact-item">
                         <i class="fas fa-envelope text-gray-400"></i>
@@ -352,7 +417,7 @@ class EmployeeStatusDashboard {
                         <span class="score-text">${employee.performanceScore}/100</span>
                     </div>
                     <div class="performance-details">
-                        ${employee.salesCount} ventas • ${this.formatCurrency(employee.totalSales)}
+                        ${employee.salesCount} venta${employee.salesCount !== 1 ? 's' : ''} • ${this.formatCurrency(employee.totalSales)}
                     </div>
                 </td>
                 <td class="status-info">
@@ -368,18 +433,18 @@ class EmployeeStatusDashboard {
     sortEmployees() {
         const sortBy = document.getElementById('sortBy')?.value || 'nombre';
 
-        this.employeesData.sort((a, b) => {
+        this.filteredEmployeesData.sort((a, b) => {
             switch (sortBy) {
                 case 'nombre':
                     return `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`);
                 case 'fechaContratacion':
                     return new Date(b.fechaContratacion) - new Date(a.fechaContratacion);
                 case 'salario':
-                    return b.salario - a.salario;
+                    return (b.salario || 0) - (a.salario || 0);
                 case 'comision':
                     return (b.comision || 0) - (a.comision || 0);
                 case 'performance':
-                    return b.performanceScore - a.performanceScore;
+                    return (b.performanceScore || 0) - (a.performanceScore || 0);
                 default:
                     return 0;
             }
@@ -391,37 +456,36 @@ class EmployeeStatusDashboard {
     filterByStatus() {
         const filterStatus = document.getElementById('filterStatus')?.value || 'all';
 
-        // Recargar datos originales si es necesario
         if (filterStatus === 'all') {
-            this.loadData();
-            return;
+            this.filteredEmployeesData = [...this.employeesData];
+        } else {
+            this.filteredEmployeesData = this.employeesData.filter(emp => {
+                switch (filterStatus) {
+                    case 'active':
+                        return !emp.deleted;
+                    case 'new':
+                        return emp.monthsWorked < 3;
+                    case 'experienced':
+                        return emp.monthsWorked >= 12;
+                    default:
+                        return true;
+                }
+            });
         }
 
-        const now = new Date();
-        this.employeesData = this.employeesData.filter(emp => {
-            switch (filterStatus) {
-                case 'active':
-                    return !emp.deleted;
-                case 'new':
-                    return emp.monthsWorked < 3;
-                case 'experienced':
-                    return emp.monthsWorked >= 12;
-                default:
-                    return true;
-            }
-        });
-
-        this.updateMetrics();
         this.renderEmployeeTable();
     }
 
     updateTimestamp() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('es-ES', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        document.getElementById('employeeLastUpdated').textContent = `Actualizado: ${timeString}`;
+        const timestampElement = document.getElementById('employeeLastUpdated');
+        if (timestampElement) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            timestampElement.textContent = `${timeString}`;
+        }
     }
 
     showError(message) {
@@ -431,7 +495,7 @@ class EmployeeStatusDashboard {
                 <div class="error-state">
                     <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
                     <p class="text-gray-700 mt-2">${message}</p>
-                    <button onclick="employeeStatus.loadData()" class="retry-btn">
+                    <button onclick="employeeStatus.refresh()" class="retry-btn">
                         <i class="fas fa-redo"></i>
                         Reintentar
                     </button>
@@ -441,10 +505,10 @@ class EmployeeStatusDashboard {
     }
 
     startAutoRefresh() {
-        // Refrescar cada 5 minutos
+        // Refrescar cada 10 minutos
         this.refreshInterval = setInterval(() => {
             this.loadData();
-        }, 300000); // 5 minutos en milisegundos
+        }, 600000);
     }
 
     stopAutoRefresh() {
@@ -456,6 +520,7 @@ class EmployeeStatusDashboard {
 
     destroy() {
         this.stopAutoRefresh();
+        console.log('EmployeeStatusDashboard destroyed');
     }
 
     // Método público para refrescar manualmente
@@ -475,11 +540,15 @@ class EmployeeStatusDashboard {
 
     formatDate(date) {
         if (!date) return '';
-        return new Date(date).toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+        try {
+            return new Date(date).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return '';
+        }
     }
 
     getStatusClass(status) {
