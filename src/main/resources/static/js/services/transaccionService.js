@@ -368,7 +368,7 @@ export class TransaccionService {
         console.log('Reactivating client:', cedula);
         try {
             const authToken = this.getAuthToken();
-            const response = await fetch(`/api/clientes/${cedula}/restaurar`, {
+                    const response = await fetch(`/api/clientes/${cedula}/restaurar`, {
                 method: 'POST',
                 headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
