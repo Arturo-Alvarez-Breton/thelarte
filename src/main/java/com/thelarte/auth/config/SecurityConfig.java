@@ -85,7 +85,7 @@ public class SecurityConfig {
                     }
                 }));
 
-        http.headers(headers -> headers.frameOptions().sameOrigin());
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
 
         return http.build();
     }
