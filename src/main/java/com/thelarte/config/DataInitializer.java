@@ -498,7 +498,6 @@ public class DataInitializer implements CommandLineRunner {
             s1.setDireccion("Av. John F. Kennedy #1425, Sector Los Cacicazgos");
             s1.setEmail("ventas@mueblesdom.com.do");
             s1.setRNC("130-12345-6");
-            s1.setNCF("B0100000001");
             s1.setTelefonos(Arrays.asList("+1-809-567-8900", "+1-809-567-8901"));
             s1.setLongitud(-69.9312117);
             s1.setLatitud(18.4860575);
@@ -516,7 +515,6 @@ public class DataInitializer implements CommandLineRunner {
             s2.setDireccion("Calle Mella #45, Centro de Santiago");
             s2.setEmail("info@importcaribe.do");
             s2.setRNC("130-98765-4");
-            s2.setNCF("B0100000002");
             s2.setTelefonos(Arrays.asList("+1-809-582-3456"));
             s2.setLongitud(-70.6969664);
             s2.setLatitud(19.4517447);
@@ -534,7 +532,6 @@ public class DataInitializer implements CommandLineRunner {
             s3.setDireccion("Autopista Duarte Km 125, Zona Industrial");
             s3.setEmail("contacto@textilestropicales.com");
             s3.setRNC("130-55555-5");
-            s3.setNCF("B0100000003");
             s3.setTelefonos(Arrays.asList("+1-809-573-7890", "+1-809-573-7891"));
             s3.setLongitud(-70.5286778);
             s3.setLatitud(19.2227407);
@@ -552,7 +549,6 @@ public class DataInitializer implements CommandLineRunner {
             s4.setDireccion("Carretera Mella Km 67, Parque Industrial");
             s4.setEmail("ventas@maderaspremium.do");
             s4.setRNC("130-77777-7");
-            s4.setNCF("B0100000004");
             s4.setTelefonos(Arrays.asList("+1-809-529-1234"));
             s4.setLongitud(-69.2975306);
             s4.setLatitud(18.4539274);
@@ -570,7 +566,6 @@ public class DataInitializer implements CommandLineRunner {
             s5.setDireccion("8550 NW 17th Street, Doral, FL 33126");
             s5.setEmail("exports@globalfurniture.us");
             s5.setRNC(null); // No tiene RNC dominicano
-            s5.setNCF(null);
             s5.setTelefonos(Arrays.asList("+1-305-592-8800", "+1-305-592-8801"));
             s5.setLongitud(-80.3374393);
             s5.setLatitud(25.7907628);
@@ -588,7 +583,6 @@ public class DataInitializer implements CommandLineRunner {
             s6.setDireccion("Calle Mercedes #89, Zona Colonial");
             s6.setEmail("info@distcentral.do");
             s6.setRNC("130-99999-9");
-            s6.setNCF("B0100000005");
             s6.setTelefonos(Arrays.asList("+1-809-221-9999"));
             s6.setLongitud(-69.8849595);
             s6.setLatitud(18.4655394);
@@ -606,7 +600,6 @@ public class DataInitializer implements CommandLineRunner {
             s7.setDireccion("Futian District, Shenzhen, Guangdong Province");
             s7.setEmail("export@techsolutions.cn");
             s7.setRNC(null);
-            s7.setNCF(null);
             s7.setTelefonos(Arrays.asList("+86-755-8888-9999"));
             s7.setLongitud(114.0579909);
             s7.setLatitud(22.5445741);

@@ -69,7 +69,6 @@ public class SuplidorService implements ISuplidorService {
         suplidor.setDireccion(suplidorDTO.getDireccion());
         suplidor.setEmail(suplidorDTO.getEmail());
         suplidor.setRNC(suplidorDTO.getRNC());
-        suplidor.setNCF(suplidorDTO.getNCF());
         suplidor.setTelefonos(suplidorDTO.getTelefonos());
         suplidor.setLongitud(suplidorDTO.getLongitud());
         suplidor.setLatitud(suplidorDTO.getLatitud());
@@ -117,7 +116,6 @@ public class SuplidorService implements ISuplidorService {
                 s.getDireccion(),
                 s.getEmail(),
                 s.getRNC(),
-                s.getNCF(),
                 s.getTelefonos(),
                 s.getLongitud(),
                 s.getLatitud(),

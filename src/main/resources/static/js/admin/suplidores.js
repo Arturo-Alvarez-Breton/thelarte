@@ -535,10 +535,6 @@ class SuplidoresManager {
                         <p class="mt-1 text-sm text-gray-900">${suplidor.rNC || 'N/A'}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">NCF</label>
-                        <p class="mt-1 text-sm text-gray-900">${suplidor.nCF || 'N/A'}</p>
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium text-gray-700">Email</label>
                         <p class="mt-1 text-sm text-gray-900">${suplidor.email || 'N/A'}</p>
                     </div>
@@ -622,7 +618,6 @@ class SuplidoresManager {
             direccion: direccion,
             email: document.getElementById('suplidorEmail').value.trim() || null,
             rNC: document.getElementById('suplidorRNC').value.trim() || null,
-            nCF: document.getElementById('suplidorNCF').value.trim() || null,
             telefonos: telefonos.length > 0 ? telefonos : null,
             longitud: null,
             latitud: null
@@ -703,7 +698,6 @@ class SuplidoresManager {
         document.getElementById('suplidorNombre').value = suplidor.nombre || '';
         document.getElementById('suplidorEmail').value = suplidor.email || '';
         document.getElementById('suplidorRNC').value = suplidor.rNC || '';
-        document.getElementById('suplidorNCF').value = suplidor.nCF || '';
         document.getElementById('suplidorDireccion').value = suplidor.direccion || '';
 
         const paisSel = document.getElementById('suplidorPaisSelect');
@@ -948,4 +942,3 @@ function formatCedulaRnc(e) {
     if (part3) formatted += '-' + part3;
     input.value = formatted;
 }
-

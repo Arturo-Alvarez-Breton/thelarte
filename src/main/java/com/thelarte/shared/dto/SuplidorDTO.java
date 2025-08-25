@@ -13,8 +13,6 @@ public class SuplidorDTO {
     @JsonProperty("rNC")
     private String RNC;
 
-    @JsonProperty("nCF")
-    private String NCF;
     private List<String> telefonos;
     private Double longitud;
     private Double latitud;
@@ -22,7 +20,7 @@ public class SuplidorDTO {
 
     public SuplidorDTO() {}
 
-    public SuplidorDTO(long id, String nombre, String ciudad, String pais, String direccion, String email, String RNC, String NCF, List<String> telefonos, Double longitud, Double latitud, Boolean activo) {
+    public SuplidorDTO(long id, String nombre, String ciudad, String pais, String direccion, String email, String RNC, List<String> telefonos, Double longitud, Double latitud, Boolean activo) {
         this.id = id;
         this.nombre = nombre;
         this.ciudad = ciudad;
@@ -30,7 +28,6 @@ public class SuplidorDTO {
         this.direccion = direccion;
         this.email = email;
         this.RNC = RNC;
-        this.NCF = NCF;
         this.telefonos = telefonos;
         this.longitud = longitud;
         this.latitud = latitud;
@@ -44,7 +41,6 @@ public class SuplidorDTO {
     public String getDireccion() { return direccion; }
     public String getEmail() { return email; }
     public String getRNC() { return RNC; }
-    public String getNCF() { return NCF; }
     public List<String> getTelefonos() { return telefonos; }
     public Double getLongitud() { return longitud; }
     public Double getLatitud() { return latitud; }
@@ -57,7 +53,6 @@ public class SuplidorDTO {
     public void setDireccion(String direccion) { this.direccion = direccion; }
     public void setEmail(String email) { this.email = email; }
     public void setRNC(String RNC) { this.RNC = RNC; }
-    public void setNCF(String NCF) { this.NCF = NCF; }
     public void setTelefonos(List<String> telefonos) { this.telefonos = telefonos; }
     public void setLongitud(Double longitud) { this.longitud = longitud; }
     public void setLatitud(Double latitud) { this.latitud = latitud; }

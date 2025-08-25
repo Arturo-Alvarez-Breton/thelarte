@@ -16,7 +16,6 @@ public class Suplidor {
     private String direccion;
     private String email;
     private String RNC;
-    private String NCF;
 
     private Double longitud;
     private Double latitud;
@@ -29,7 +28,7 @@ public class Suplidor {
 
     public Suplidor() {}
 
-    public Suplidor(String nombre, String ciudad, String pais, String direccion, String email, List<String> telefonos, String RNC, String NCF, Double longitud, Double latitud) {
+    public Suplidor(String nombre, String ciudad, String pais, String direccion, String email, List<String> telefonos, String RNC, Double longitud, Double latitud) {
         this.nombre = nombre;
         this.ciudad = ciudad;
         this.pais = pais;
@@ -37,7 +36,6 @@ public class Suplidor {
         this.email = email;
         this.telefonos = telefonos;
         this.RNC = RNC;
-        this.NCF = NCF;
         this.longitud = longitud;
         this.latitud = latitud;
     }
@@ -50,7 +48,6 @@ public class Suplidor {
     public String getEmail() { return email; }
     public List<String> getTelefonos() { return telefonos; }
     public String getRNC() { return RNC; }
-    public String getNCF() { return NCF; }
     public Double getLongitud() { return longitud; }
     public Double getLatitud() { return latitud; }
     public Boolean getActivo() { return activo; }
@@ -62,7 +59,6 @@ public class Suplidor {
     public void setEmail(String email) { this.email = email; }
     public void setTelefonos(List<String> telefonos) { this.telefonos = telefonos; }
     public void setRNC(String RNC) { this.RNC = RNC; }
-    public void setNCF(String NCF) { this.NCF = NCF; }
     public void setLongitud(Double longitud) { this.longitud = longitud; }
     public void setLatitud(Double latitud) { this.latitud = latitud; }
     public void setActivo(Boolean activo) { this.activo = activo; }
