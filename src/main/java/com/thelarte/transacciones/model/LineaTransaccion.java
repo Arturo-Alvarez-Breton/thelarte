@@ -81,7 +81,9 @@ public class LineaTransaccion {
         }
 
         if (this.impuestoPorcentaje != null) {
-            this.impuestoMonto = this.subtotal.multiply(this.impuestoPorcentaje).divide(BigDecimal.valueOf(100));
+            this.impuestoMonto = this.subtotal
+                    .multiply(this.impuestoPorcentaje)
+                    .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
         } else {
             this.impuestoMonto = BigDecimal.ZERO;
         }

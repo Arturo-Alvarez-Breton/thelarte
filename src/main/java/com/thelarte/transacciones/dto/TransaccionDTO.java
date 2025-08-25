@@ -31,6 +31,10 @@ public class TransaccionDTO {
     private String numeroReferencia;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
+    private String tipoPago;
+    private BigDecimal montoInicial;
+    private BigDecimal saldoPendiente;
+    private List<PagoDTO> pagos;
 
     public TransaccionDTO() {
     }
@@ -153,6 +157,38 @@ public class TransaccionDTO {
 
     public LocalDateTime getFechaEntregaReal() {
         return fechaEntregaReal;
+    }
+
+    public String getTipoPago() {
+        return tipoPago;
+    }
+
+    public void setTipoPago(String tipoPago) {
+        this.tipoPago = tipoPago;
+    }
+
+    public BigDecimal getMontoInicial() {
+        return montoInicial;
+    }
+
+    public void setMontoInicial(BigDecimal montoInicial) {
+        this.montoInicial = montoInicial;
+    }
+
+    public BigDecimal getSaldoPendiente() {
+        return saldoPendiente;
+    }
+
+    public void setSaldoPendiente(BigDecimal saldoPendiente) {
+        this.saldoPendiente = saldoPendiente;
+    }
+
+    public List<PagoDTO> getPagos() {
+        return pagos;
+    }
+
+    public void setPagos(List<PagoDTO> pagos) {
+        this.pagos = pagos;
     }
 
     public void setFechaEntregaReal(LocalDateTime fechaEntregaReal) {
