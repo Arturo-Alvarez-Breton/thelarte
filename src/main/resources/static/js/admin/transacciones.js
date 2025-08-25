@@ -112,6 +112,9 @@ class TransaccionesManager {
         this.checkUrlFilters();
         await this.loadTransactions();
         this.updateTransactionCount();
+        // Inicializar la vista y los botones
+        this.updateViewButtons();
+        this.renderVista();
     }
 
     setupEventListeners() {
@@ -130,20 +133,40 @@ class TransaccionesManager {
 
     setVista(vista) {
         this.vista = vista;
+        this.updateViewButtons();
         this.renderVista();
+    }
+
+    updateViewButtons() {
+        const btnTarjetas = document.getElementById('btnVistaTarjetas');
+        const btnTabla = document.getElementById('btnVistaTabla');
+
+        if (btnTarjetas && btnTabla) {
+            if (this.vista === 'tarjetas') {
+                btnTarjetas.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
+                btnTabla.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
+            } else {
+                btnTarjetas.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
+                btnTabla.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
+            }
+        }
     }
 
     renderVista() {
         if (this.vista === 'tarjetas') {
             document.getElementById('transaccionesListContainer').classList.remove('hidden');
             document.getElementById('transaccionesTableContainer').classList.add('hidden');
+            // Usar el TableViewManager para cambiar a vista de tarjetas
+            this.tableViewManager.switchToCardView();
             this.renderTransactions();
             this.renderPagination();
         } else {
             document.getElementById('transaccionesListContainer').classList.add('hidden');
             document.getElementById('transaccionesTableContainer').classList.remove('hidden');
+            // Usar el TableViewManager para cambiar a vista de tabla
+            this.tableViewManager.switchToTableView();
             this.renderTableTransactions();
-            this.renderTablePagination();
+            // NO renderizar paginación separada para tabla, el TableViewManager la maneja
         }
     }
 
@@ -565,14 +588,15 @@ class TransaccionesManager {
     }
 
     renderTableTransactions() {
-        // Usar el TableViewManager para mostrar datos filtrados
+        // Usar el TableViewManager para mostrar TODOS los datos filtrados
         const filtered = this.getFilteredTransactions();
-        const start = this.currentPage * this.transactionsPerPage;
-        const end = start + this.transactionsPerPage;
-        const toShow = filtered.slice(start, end);
 
-        // Actualizar datos en el TableViewManager
-        this.tableViewManager.setData(toShow);
+        // Pasar todos los datos filtrados al TableViewManager
+        // El TableViewManager se encargará de la paginación internamente
+        this.tableViewManager.setData(filtered);
+
+        // Sincronizar la página actual si es necesario
+        this.tableViewManager.currentPage = this.currentPage;
     }
 
 
@@ -587,29 +611,6 @@ class TransaccionesManager {
             return;
         }
         let paginationHtml = '<div class="flex justify-center space-x-2">';
-        for (let i = 0; i < totalPages; i++) {
-            paginationHtml += `
-            <button onclick="transaccionesManager.changePage(${i})" 
-                    class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
-                ${i + 1}
-            </button>
-        `;
-        }
-        paginationHtml += '</div>';
-        paginationContainer.innerHTML = paginationHtml;
-    }
-
-    renderTablePagination() {
-        if (this.vista !== 'tabla') return;
-        const filtered = this.getFilteredTransactions();
-        const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
-        const paginationContainer = document.getElementById('paginacion');
-        if (!paginationContainer) return;
-        if (totalPages <= 1) {
-            paginationContainer.innerHTML = '';
-            return;
-        }
-        let paginationHtml = '<div class="flex justify-center space-x-2 my-4">';
         for (let i = 0; i < totalPages; i++) {
             paginationHtml += `
             <button onclick="transaccionesManager.changePage(${i})" 
@@ -1399,3 +1400,4 @@ document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
     document.getElementById('sidebar').classList.add('-translate-x-full');
     document.getElementById('sidebarOverlay').classList.add('hidden');
 });
+

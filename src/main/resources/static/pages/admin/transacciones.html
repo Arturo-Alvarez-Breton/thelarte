@@ -118,6 +118,21 @@
                     <option value="PARCIALMENTE_DEVUELTA">Parcialmente devuelta</option>
                 </select>
             </div>
+            <!-- Botones de vista agregados -->
+            <div class="mb-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-700">Vista:</span>
+                    <div class="bg-gray-100 rounded-lg p-1 flex">
+                        <button id="btnVistaTarjetas" class="px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm">
+                            <i class="fas fa-th-large mr-1"></i>Tarjetas
+                        </button>
+                        <button id="btnVistaTabla" class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
+                            <i class="fas fa-table mr-1"></i>Tabla
+                        </button>
+                    </div>
+                </div>
+                <div id="totalTransacciones" class="text-sm text-gray-600"></div>
+            </div>
             <div id="transaccionesListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3"></div>
             <div id="transaccionesTableContainer" class="hidden mt-4 overflow-x-auto"></div>
             <div id="paginacion" class="mt-6 flex justify-center"></div>

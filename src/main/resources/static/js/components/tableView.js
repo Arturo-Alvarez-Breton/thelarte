@@ -16,43 +16,9 @@ class TableViewManager {
     }
 
     init() {
-        this.createViewToggle();
+        // Solo crear el contenedor de tabla, NO los controles de vista
         this.createTableContainer();
         this.createPaginationContainer();
-    }
-
-    createViewToggle() {
-        const toggleContainer = document.createElement('div');
-        toggleContainer.className = 'flex items-center gap-2 mb-4';
-        toggleContainer.innerHTML = `
-            <span class="text-sm font-medium text-gray-700">Vista:</span>
-            <div class="bg-gray-100 rounded-lg p-1 flex">
-                <button id="cardViewBtn" class="px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm">
-                    <i class="fas fa-th-large mr-1"></i>Tarjetas
-                </button>
-                <button id="tableViewBtn" class="px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900">
-                    <i class="fas fa-table mr-1"></i>Tabla
-                </button>
-            </div>
-            <div class="ml-auto flex items-center gap-2" id="pageSizeContainer" style="display: none;">
-                <span class="text-sm text-gray-600">Filas por página:</span>
-                <select id="pageSizeSelect" class="px-2 py-1 border border-gray-300 rounded text-sm">
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-            </div>
-        `;
-
-        this.container.parentNode.insertBefore(toggleContainer, this.container);
-
-        document.getElementById('cardViewBtn').addEventListener('click', () => this.switchToCardView());
-        document.getElementById('tableViewBtn').addEventListener('click', () => this.switchToTableView());
-        document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
-            this.pageSize = parseInt(e.target.value);
-            this.currentPage = 0;
-            this.renderTable();
-        });
     }
 
     createTableContainer() {
@@ -65,7 +31,12 @@ class TableViewManager {
                 <tbody class="bg-white divide-y divide-gray-200" id="tableBody"></tbody>
             </table>
         `;
-        this.container.parentNode.insertBefore(this.tableContainer, this.container.nextSibling);
+
+        // Insertar en el contenedor de tabla específico
+        const tableContainerParent = document.getElementById('transaccionesTableContainer');
+        if (tableContainerParent) {
+            tableContainerParent.appendChild(this.tableContainer);
+        }
     }
 
     createPaginationContainer() {
@@ -77,20 +48,12 @@ class TableViewManager {
 
     switchToCardView() {
         this.isTableView = false;
-        document.getElementById('cardViewBtn').className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
-        document.getElementById('tableViewBtn').className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
-        document.getElementById('pageSizeContainer').style.display = 'none';
-        this.container.classList.remove('hidden');
         this.tableContainer.classList.add('hidden');
         this.paginationContainer.classList.add('hidden');
     }
 
     switchToTableView() {
         this.isTableView = true;
-        document.getElementById('cardViewBtn').className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
-        document.getElementById('tableViewBtn').className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
-        document.getElementById('pageSizeContainer').style.display = 'flex';
-        this.container.classList.add('hidden');
         this.tableContainer.classList.remove('hidden');
         this.paginationContainer.classList.remove('hidden');
         this.renderTable();
