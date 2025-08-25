@@ -142,10 +142,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Redirect based on role
       setTimeout(() => {
-        if (data.role === 'VENTAS' || data.role === 'CONTABILIDAD') {
-          window.location.href = '/pages/contabilidad/index.html';
-        } else {
-          window.location.href = '/pages/structure/home.html';
+        const role = data.role;
+        switch(role) {
+          case 'ADMINISTRADOR':
+            window.location.href = '/pages/admin/index.html';
+            break;
+          case 'CAJERO':
+            window.location.href = '/pages/cajero/transacciones.html';
+            break;
+          case 'CONTABILIDAD':
+            window.location.href = '/pages/contabilidad/reportes.html';
+            break;
+          case 'TI':
+            window.location.href = '/pages/ti/clientes.html';
+            break;
+          case 'VENDEDOR':
+            window.location.href = '/pages/vendedor/productos.html';
+            break;
+          default:
+            // Fallback to vendedor if role is not recognized
+            window.location.href = '/pages/vendedor/productos.html';
+            break;
         }
       }, 800);
 
@@ -190,13 +207,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if user is already logged in
   const token = localStorage.getItem('authToken');
   const role = localStorage.getItem('userRole');
-  if (token) {
-    console.log('User already has a token');
-    // Redirigir al inicio automáticamente si hay un token
-    if (role === 'VENTAS' || role === 'CONTABILIDAD') {
-      window.location.href = '/pages/contabilidad/index.html';
-    } else {
-      window.location.href = '/pages/structure/home.html';
+  if (token && role) {
+    console.log('User already has a token, redirecting based on role:', role);
+    // Redirect based on stored role
+    switch(role) {
+      case 'ADMINISTRADOR':
+        window.location.href = '/pages/admin/index.html';
+        break;
+      case 'CAJERO':
+        window.location.href = '/pages/cajero/transacciones.html';
+        break;
+      case 'CONTABILIDAD':
+        window.location.href = '/pages/contabilidad/reportes.html';
+        break;
+      case 'TI':
+        window.location.href = '/pages/ti/clientes.html';
+        break;
+      case 'VENDEDOR':
+        window.location.href = '/pages/vendedor/productos.html';
+        break;
+      default:
+        // Fallback to vendedor if role is not recognized
+        window.location.href = '/pages/vendedor/productos.html';
+        break;
     }
   }
 });

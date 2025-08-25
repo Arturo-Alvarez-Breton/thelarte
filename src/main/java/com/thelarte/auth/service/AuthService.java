@@ -46,7 +46,8 @@ public class AuthService {
                 user.getUsername(), null, user.getAuthorities());
         
         String token = jwtTokenProvider.createToken(authentication);
-        return new AuthResponse(token, user.getUsername());
+        String primaryRole = user.getRoles().isEmpty() ? "VENDEDOR" : user.getRoles().get(0).name();
+        return new AuthResponse(token, user.getUsername(), primaryRole);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -59,7 +60,8 @@ public class AuthService {
                     .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
             
             String token = jwtTokenProvider.createToken(authentication);
-            return new AuthResponse(token, user.getUsername());
+            String primaryRole = user.getRoles().isEmpty() ? "VENDEDOR" : user.getRoles().get(0).name();
+            return new AuthResponse(token, user.getUsername(), primaryRole);
         } else {
             throw new UsernameNotFoundException("Credenciales inválidas");
         }
