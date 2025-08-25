@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contabilidad - Inicio</title>
     <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="/css/inventoryDashboard.css" rel="stylesheet">
+    <link href="/css/salesDashboard.css" rel="stylesheet">
+    <link href="/css/employeeStatusDashboard.css" rel="stylesheet">
+    <link href="/css/financialHealthWidget.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -118,6 +123,26 @@
                     </div>
                 </div>
 
+                <!-- Financial Health Widget -->
+                <div id="financialHealthWidget" class="mb-8">
+                    <!-- Financial health widget will be rendered here -->
+                </div>
+
+                <!-- Inventory Dashboard Component -->
+                <div id="inventoryDashboard" class="mb-8">
+                    <!-- Inventory dashboard will be rendered here -->
+                </div>
+
+                <!-- Sales Dashboard Component -->
+                <div id="salesDashboard" class="mb-8">
+                    <!-- Sales dashboard will be rendered here -->
+                </div>
+
+                <!-- Employee Status Dashboard Component -->
+                <div id="employeeStatusDashboard" class="mb-8">
+                    <!-- Employee status dashboard will be rendered here -->
+                </div>
+
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
                     <h3 class="text-lg font-semibold text-brand-brown mb-4">Acciones Rápidas</h3>
@@ -217,9 +242,83 @@
 
     <script src="/js/components/sidebar.js" type="module"></script>
     <script src="/js/components/header.js" type="module"></script>
+    <script src="/js/components/inventoryDashboard.js"></script>
+    <script src="/js/components/salesDashboard.js"></script>
+    <script src="/js/components/employeeStatusDashboard.js"></script>
+    <script src="/js/components/financialHealthWidget.js"></script>
     <script src="/js/contabilidad/main.js" type="module"></script>
     <script src="/js/components/notifications.js"></script>
     <script src="/js/components/transactionWizard.js" type="module"></script>
     <script src="/js/services/transaccionService.js" type="module"></script>
+
+    <script>
+        // Initialize Dashboard Components when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the inventory dashboard component
+            const inventoryDashboard = new InventoryDashboard('inventoryDashboard');
+
+            // Initialize the sales dashboard component
+            const salesDashboard = new SalesDashboard('salesDashboard');
+
+            // Initialize the employee status dashboard component
+            const employeeStatusDashboard = new EmployeeStatusDashboard('employeeStatusDashboard');
+
+            // Initialize the financial health widget
+            const financialHealthWidget = new FinancialHealthWidget('financialHealthWidget');
+
+            // Optional: Add refresh button functionality
+            window.refreshInventory = () => {
+                if (inventoryDashboard) {
+                    inventoryDashboard.refresh();
+                }
+            };
+
+            window.refreshSales = () => {
+                if (salesDashboard) {
+                    salesDashboard.refresh();
+                }
+            };
+
+            window.refreshEmployees = () => {
+                if (employeeStatusDashboard) {
+                    employeeStatusDashboard.refresh();
+                }
+            };
+
+            window.refreshFinancialHealth = () => {
+                if (financialHealthWidget) {
+                    financialHealthWidget.refresh();
+                }
+            };
+
+            // Refresh all dashboards
+            window.refreshDashboards = () => {
+                if (inventoryDashboard) inventoryDashboard.refresh();
+                if (salesDashboard) salesDashboard.refresh();
+                if (employeeStatusDashboard) employeeStatusDashboard.refresh();
+                if (financialHealthWidget) financialHealthWidget.refresh();
+            };
+
+            // Clean up on page unload
+            window.addEventListener('beforeunload', function() {
+                if (inventoryDashboard) {
+                    inventoryDashboard.destroy();
+                }
+                if (salesDashboard) {
+                    salesDashboard.destroy();
+                }
+                if (employeeStatusDashboard) {
+                    employeeStatusDashboard.destroy();
+                }
+                if (financialHealthWidget) {
+                    financialHealthWidget.destroy();
+                }
+            });
+
+            // Make global references available
+            window.employeeStatus = employeeStatusDashboard;
+            window.financialHealth = financialHealthWidget;
+        });
+    </script>
 </body>
 </html>

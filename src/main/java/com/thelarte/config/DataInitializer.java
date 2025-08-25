@@ -51,11 +51,11 @@ public class DataInitializer implements CommandLineRunner {
         Thread.sleep(2000);
 
         // 3) Cargar datos de dominio
-        seedEmpleados();
-        seedClientes();
-        seedAdminRoot();
-        seedProductos();
-        seedSuplidores();
+//        seedEmpleados();
+//        seedClientes();
+//        seedAdminRoot();
+//        seedProductos();
+//        seedSuplidores();
     }
 
     private void startH2ServerIfNeeded() {

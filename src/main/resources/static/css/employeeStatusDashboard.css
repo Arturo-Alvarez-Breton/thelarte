@@ -1,0 +1,534 @@
+/* Employee Status Dashboard Styles */
+.employee-status-dashboard {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.employee-status-dashboard .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.employee-status-dashboard .dashboard-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.employee-status-dashboard .dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.employee-status-dashboard .last-updated {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .refresh-btn {
+    padding: 8px 12px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.employee-status-dashboard .refresh-btn:hover {
+    background: #2563eb;
+}
+
+.employee-status-dashboard .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.employee-status-dashboard .metric-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.employee-status-dashboard .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8b5cf6, #3b82f6);
+    border-radius: 12px 12px 0 0;
+}
+
+.employee-status-dashboard .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.12);
+}
+
+.employee-status-dashboard .metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+}
+
+.employee-status-dashboard .metric-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.employee-status-dashboard .metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.employee-status-dashboard .metric-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.employee-status-dashboard .employee-table-section {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.employee-status-dashboard .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.employee-status-dashboard .section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+}
+
+.employee-status-dashboard .table-filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.employee-status-dashboard .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 150px;
+}
+
+.employee-status-dashboard .filter-select:hover {
+    border-color: #9ca3af;
+}
+
+.employee-status-dashboard .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.employee-status-dashboard .employee-table-container {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.employee-status-dashboard .table-responsive {
+    overflow-x: auto;
+}
+
+.employee-status-dashboard .employee-table-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.employee-status-dashboard .employee-table-grid th {
+    background: #f8fafc;
+    padding: 16px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.employee-status-dashboard .employee-table-grid td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+}
+
+.employee-status-dashboard .employee-row:hover {
+    background: #f9fafb;
+}
+
+.employee-status-dashboard .employee-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+}
+
+.employee-status-dashboard .employee-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.employee-status-dashboard .employee-details {
+    min-width: 0;
+}
+
+.employee-status-dashboard .employee-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.employee-status-dashboard .employee-id {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .contact-info {
+    min-width: 200px;
+}
+
+.employee-status-dashboard .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+.employee-status-dashboard .contact-item:last-child {
+    margin-bottom: 0;
+}
+
+.employee-status-dashboard .experience-info {
+    min-width: 120px;
+}
+
+.employee-status-dashboard .experience-main {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.employee-status-dashboard .hire-date {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .salary-info {
+    min-width: 120px;
+    text-align: right;
+}
+
+.employee-status-dashboard .salary-amount {
+    font-weight: 700;
+    color: #059669;
+    margin-bottom: 2px;
+}
+
+.employee-status-dashboard .salary-period {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .commission-info {
+    min-width: 120px;
+    text-align: right;
+}
+
+.employee-status-dashboard .commission-rate {
+    font-weight: 600;
+    color: #7c3aed;
+    margin-bottom: 2px;
+}
+
+.employee-status-dashboard .commission-earned {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .performance-info {
+    min-width: 150px;
+}
+
+.employee-status-dashboard .performance-score {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.employee-status-dashboard .score-bar {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.employee-status-dashboard .score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.employee-status-dashboard .score-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    min-width: 40px;
+}
+
+.employee-status-dashboard .performance-details {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.employee-status-dashboard .status-info {
+    min-width: 100px;
+}
+
+.employee-status-dashboard .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.employee-status-dashboard .status-badge.status-new {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.employee-status-dashboard .status-badge.status-top {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.employee-status-dashboard .status-badge.status-good {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.employee-status-dashboard .status-badge.status-regular {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.employee-status-dashboard .no-data,
+.employee-status-dashboard .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+}
+
+.employee-status-dashboard .loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    color: #9ca3af;
+}
+
+.employee-status-dashboard .retry-btn {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    transition: background-color 0.2s ease;
+}
+
+.employee-status-dashboard .retry-btn:hover {
+    background: #dc2626;
+}
+
+/* Color personalizado para gold */
+.text-gold-600 {
+    color: #d97706 !important;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .employee-status-dashboard {
+        padding: 16px;
+    }
+
+    .employee-status-dashboard .metrics-row {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-status-dashboard .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .employee-status-dashboard .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .employee-status-dashboard .table-filters {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .employee-status-dashboard .filter-select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .employee-status-dashboard .employee-table-grid th,
+    .employee-status-dashboard .employee-table-grid td {
+        padding: 12px 8px;
+    }
+
+    .employee-status-dashboard .employee-info {
+        min-width: 160px;
+    }
+
+    .employee-status-dashboard .contact-info {
+        min-width: 180px;
+    }
+}
+
+@media (max-width: 640px) {
+    .employee-status-dashboard .metric-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px;
+    }
+
+    .employee-status-dashboard .metric-icon {
+        margin-bottom: 8px;
+    }
+
+    /* Hacer la tabla más compacta en móviles */
+    .employee-status-dashboard .employee-table-grid {
+        font-size: 0.8rem;
+    }
+
+    .employee-status-dashboard .employee-table-grid th,
+    .employee-status-dashboard .employee-table-grid td {
+        padding: 10px 6px;
+    }
+}
+
+/* Animaciones */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.employee-status-dashboard {
+    animation: slideInUp 0.4s ease-out;
+}
+
+.employee-status-dashboard .metric-card {
+    animation: slideInUp 0.4s ease-out;
+}
+
+.employee-status-dashboard .employee-row {
+    animation: slideInUp 0.3s ease-out;
+}
+
+/* Efectos hover adicionales */
+.employee-status-dashboard .employee-row:hover .employee-avatar {
+    background: #d1d5db;
+    color: #4b5563;
+}
+
+.employee-status-dashboard .metric-card:hover .metric-value {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.employee-status-dashboard .score-bar:hover + .score-text {
+    color: #1f2937;
+    font-weight: 700;
+}
