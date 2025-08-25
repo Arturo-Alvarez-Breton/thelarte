@@ -2319,8 +2319,9 @@ export class TransactionWizard {
                 <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
             </button>
         </div>
-        <div id="compraProveedorForm" class="hidden space-y-4 border-t pt-4 mt-4">
-            <p class="text-sm text-gray-600">Complete la información del proveedor para esta compra.</p>
+        <!-- Formulario para nuevo suplidor (oculto inicialmente) -->
+        <div id="compraProveedorForm" class="hidden mt-4 border p-4 rounded-lg bg-gray-50">
+            <h4 class="text-md font-bold mb-2">Registrar Nuevo Suplidor</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Proveedor <span class="text-red-500">*</span></label>
@@ -2355,6 +2356,10 @@ export class TransactionWizard {
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                 </div>
             </div>
+            <div class="mt-4 flex space-x-2">
+                <button type="button" id="guardarNuevoSuplidor" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Guardar Suplidor</button>
+                <button type="button" id="cancelarNuevoSuplidor" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancelar</button>
+            </div>
         </div>
     </div>
     `;
@@ -2367,6 +2372,8 @@ export class TransactionWizard {
             const searchInput = document.getElementById('compraSuplidorSearch');
             const form = document.getElementById('compraProveedorForm');
             const btnNuevoSuplidor = document.getElementById('btnNuevoSuplidor');
+            const guardarBtn = document.getElementById('guardarNuevoSuplidor');
+            const cancelarBtn = document.getElementById('cancelarNuevoSuplidor');
 
             // Inicializa el select con todos los suplidores
             if (select) {
@@ -2392,10 +2399,76 @@ export class TransactionWizard {
                 });
             }
 
-            if (btnNuevoSuplidor) {
-                btnNuevoSuplidor.addEventListener('click', () => {
-                    form.classList.toggle('hidden');
-                });
+            // Mostrar/ocultar formulario de nuevo suplidor
+            if (btnNuevoSuplidor && form) {
+                btnNuevoSuplidor.onclick = () => form.classList.toggle('hidden');
+            }
+            if (cancelarBtn && form) {
+                cancelarBtn.onclick = () => form.classList.add('hidden');
+            }
+
+            // Guardar el nuevo suplidor
+            if (guardarBtn && select && form) {
+                guardarBtn.onclick = async () => {
+                    const nombre = document.getElementById('compraNombreProveedor').value.trim();
+                    const rnc = document.getElementById('compraRncProveedor').value.trim();
+                    const telefono = document.getElementById('compraTelefonoProveedor').value.trim();
+                    const email = document.getElementById('compraEmailProveedor').value.trim();
+
+                    // Validaciones
+                    if (!nombre) {
+                        window.showToast('El nombre del suplidor es obligatorio.', 'error');
+                        return;
+                    }
+
+                    if (rnc && !validateRNC(rnc)) {
+                        window.showToast('El RNC debe tener el formato correcto: 00-0000000', 'error');
+                        document.getElementById('compraRncProveedor').focus();
+                        return;
+                    }
+
+                    if (telefono && !validateTelefono(telefono)) {
+                        window.showToast('El teléfono debe tener el formato correcto: 809-000-0000', 'error');
+                        document.getElementById('compraTelefonoProveedor').focus();
+                        return;
+                    }
+
+                    if (email && !validateEmail(email)) {
+                        window.showToast('El email debe tener un formato válido', 'error');
+                        document.getElementById('compraEmailProveedor').focus();
+                        return;
+                    }
+
+                    try {
+                        const nuevoSuplidor = await this.transaccionService.createSuplidor({
+                            nombre,
+                            rnc: rnc || null,
+                            telefono: telefono || null,
+                            email: email || null,
+                            pais: 'República Dominicana', // Valor por defecto
+                            ciudad: 'Santo Domingo', // Valor por defecto
+                            direccion: 'N/A' // Valor por defecto
+                        });
+                        window.showToast('Suplidor creado exitosamente.', 'success');
+
+                        const option = document.createElement('option');
+                        option.value = nuevoSuplidor.id;
+                        option.textContent = `${nuevoSuplidor.nombre} (${nuevoSuplidor.rnc || 'Sin RNC'})`;
+                        select.appendChild(option);
+                        select.value = nuevoSuplidor.id;
+
+                        this.transactionData.proveedor = nuevoSuplidor;
+                        form.classList.add('hidden');
+
+                        // Limpiar formulario
+                        document.getElementById('compraNombreProveedor').value = '';
+                        document.getElementById('compraRncProveedor').value = '';
+                        document.getElementById('compraTelefonoProveedor').value = '';
+                        document.getElementById('compraEmailProveedor').value = '';
+                    } catch (err) {
+                        window.showToast('Error al crear suplidor: ' + (err.message || err), 'error');
+                    }
+                };
             }
         } catch (error) {
             console.error('Error loading suppliers:', error);
@@ -2416,11 +2489,19 @@ export class TransactionWizard {
         }
 
         if (suplidorSeleccionado) {
+            // Si se seleccionó un suplidor existente, obtener sus datos completos
             const selectedOption = suplidorSelect.options[suplidorSelect.selectedIndex];
+            const suplidorText = selectedOption.text;
+            const suplidorId = suplidorSelect.value;
+
+            // Extraer información del texto del option
+            const nombreMatch = suplidorText.match(/^(.+?)\s*\(/);
+            const rncMatch = suplidorText.match(/\((.+?)\)/);
+
             this.transactionData.proveedor = {
-                id: suplidorSelect.value,
-                nombre: selectedOption.text,
-                rnc: '',
+                id: suplidorId,
+                nombre: nombreMatch ? nombreMatch[1].trim() : suplidorText,
+                rnc: rncMatch && rncMatch[1] !== 'Sin RNC' ? rncMatch[1] : '',
                 telefono: '',
                 email: ''
             };
@@ -2457,9 +2538,13 @@ export class TransactionWizard {
             };
         }
 
+        console.log('=== DEBUG: Proveedor data saved ===');
+        console.log('Proveedor completo:', this.transactionData.proveedor);
+        console.log('Nombre:', this.transactionData.proveedor?.nombre);
+        console.log('ID:', this.transactionData.proveedor?.id);
+
         return true;
     }
-
     getCompraStep2Content() {
         return `
         <div class="space-y-4">
