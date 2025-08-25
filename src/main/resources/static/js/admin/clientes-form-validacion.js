@@ -45,17 +45,33 @@ async function cargarProvincias() {
     }
 }
 
-// Formateo de cédula en tiempo real
+// Formateo inteligente de cédula o RNC en tiempo real
 function formatCedula(e) {
     const input = e.target;
-    let digits = input.value.replace(/\D/g, '').slice(0, 11);
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 10);
-    let part3 = digits.slice(10, 11);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
+    let digits = input.value.replace(/\D/g, '');
+
+    // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
+    if (digits.length <= 9) {
+        // Formato RNC: XXX-XXXXX-X
+        digits = digits.slice(0, 9);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 8);
+        let part3 = digits.slice(8, 9);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    } else {
+        // Formato Cédula: XXX-XXXXXXX-X
+        digits = digits.slice(0, 11);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 10);
+        let part3 = digits.slice(10, 11);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    }
 }
 
 // Formateo de teléfono en tiempo real
@@ -87,22 +103,46 @@ function clearError(fieldId) {
     }
 }
 
+// Validación de cédula o RNC
+function validateCedulaOrRNC(cedula) {
+    if (!cedula) return { valid: false, message: 'La cédula o RNC es obligatorio' };
+
+    const digits = cedula.replace(/\D/g, '');
+
+    if (digits.length === 9) {
+        // Validación RNC
+        if (!/^\d{3}-\d{5}-\d{1}$/.test(cedula)) {
+            return { valid: false, message: 'Formato de RNC inválido (debe ser XXX-XXXXX-X)' };
+        }
+        return { valid: true, type: 'RNC' };
+    } else if (digits.length === 11) {
+        // Validación Cédula
+        if (!/^\d{3}-\d{7}-\d{1}$/.test(cedula)) {
+            return { valid: false, message: 'Formato de cédula inválido (debe ser XXX-XXXXXXX-X)' };
+        }
+        return { valid: true, type: 'Cédula' };
+    } else {
+        return {
+            valid: false,
+            message: 'Formato inválido. Debe ser una cédula (11 dígitos) o RNC (9 dígitos)'
+        };
+    }
+}
+
 // Validación de formulario
 function validateFormCliente(data) {
     let valid = true;
     ['clienteCedula', 'clienteNombre', 'clienteApellido', 'clienteTelefono', 'clienteEmail', 'clienteProvincia', 'clienteDireccion'].forEach(field => {
         clearError(field);
     });
-    if (!data.cedula) {
-        showError('clienteCedula', 'La cédula es obligatoria');
+
+    // Validación de cédula o RNC
+    const cedulaValidation = validateCedulaOrRNC(data.cedula);
+    if (!cedulaValidation.valid) {
+        showError('clienteCedula', cedulaValidation.message);
         valid = false;
-    } else {
-        const digits = data.cedula.replace(/\D/g, '');
-        if (digits.length !== 11) {
-            showError('clienteCedula', 'Formato de cédula inválido');
-            valid = false;
-        }
     }
+
     if (!data.nombre) {
         showError('clienteNombre', 'El nombre es obligatorio');
         valid = false;
