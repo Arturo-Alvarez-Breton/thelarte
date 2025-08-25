@@ -98,23 +98,23 @@ class FinancialHealthWidget {
                     </div>
                     
                     <!-- Indicadores de Estado -->
-                    <div class="health-indicators">
-                        <div class="health-indicator" id="liquidityIndicator">
-                            <div class="indicator-dot"></div>
-                            <span class="indicator-label">Liquidez</span>
-                            <span class="indicator-status">Buena</span>
-                        </div>
-                        <div class="health-indicator" id="growthIndicator">
-                            <div class="indicator-dot"></div>
-                            <span class="indicator-label">Crecimiento</span>
-                            <span class="indicator-status">Estable</span>
-                        </div>
-                        <div class="health-indicator" id="taxIndicator">
-                            <div class="indicator-dot"></div>
-                            <span class="indicator-label">Impuestos</span>
-                            <span class="indicator-status">Al día</span>
-                        </div>
-                    </div>
+<!--                    <div class="health-indicators">-->
+<!--                        <div class="health-indicator" id="liquidityIndicator">-->
+<!--                            <div class="indicator-dot"></div>-->
+<!--                            <span class="indicator-label">Liquidez</span>-->
+<!--                            <span class="indicator-status">Buena</span>-->
+<!--                        </div>-->
+<!--                        <div class="health-indicator" id="growthIndicator">-->
+<!--                            <div class="indicator-dot"></div>-->
+<!--                            <span class="indicator-label">Crecimiento</span>-->
+<!--                            <span class="indicator-status">Estable</span>-->
+<!--                        </div>-->
+<!--                        <div class="health-indicator" id="taxIndicator">-->
+<!--                            <div class="indicator-dot"></div>-->
+<!--                            <span class="indicator-label">Impuestos</span>-->
+<!--                            <span class="indicator-status">Al día</span>-->
+<!--                        </div>-->
+<!--                    </div>-->
                 </div>
             </div>
         `;
@@ -442,20 +442,20 @@ class FinancialHealthWidget {
 
         const { balance, profitMargin } = this.financialData;
 
-        // Indicador de liquidez
-        this.updateIndicator('liquidityIndicator',
-            balance >= 0 ? 'success' : 'danger',
-            balance >= 50000 ? 'Excelente' : balance >= 0 ? 'Buena' : 'Crítica'
-        );
-
-        // Indicador de crecimiento
-        this.updateIndicator('growthIndicator',
-            profitMargin >= 15 ? 'success' : profitMargin >= 5 ? 'warning' : 'danger',
-            profitMargin >= 15 ? 'Creciendo' : profitMargin >= 5 ? 'Estable' : 'Declinando'
-        );
-
-        // Indicador de impuestos
-        this.updateIndicator('taxIndicator', 'success', 'Al día');
+        // // Indicador de liquidez
+        // this.updateIndicator('liquidityIndicator',
+        //     balance >= 0 ? 'success' : 'danger',
+        //     balance >= 50000 ? 'Excelente' : balance >= 0 ? 'Buena' : 'Crítica'
+        // );
+        //
+        // // Indicador de crecimiento
+        // this.updateIndicator('growthIndicator',
+        //     profitMargin >= 15 ? 'success' : profitMargin >= 5 ? 'warning' : 'danger',
+        //     profitMargin >= 15 ? 'Creciendo' : profitMargin >= 5 ? 'Estable' : 'Declinando'
+        // );
+        //
+        // // Indicador de impuestos
+        // this.updateIndicator('taxIndicator', 'success', 'Al día');
     }
 
     updateIndicator(indicatorId, status, text) {
