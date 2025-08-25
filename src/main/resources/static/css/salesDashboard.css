@@ -121,28 +121,96 @@
 }
 
 @media (max-width: 1024px) {
+    .sales-dashboard {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    .sales-dashboard .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
     .sales-dashboard .dashboard-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
-
     .sales-dashboard .metrics-row {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .sales-dashboard .metric-card {
+        padding: 16px;
+    }
+    .sales-dashboard .chart-section,
+    .sales-dashboard .recent-sales-section {
+        padding: 16px;
+    }
+    .sales-dashboard .chart-container {
+        height: 200px;
+    }
+    .sales-dashboard .recent-sales-list {
+        max-height: 250px;
     }
 }
 
 @media (max-width: 640px) {
+    .sales-dashboard {
+        padding: 10px;
+    }
+    .sales-dashboard .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+    }
+    .sales-dashboard .dashboard-title {
+        font-size: 1.1rem;
+    }
     .sales-dashboard .metrics-row {
         grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
     }
-
     .sales-dashboard .metric-card {
-        padding: 16px;
+        padding: 10px;
+        font-size: 0.95rem;
     }
-
     .sales-dashboard .metric-value {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
+    }
+    .sales-dashboard .chart-section,
+    .sales-dashboard .recent-sales-section {
+        padding: 10px;
+    }
+    .sales-dashboard .section-title {
+        font-size: 1rem;
+    }
+    .sales-dashboard .chart-container {
+        height: 120px;
+    }
+    .sales-dashboard .recent-sales-list {
+        max-height: 120px;
+    }
+    .sales-dashboard .recent-sale-item {
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+    }
+    .sales-dashboard .sale-details {
+        align-items: flex-start;
+        width: 100%;
+    }
+    .sales-dashboard .sale-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .sales-dashboard .sale-amount {
+        font-size: 0.95rem;
     }
 }
+
+/* ...existing code... */
 
 .sales-dashboard .chart-section,
 .sales-dashboard .recent-sales-section {
@@ -439,5 +507,3 @@
         gap: 8px;
     }
 }
-
-

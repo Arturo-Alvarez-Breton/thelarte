@@ -93,6 +93,46 @@
     gap: 24px;
 }
 
+@media (max-width: 1024px) {
+    .inventory-dashboard {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .metric-card {
+        padding: 16px;
+    }
+
+    .chart-section,
+    .low-stock-section {
+        padding: 16px;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .low-stock-list {
+        max-height: 200px;
+    }
+}
+
 @media (max-width: 768px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
@@ -100,6 +140,71 @@
 
     .metrics-row {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .inventory-dashboard {
+        padding: 10px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+    }
+
+    .dashboard-title {
+        font-size: 1.1rem;
+    }
+
+    .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .metric-card {
+        padding: 10px;
+        font-size: 0.95rem;
+    }
+
+    .metric-value {
+        font-size: 1.2rem;
+    }
+
+    .chart-section,
+    .low-stock-section {
+        padding: 10px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .chart-container {
+        height: 120px;
+    }
+
+    .low-stock-list {
+        max-height: 120px;
+    }
+
+    .low-stock-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .product-info {
+        width: 100%;
+    }
+
+    .stock-info {
+        font-size: 0.8rem;
     }
 }
 
@@ -291,35 +396,3 @@
 .low-stock-item {
     animation: fadeIn 0.2s ease-out;
 }
-
-/* Responsividad adicional */
-@media (max-width: 640px) {
-    .inventory-dashboard {
-        padding: 16px;
-    }
-
-    .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .metric-card {
-        padding: 16px;
-    }
-
-    .metric-value {
-        font-size: 1.5rem;
-    }
-
-    .chart-container {
-        height: 200px;
-    }
-
-    .chart-section,
-    .low-stock-section {
-        padding: 16px;
-    }
-}
-
-
