@@ -160,6 +160,61 @@ class AuthManager {
     }
 
     /**
+     * Safe logout function that avoids unnecessary server calls
+     */
+    async safeLogout() {
+        // Only perform logout if we're not already on login page and there's actually a session
+        if (window.location.pathname !== '/pages/login.html' ||
+            this.token ||
+            localStorage.getItem('jwt_token') ||
+            document.cookie.includes('jwt_token')) {
+
+            try {
+                // Call server logout to clear httpOnly cookies
+                await fetch('/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (error) {
+                console.warn('Error during server logout:', error);
+            } finally {
+                // Función más agresiva para eliminar cookies
+                function deleteCookie(name, path = '/', domain = null) {
+                    const domainPart = domain ? `domain=${domain};` : '';
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domainPart}`;
+                }
+
+                // Lista de cookies a eliminar
+                const cookiesToClear = ['jwt_token', 'JSESSIONID', 'session_id'];
+
+                cookiesToClear.forEach(cookieName => {
+                    // Clear for current domain and various paths
+                    deleteCookie(cookieName, '/');
+                    deleteCookie(cookieName, '/pages/');
+                    deleteCookie(cookieName, '');
+
+                    // Clear with domain variations
+                    const hostname = window.location.hostname;
+                    deleteCookie(cookieName, '/', hostname);
+                    deleteCookie(cookieName, '/', `.${hostname}`);
+
+                    // Clear for localhost scenarios
+                    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                        deleteCookie(cookieName, '/', 'localhost');
+                        deleteCookie(cookieName, '/', '127.0.0.1');
+                    }
+                });
+
+                // Clear client-side session data
+                this.logout();
+            }
+        }
+    }
+
+    /**
      * Redirect to login page
      */
     redirectToLogin() {

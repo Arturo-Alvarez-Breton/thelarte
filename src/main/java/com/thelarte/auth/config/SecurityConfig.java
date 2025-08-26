@@ -42,7 +42,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 // Public routes - no authentication required
-                .requestMatchers("/login", "/register", "/pages/login.html", "/pages/payment-success.html").permitAll()
+                .requestMatchers("/login", "/register", "/logout", "/pages/login.html", "/pages/payment-success.html").permitAll()
                 .requestMatchers("/", "/static/**", "/css/**", "/js/**", "/images/**", "/uploads/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
 

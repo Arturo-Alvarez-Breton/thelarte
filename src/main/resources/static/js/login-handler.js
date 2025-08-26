@@ -61,8 +61,8 @@ class LoginHandler {
                     // Store token
                     localStorage.setItem('jwt_token', data.token);
 
-                    // Set token in cookie for server-side validation
-                    document.cookie = `jwt_token=${data.token}; path=/; max-age=86400; secure; samesite=strict`;
+                    // Set token in cookie for server-side validation - 30 minutes
+                    document.cookie = `jwt_token=${data.token}; path=/; max-age=1800; secure; samesite=strict`;
 
                     // Update auth manager
                     if (window.authManager) {
@@ -145,19 +145,80 @@ class LoginHandler {
 }
 
 // Logout function for global use
-function logout() {
-    // Clear localStorage
-    localStorage.removeItem('jwt_token');
+async function logout() {
+    try {
+        // Llamar al backend para eliminar la cookie httpOnly
+        await fetch('/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.warn('Error during server logout:', error);
+        // Continue with client-side cleanup even if server request fails
+    } finally {
+        // Limpiar localStorage y sessionStorage
+        localStorage.clear();
+        sessionStorage.clear();
 
-    // Clear cookie
-    document.cookie = 'jwt_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        // Función más agresiva para eliminar cookies
+        function deleteCookie(name, path = '/', domain = null) {
+            const domainPart = domain ? `domain=${domain};` : '';
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domainPart}`;
+        }
 
-    // Clear auth manager
-    if (window.authManager) {
-        window.authManager.logout();
-    } else {
-        // Fallback redirect
-        window.location.href = '/pages/login.html';
+        // Lista de cookies a eliminar
+        const cookiesToClear = ['jwt_token', 'JSESSIONID', 'session_id'];
+
+        cookiesToClear.forEach(cookieName => {
+            // Clear for current domain and various paths
+            deleteCookie(cookieName, '/');
+            deleteCookie(cookieName, '/pages/');
+            deleteCookie(cookieName, '');
+
+            // Clear with domain variations
+            const hostname = window.location.hostname;
+            deleteCookie(cookieName, '/', hostname);
+            deleteCookie(cookieName, '/', `.${hostname}`);
+
+            // Clear for localhost scenarios
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                deleteCookie(cookieName, '/', 'localhost');
+                deleteCookie(cookieName, '/', '127.0.0.1');
+            }
+
+            // Clear for parent domains
+            const domainParts = hostname.split('.');
+            while (domainParts.length > 1) {
+                const domain = domainParts.join('.');
+                deleteCookie(cookieName, '/', domain);
+                deleteCookie(cookieName, '/', `.${domain}`);
+                domainParts.shift();
+            }
+        });
+
+        // Forzar recarga de la página después de limpiar cookies
+        setTimeout(() => {
+            // Limpiar auth manager
+            if (window.authManager) {
+                window.authManager.logout();
+            } else {
+                // Forzar redirección si no hay authManager
+                window.location.href = '/pages/login.html';
+            }
+        }, 100);
+    }
+}
+
+// Safe logout function for login page
+function safeLogout() {
+    // Only perform logout if we're not already on login page and there's actually a session
+    if (window.location.pathname !== '/pages/login.html' ||
+        localStorage.getItem('jwt_token') ||
+        document.cookie.includes('jwt_token')) {
+        logout();
     }
 }
 
@@ -167,3 +228,4 @@ const loginHandler = new LoginHandler();
 // Export for global use
 window.loginHandler = loginHandler;
 window.logout = logout;
+window.safeLogout = safeLogout;

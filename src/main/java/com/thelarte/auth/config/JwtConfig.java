@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 public class JwtConfig {    @Value("${jwt.secret:thisisasecretkeyforjwtauthenticationthelarteappthisneedstobe64chars}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}")
+    @Value("${jwt.expiration:1800000}") // Changed to 30 minutes (30 * 60 * 1000 ms)
     private long jwtExpiration;
 
     @Bean

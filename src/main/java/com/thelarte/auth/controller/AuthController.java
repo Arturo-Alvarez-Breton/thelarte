@@ -30,13 +30,13 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
 
-        // Create HTTP-only cookie for JWT token (for browser navigation)
+        // Create HTTP-only cookie for JWT token (for browser navigation) - 30 minutes expiration
         ResponseCookie jwtCookie = ResponseCookie.from("jwt_token", response.getToken())
                 .httpOnly(true)
-                .secure(true) // Enable for HTTPS in production
+                .secure(false) // Set to true for HTTPS in production
                 .path("/")
-                .maxAge(Duration.ofHours(24))
-                .sameSite("Strict")
+                .maxAge(Duration.ofMinutes(30)) // Changed to 30 minutes
+                .sameSite("Lax")
                 .build();
 
         return ResponseEntity.ok()
@@ -45,18 +45,53 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // Clear the JWT cookie
-        ResponseCookie jwtCookie = ResponseCookie.from("jwt_token", "")
+    public ResponseEntity<Void> logoutPost() {
+        return performLogout();
+    }
+
+    @GetMapping("/logout")
+    public ResponseEntity<Void> logoutGet() {
+        return performLogout();
+    }
+
+    private ResponseEntity<Void> performLogout() {
+        // Create multiple cookie clearing headers to ensure removal
+        ResponseCookie clearCookieHttpOnly = ResponseCookie.from("jwt_token", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(Duration.ZERO)
-                .sameSite("Strict")
+                .sameSite("Lax")
+                .build();
+
+        ResponseCookie clearCookieNonHttpOnly = ResponseCookie.from("jwt_token", "")
+                .httpOnly(false)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .sameSite("Lax")
+                .build();
+
+        // Additional clearing for different path variations
+        ResponseCookie clearCookieRoot = ResponseCookie.from("jwt_token", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
+
+        ResponseCookie clearCookieRootNonHttpOnly = ResponseCookie.from("jwt_token", "")
+                .httpOnly(false)
+                .secure(false)
+                .path("/")
+                .maxAge(Duration.ZERO)
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookieHttpOnly.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookieNonHttpOnly.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookieRoot.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookieRootNonHttpOnly.toString())
                 .build();
     }
 }

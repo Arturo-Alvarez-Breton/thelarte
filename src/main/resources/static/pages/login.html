@@ -90,5 +90,17 @@
   <script src="/js/auth-manager.js"></script>
   <script src="/js/login-handler.js"></script>
   <script src="/js/pages/login.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.safeLogout) {
+        window.safeLogout();
+      } else if (window.logout) {
+        // Fallback to regular logout but only if there's an active session
+        if (localStorage.getItem('jwt_token') || document.cookie.includes('jwt_token')) {
+          window.logout();
+        }
+      }
+    });
+  </script>
 </body>
 </html>
