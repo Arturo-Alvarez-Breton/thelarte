@@ -794,27 +794,54 @@ class ProductosContabilidadManager {
 
         // Manejar la imagen del producto en el modal de detalles
         const detalleImg = document.getElementById('detalleProductoImg');
-        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+        const imgContainer = detalleImg ? detalleImg.parentElement : null;
+        // Limpiar cualquier placeholder anterior y restaurar el <img>
+        if (imgContainer && detalleImg) {
+            // Eliminar todos los nodos hijos excepto el <img>
+            Array.from(imgContainer.children).forEach(child => {
+                if (child !== detalleImg) imgContainer.removeChild(child);
+            });
+            // Asegurarse que el <img> esté visible y con el src por defecto
+            detalleImg.style.display = '';
+            detalleImg.src = '/images/product-placeholder.png';
+            detalleImg.alt = 'Foto producto';
+        }
 
-        if (hasImage) {
-            detalleImg.src = producto.fotoUrl;
-            detalleImg.alt = producto.nombre || 'Producto';
-            detalleImg.onerror = function() {
-                this.style.display = 'none';
-                this.parentElement.innerHTML = `
-                    <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                        <i class="fas fa-image text-6xl mb-4"></i>
-                        <span class="text-lg">Sin imagen disponible</span>
-                    </div>
-                `;
-            };
-        } else {
-            detalleImg.parentElement.innerHTML = `
-                <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                    <i class="fas fa-image text-6xl mb-4"></i>
-                    <span class="text-lg">Sin imagen disponible</span>
-                </div>
-            `;
+        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+        if (detalleImg) {
+            if (hasImage) {
+                detalleImg.src = producto.fotoUrl;
+                detalleImg.alt = producto.nombre || 'Producto';
+                detalleImg.onerror = function() {
+                    this.style.display = 'none';
+                    if (this.parentElement) {
+                        // Eliminar cualquier placeholder anterior
+                        Array.from(this.parentElement.children).forEach(child => {
+                            if (child !== this) this.parentElement.removeChild(child);
+                        });
+                        // Agregar placeholder
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50';
+                        placeholder.innerHTML = '<i class="fas fa-image text-6xl mb-4"></i><span class="text-lg">Sin imagen disponible</span>';
+                        this.parentElement.appendChild(placeholder);
+                    }
+                };
+                detalleImg.style.display = '';
+            } else {
+                // Si no hay imagen, ocultar el <img> y mostrar el placeholder
+                detalleImg.style.display = 'none';
+                if (detalleImg.parentElement) {
+                    // Eliminar cualquier placeholder anterior
+                    Array.from(detalleImg.parentElement.children).forEach(child => {
+                        if (child !== detalleImg) detalleImg.parentElement.removeChild(child);
+                    });
+                    // Agregar placeholder
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50';
+                    placeholder.innerHTML = '<i class="fas fa-image text-6xl mb-4"></i><span class="text-lg">Sin imagen disponible</span>';
+                    detalleImg.parentElement.appendChild(placeholder);
+                }
+            }
         }
 
         // Llenar datos
