@@ -743,27 +743,57 @@ class ProductosManager {
 
         // Manejar la imagen del producto en el modal de detalles
         const detalleImg = document.getElementById('detalleProductoImg');
-        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+        const imgContainer = detalleImg ? detalleImg.parentElement : null;
+        // Limpiar cualquier placeholder anterior
+        if (imgContainer) {
+            // Restaurar solo la imagen y eliminar otros nodos (placeholders)
+            imgContainer.innerHTML = '';
+            imgContainer.appendChild(detalleImg);
+        }
+        // Resetear la imagen a la de placeholder por defecto
+        if (detalleImg) {
+            detalleImg.style.display = '';
+            detalleImg.src = '/images/product-placeholder.png';
+            detalleImg.alt = 'Foto producto';
+        }
 
-        if (hasImage) {
-            detalleImg.src = producto.fotoUrl;
-            detalleImg.alt = producto.nombre || 'Producto';
-            detalleImg.onerror = function() {
-                this.style.display = 'none';
-                this.parentElement.innerHTML = `
-                    <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                        <i class="fas fa-image text-6xl mb-4"></i>
-                        <span class="text-lg">Sin imagen disponible</span>
-                    </div>
-                `;
-            };
-        } else {
-            detalleImg.parentElement.innerHTML = `
-                <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                    <i class="fas fa-image text-6xl mb-4"></i>
-                    <span class="text-lg">Sin imagen disponible</span>
-                </div>
-            `;
+        const hasImage = producto.fotoUrl && producto.fotoUrl.trim() && producto.fotoUrl !== 'null';
+        if (detalleImg) {
+            if (hasImage) {
+                detalleImg.src = producto.fotoUrl;
+                detalleImg.alt = producto.nombre || 'Producto';
+                detalleImg.onerror = function() {
+                    this.style.display = 'none';
+                    if (this.parentElement) {
+                        // Eliminar cualquier placeholder anterior
+                        Array.from(this.parentElement.children).forEach(child => {
+                            if (child !== this) this.parentElement.removeChild(child);
+                        });
+                        this.parentElement.innerHTML += `
+                            <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                                <i class="fas fa-image text-6xl mb-4"></i>
+                                <span class="text-lg">Sin imagen disponible</span>
+                            </div>
+                        `;
+                    }
+                };
+                detalleImg.style.display = '';
+            } else {
+                // Si no hay imagen, ocultar el <img> y mostrar el placeholder
+                detalleImg.style.display = 'none';
+                if (detalleImg.parentElement) {
+                    // Eliminar cualquier placeholder anterior
+                    Array.from(detalleImg.parentElement.children).forEach(child => {
+                        if (child !== detalleImg) detalleImg.parentElement.removeChild(child);
+                    });
+                    detalleImg.parentElement.innerHTML += `
+                        <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 bg-gray-50">
+                            <i class="fas fa-image text-6xl mb-4"></i>
+                            <span class="text-lg">Sin imagen disponible</span>
+                        </div>
+                    `;
+                }
+            }
         }
 
         // Llenar datos
@@ -772,8 +802,8 @@ class ProductosManager {
         document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
         document.getElementById('detalleProductoPrecioVenta').textContent =
             `$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
-        document.getElementById('detalleProductoPrecioCompra').textContent =
-            `$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
+        // document.getElementById('detalleProductoPrecioCompra').textContent =
+        //     `$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
 
         // Mostrar modal
         this.currentProducto = producto;
