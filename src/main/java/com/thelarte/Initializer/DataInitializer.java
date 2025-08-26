@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -42,13 +43,21 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private SuplidorRepository suplidorRepository;
 
+    @Autowired
+    private Environment environment;
+
     @Override
     public void run(String... args) throws Exception {
-        // 1) Iniciar H2 TCP Server
-        startH2ServerIfNeeded();
+        // Only start H2 server in development profiles
+        if (isDevelopmentProfile()) {
+            // 1) Iniciar H2 TCP Server solo en desarrollo
+            startH2ServerIfNeeded();
 
-        // 2) Pequeña pausa para que arranque bien
-        Thread.sleep(2000);
+            // 2) Pequeña pausa para que arranque bien
+            Thread.sleep(2000);
+        } else {
+            logger.info("Skipping H2 server startup - not in development profile");
+        }
 
         // 3) Cargar datos de dominio
 //        seedEmpleados();
@@ -56,6 +65,14 @@ public class DataInitializer implements CommandLineRunner {
 //        seedAdminRoot();
 //        seedProductos();
 //        seedSuplidores();
+    }
+
+    private boolean isDevelopmentProfile() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        // Only start H2 if we're in dev profile, not railway or prod
+        return Arrays.stream(activeProfiles).anyMatch(profile -> 
+            profile.equals("dev") || profile.equals("development")
+        ) || activeProfiles.length == 0; // If no profile is set, assume development
     }
 
     private void startH2ServerIfNeeded() {
