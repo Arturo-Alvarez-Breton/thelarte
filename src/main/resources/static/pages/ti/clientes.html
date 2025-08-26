@@ -217,10 +217,10 @@
                             <span id="countEliminados" class="count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold">0</span>
                         </button>
                     </div>
-                    <button id="nuevoClienteBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base justify-center">
-                        <i class="fas fa-plus mr-2"></i>
-                        <span class="sm:inline">Nuevo Cliente</span>
-                    </button>
+<!--                    <button id="nuevoClienteBtn" class="bg-brand-brown text-white px-3 md:px-4 py-2 rounded-lg hover:bg-brand-light-brown flex items-center text-sm md:text-base justify-center">-->
+<!--                        <i class="fas fa-plus mr-2"></i>-->
+<!--                        <span class="sm:inline">Nuevo Cliente</span>-->
+<!--                    </button>-->
                 </div>
             </div>
             <div class="mb-4">
@@ -238,85 +238,6 @@
 <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
         <span class="visually-hidden">Cargando...</span>
-    </div>
-</div>
-
-<!-- Modal Nuevo/Editar Cliente -->
-<div id="modalCliente" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-2 md:p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
-            <div class="bg-brand-brown text-white p-4 md:p-6">
-                <div class="flex items-center justify-between">
-                    <h3 id="modalClienteTitle" class="text-lg md:text-xl font-bold">Nuevo Cliente</h3>
-                    <button onclick="cerrarModalCliente()" class="text-white hover:text-gray-300">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-            </div>
-
-            <form id="formCliente" class="p-4 md:p-6 space-y-4" novalidate>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                        <label for="clienteCedula" class="block text-sm font-medium text-gray-700 mb-1">Cédula o RNC *</label>
-                        <input type="text" id="clienteCedula" name="cedula" required placeholder="XXX-XXXXXXX-X o XXX-XXXXX-X"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <p id="clienteCedulaError" class="text-xs text-red-500 mt-1 hidden"></p>
-                    </div>
-                    <div>
-                        <label for="clienteNombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                        <input type="text" id="clienteNombre" name="nombre" required placeholder="Nombre"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <p id="clienteNombreError" class="text-xs text-red-500 mt-1 hidden"></p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                        <label for="clienteApellido" class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-                        <input type="text" id="clienteApellido" name="apellido" required placeholder="Apellido"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <p id="clienteApellidoError" class="text-xs text-red-500 mt-1 hidden"></p>
-                    </div>
-                    <div>
-                        <label for="clienteTelefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
-                        <input type="text" id="clienteTelefono" name="telefono" required placeholder="XXX-XXX-XXXX"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                        <p id="clienteTelefonoError" class="text-xs text-red-500 mt-1 hidden"></p>
-                    </div>
-                </div>
-                <div>
-                    <label for="clienteEmail" class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico *</label>
-                    <input type="email" id="clienteEmail" name="email" required placeholder="correo@dominio.com"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    <p id="clienteEmailError" class="text-xs text-red-500 mt-1 hidden"></p>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                        <label for="clienteProvincia" class="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
-                        <select id="clienteProvincia" name="provincia" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown" disabled>
-                            <option value="">Cargando provincias...</option>
-                        </select>
-                        <p id="clienteProvinciaError" class="text-xs text-red-500 mt-1 hidden"></p>
-                    </div>
-                </div>
-                <div>
-                    <label for="clienteDireccion" class="block text-sm font-medium text-gray-700 mb-1">Dirección Detallada *</label>
-                    <textarea id="clienteDireccion" name="direccion" required placeholder="Ej: Calle 10 #25, Ens. Naco, Santo Domingo" rows="3"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown resize-vertical"></textarea>
-                    <p id="clienteDireccionError" class="text-xs text-red-500 mt-1 hidden"></p>
-                </div>
-            </form>
-
-            <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
-                <button type="button" onclick="cerrarModalCliente()" class="w-full sm:w-auto px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
-                    Cancelar
-                </button>
-                <button type="submit" form="formCliente" class="w-full sm:w-auto px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
-                    <i id="btnClienteIcon" class="fas fa-plus mr-2"></i>
-                    <span id="btnClienteText">Crear Cliente</span>
-                </button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -338,10 +259,6 @@
             </div>
 
             <div class="bg-gray-50 px-4 md:px-6 py-4 flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3 border-t border-gray-200">
-<!--                <button onclick="editarClienteDesdeDetalle()" class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">-->
-<!--                    <i class="fas fa-edit mr-2"></i>-->
-<!--                    Editar-->
-<!--                </button>-->
                 <button onclick="cerrarModalVerCliente()" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium">
                     Cerrar
                 </button>
@@ -356,7 +273,7 @@
 <script src="/js/components/notifications.js" type="module"></script>
 <script src="/js/components/transactionWizard.js" type="module"></script>
 <script src="/js/services/transaccionService.js" type="module"></script>
-<script src="/js/admin/clientes.js" type="module"></script>
+<script src="/js/ti/clientes.js" type="module"></script>
 <script src="/js/admin/clientes-form-validacion.js" type="module"></script>
 <script src="/js/services/logoutHandler.js"></script>
 
