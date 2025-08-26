@@ -27,19 +27,8 @@ class ProductosContabilidadManager {
                     handler: 'productosContabilidadManager.verProducto',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-edit',
-                    handler: 'productosContabilidadManager.editProducto',
-                    className: 'text-green-600 hover:text-green-700',
-                    title: 'Editar'
-                },
-                {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'productosContabilidadManager.deleteProducto',
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
                 }
+                // Removed edit and delete actions for accounting module
             ],
             searchFields: ['nombre', 'tipo', 'descripcion', 'codigo'],
             idField: 'id',
@@ -556,34 +545,17 @@ class ProductosContabilidadManager {
             `;
         }
 
+        // For active products in accounting module, only show "Ver" button
         return `
             <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <button 
-                        data-id="${producto.id}" 
-                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
-                        title="Ver detalles"
-                    >
-                        <i class="fas fa-eye text-xs"></i>
-                        <span>Ver</span>
-                    </button>
-                    <button 
-                        data-id="${producto.id}" 
-                        class="edit-btn flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        title="Editar producto"
-                    >
-                        <i class="fas fa-edit text-xs"></i>
-                        <span>Editar</span>
-                    </button>
-                </div>
                 <div class="w-full">
                     <button 
                         data-id="${producto.id}" 
-                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium w-full"
-                        title="Eliminar producto"
+                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium w-full"
+                        title="Ver detalles"
                     >
-                        <i class="fas fa-trash-alt text-xs"></i>
-                        <span>Eliminar</span>
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver Detalles</span>
                     </button>
                 </div>
             </div>
@@ -614,6 +586,7 @@ class ProductosContabilidadManager {
             `;
         }
 
+        // For active products in accounting module, only show "Ver" button
         return `
             <div class="flex flex-wrap gap-1.5 justify-center">
                 <button 
@@ -622,23 +595,7 @@ class ProductosContabilidadManager {
                     title="Ver detalles"
                 >
                     <i class="fas fa-eye"></i>
-                    <span>Ver</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="edit-btn flex items-center gap-1 bg-blue-600 text-white px-2.5 py-1.5 rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
-                    title="Editar"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Editar</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
-                    title="Eliminar"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Eliminar</span>
+                    <span>Ver Detalles</span>
                 </button>
             </div>
         `;
@@ -668,6 +625,7 @@ class ProductosContabilidadManager {
             `;
         }
 
+        // For active products in accounting module, only show "Ver" button
         return `
             <div class="flex flex-wrap gap-2">
                 <button 
@@ -676,23 +634,7 @@ class ProductosContabilidadManager {
                     title="Ver detalles"
                 >
                     <i class="fas fa-eye"></i>
-                    <span>Detalles</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="edit-btn flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Editar"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Editar</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Eliminar"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Eliminar</span>
+                    <span>Ver Detalles</span>
                 </button>
             </div>
         `;
