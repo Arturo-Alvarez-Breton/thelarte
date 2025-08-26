@@ -876,7 +876,7 @@ class EmpleadosManager {
         document.getElementById('empleadoSalario').value = empleado.salario || '';
         document.getElementById('empleadoComision').value = empleado.comision != null ? empleado.comision : '';
         document.getElementById('empleadoFechaContratacion').value = empleado.fechaContratacion || '';
-        if (empleado.rol === 'COMERCIAL') {
+        if (empleado.rol === 'VENDEDOR') {
             document.getElementById('empleadoComisionContainer').classList.remove('hidden');
         } else {
             document.getElementById('empleadoComisionContainer').classList.add('hidden');
@@ -977,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('empleadoRol')?.addEventListener('change', function () {
         const rol = this.value;
         const comisionContainer = document.getElementById('empleadoComisionContainer');
-        if (rol === 'COMERCIAL') {
+        if (rol === 'VENDEDOR') {
             comisionContainer.classList.remove('hidden');
         } else {
             comisionContainer.classList.add('hidden');

@@ -64,8 +64,8 @@ function validateFormEmpleado(empleadoData) {
         isValid = false;
     }
 
-    // Validar comisión (solo para rol COMERCIAL)
-    if (empleadoData.rol === 'COMERCIAL') {
+    // Validar comisión (solo para rol VENDEDOR)
+    if (empleadoData.rol === 'VENDEDOR') {
         if (empleadoData.comision !== null && empleadoData.comision !== undefined) {
             if (empleadoData.comision < 0 || empleadoData.comision > 100) {
                 showEmpleadoError('empleadoComisionError', 'La comisión debe estar entre 0 y 100');
