@@ -179,10 +179,12 @@ export class TransactionWizard {
                 }
             };
         }
-        // Close button on the wizard header
-        const closeButton = this.wizardModal.querySelector('button[onclick*="closeTransactionWizard"]');
-        if (closeButton) {
-            closeButton.onclick = () => this.close();
+        // Close button on the wizard header - verificar que wizardModal existe
+        if (this.wizardModal) {
+            const closeButton = this.wizardModal.querySelector('button[onclick*="closeTransactionWizard"]');
+            if (closeButton) {
+                closeButton.onclick = () => this.close();
+            }
         }
     }
 

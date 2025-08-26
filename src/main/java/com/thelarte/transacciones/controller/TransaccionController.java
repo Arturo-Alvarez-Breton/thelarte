@@ -68,6 +68,30 @@ public class TransaccionController {
         return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
+    // Nuevo endpoint para transacciones filtradas y paginadas
+    @GetMapping("/filtered")
+    public ResponseEntity<List<TransaccionDTO>> obtenerTransaccionesFiltradas(
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        try {
+            List<Transaccion> transacciones = transaccionService.getTransaccionesFiltered(
+                tipo, estado, null, null, page, size);
+            
+            List<TransaccionDTO> dtos = transacciones.stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
+            
+            return new ResponseEntity<>(dtos, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Error al obtener transacciones filtradas: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<TransaccionDTO> obtenerPorId(@PathVariable Long id) {
         Optional<Transaccion> transaccion = transaccionService.obtenerPorId(id);
@@ -526,6 +550,34 @@ public class TransaccionController {
             return new ResponseEntity<>(transaccionService.toDTO(transaccionParcial), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // === ENDPOINTS PARA REPORTES ===
+
+    @GetMapping("/reportes/ventas-dia")
+    public ResponseEntity<Map<String, Object>> obtenerReporteVentasDelDia(
+            @RequestParam(required = false) String fecha) {
+        try {
+            Map<String, Object> reporte = transaccionService.obtenerReporteVentasDelDia(fecha);
+            return new ResponseEntity<>(reporte, HttpStatus.OK);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al obtener reporte de ventas diarias: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/reportes/productos-mas-vendidos")
+    public ResponseEntity<List<Map<String, Object>>> obtenerProductosMasVendidos(
+            @RequestParam(required = false) String fechaDesde,
+            @RequestParam(required = false) String fechaHasta,
+            @RequestParam(defaultValue = "5") Integer limite) {
+        try {
+            List<Map<String, Object>> productos = transaccionService.obtenerProductosMasVendidos(fechaDesde, fechaHasta, limite);
+            return new ResponseEntity<>(productos, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
