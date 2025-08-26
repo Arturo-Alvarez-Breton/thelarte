@@ -163,12 +163,7 @@
                     <span class="ml-3">Reportes</span>
                 </a>
             </li>
-            <li>
-                <a href="/pages/admin/config.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-cog flex-shrink-0 w-6 h-6"></i>
-                    <span class="ml-3">Configuración</span>
-                </a>
-            </li>
+
         </ul>
     </nav>
     <div class="mt-auto">
@@ -188,29 +183,9 @@
             </button>
         </div>
 
-        <!-- Quick Actions - Full width on desktop -->
-        <div class="flex-1 max-w-full">
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
-                <button data-action="open-wizard" data-type="COMPRA" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
-                    <i class="fas fa-shopping-cart text-base sm:text-lg lg:text-xl text-green-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs sm:text-sm font-medium text-green-800 text-center">Nueva Compra</span>
-                </button>
-
-                <button data-action="open-wizard" data-type="VENTA" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
-                    <i class="fas fa-cash-register text-base sm:text-lg lg:text-xl text-yellow-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs sm:text-sm font-medium text-yellow-800 text-center">Nueva Venta</span>
-                </button>
-
-                <button data-action="open-wizard" data-type="DEVOLUCION" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
-                    <i class="fas fa-undo text-base sm:text-lg lg:text-xl text-red-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs sm:text-sm font-medium text-red-800 text-center">Devolución</span>
-                </button>
-
-                <a href="/pages/contabilidad/reportes.html" class="quick-action flex flex-col items-center justify-center p-2 sm:p-3 lg:p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors group min-h-[70px] sm:min-h-[80px] lg:min-h-[90px]">
-                    <i class="fas fa-chart-line text-base sm:text-lg lg:text-xl text-blue-600 mb-1 sm:mb-2 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs sm:text-sm font-medium text-blue-800 text-center">Reportes</span>
-                </a>
-            </div>
+        <!-- Welcome Header - Will be populated by welcomeHeader.js -->
+        <div class="flex-1 max-w-full" id="welcome-header-container">
+            <!-- Welcome header content will be dynamically inserted here -->
         </div>
     </header>
 
@@ -251,6 +226,7 @@
 
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
+<script src="/js/components/welcomeHeader.js" type="module"></script>
 <script src="/js/components/stockAlertsWidget.js"></script>
 <script src="/js/components/inventoryDashboard.js"></script>
 <script src="/js/components/salesDashboard.js"></script>
