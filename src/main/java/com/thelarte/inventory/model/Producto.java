@@ -16,8 +16,11 @@ public class Producto {
     private String tipo;
     private String descripcion;
     private float itbis;
+    @Column(name = "precio_compra")
     private BigDecimal precioCompra;
+    @Column(name = "precio_venta")
     private BigDecimal precioVenta;
+    @Column(name = "foto_url")
     private String fotoURL;
     private boolean eliminado = false;
     @Column(name = "estado")
