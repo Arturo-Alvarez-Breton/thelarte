@@ -85,7 +85,6 @@ export function imprimirFactura(transaccion) {
                 </div>
                 <div style="flex: 1; text-align: right;">
                     <p style="margin: 3px 0; font-size: 14px;"><strong>ThelArte</strong></p>
-                    <p style="margin: 3px 0; font-size: 14px;"><strong>RNC:</strong> XXXXXXXX</p>
                     <p style="margin: 3px 0; font-size: 14px;"><strong>Dirección:</strong>Ave. Juan Pablo Duarte esq. la salle Plaza Zona Rosa, Santiago de los Caballeros 51000</p>
                     <p style="margin: 3px 0; font-size: 14px;"><strong>Tel:</strong> 809-581-9319</p>
                 </div>
@@ -136,7 +135,7 @@ export function imprimirFactura(transaccion) {
             <!-- Mensaje de agradecimiento -->
             <div style="text-align: center; margin: 10px 0; background-color: #f7f7f7; padding: 10px; border-radius: 4px;">
                 <p style="font-size: 16px; font-weight: bold; margin: 0 0 5px 0;">¡Gracias por su compra!</p>
-                <p style="font-size: 13px; color: #555; margin: 0;">Para cualquier consulta contacte al (809) XXX-XXXX</p>
+                <p style="font-size: 13px; color: #555; margin: 0;">Para cualquier consulta contacte al 809-581-9319</p>
                 <p style="font-size: 11px; margin-top: 8px; color: #666;">Los productos adquiridos tienen garantía según lo establecido por el fabricante. Para reclamos presente esta factura.</p>
             </div>
             

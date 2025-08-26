@@ -2546,10 +2546,10 @@ export class TransactionWizard {
                     <label class="block text-sm font-medium text-gray-700 mb-1">RNC</label>
                     <input type="text" id="compraRncProveedor"
                            placeholder=""
-                           maxlength="10"
+                           maxlength="11"
                            oninput="restrictToNumbersOnly(this); formatCedulaRnc(this);"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    <p class="text-xs text-gray-500 mt-1">Formato RNC: 00-0000000 o 000-0000000-0 (opcional)</p>
+                    <p class="text-xs text-gray-500 mt-1">Formato RNC: 000-00000-0 (opcional)</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
@@ -3091,12 +3091,14 @@ function formatCedulaRnc(input) {
 
     // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
     if (digits.length <= 9) {
-        // Formato RNC: XX-XXXXXXX
+        // Formato RNC: XXX-XXXXX-X
         digits = digits.slice(0, 9);
-        let part1 = digits.slice(0, 2);
-        let part2 = digits.slice(2);
+        let part1 = digits.slice(0, 3);      // Tipo persona
+        let part2 = digits.slice(3, 8);      // Secuencia
+        let part3 = digits.slice(8, 9);      // Dígito verificador
         let formatted = part1;
         if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
         input.value = formatted;
     } else {
         // Formato Cédula: XXX-XXXXXXX-X
@@ -3133,12 +3135,14 @@ window.formatCedulaRnc = function(input) {
 
     // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
     if (digits.length <= 9) {
-        // Formato RNC: XX-XXXXXXX
+        // Formato RNC: XXX-XXXXX-X
         digits = digits.slice(0, 9);
-        let part1 = digits.slice(0, 2);
-        let part2 = digits.slice(2);
+        let part1 = digits.slice(0, 3);      // Tipo persona
+        let part2 = digits.slice(3, 8);      // Secuencia
+        let part3 = digits.slice(8, 9);      // Dígito verificador
         let formatted = part1;
         if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
         input.value = formatted;
     } else {
         // Formato Cédula: XXX-XXXXXXX-X
