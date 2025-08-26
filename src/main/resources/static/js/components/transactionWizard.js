@@ -119,8 +119,7 @@ export class TransactionWizard {
                     }
                 ];
                 break;
-            case 'DEVOLUCION_VENTA':
-            case 'DEVOLUCION_COMPRA':
+            case 'DEVOLUCION':
                 this.steps = [
                     {
                         title: 'Tipo de Devolución',
@@ -202,14 +201,18 @@ export class TransactionWizard {
             productosADevolver: [],
         };
 
-        // Initialize steps based on transaction type
-        if (type) {
+        // Si es DEVOLUCION_VENTA o DEVOLUCION_COMPRA, fuerza los pasos de devolución desde el inicio
+        if (type === 'DEVOLUCION_VENTA' || type === 'DEVOLUCION_COMPRA') {
             this.initStepsForType(type);
+            this.currentStep = 0; // Paso inicial (Tipo de Devolución)
+        } else if (type) {
+            this.initStepsForType(type);
+            this.currentStep = 0;
         } else {
             this.initSteps();
+            this.currentStep = 0;
         }
 
-        this.currentStep = 0;
         this.updateWizardUI();
         this.wizardModal.classList.remove('hidden');
     }
@@ -218,6 +221,7 @@ export class TransactionWizard {
         this.wizardModal.classList.add('hidden');
     }
 
+    // --- Tu función nextStep ---
     async nextStep() {
         const currentStepHandler = this.steps[this.currentStep];
         if (currentStepHandler.onNext) {
@@ -233,6 +237,7 @@ export class TransactionWizard {
         }
     }
 
+// --- Tu función prevStep ---
     prevStep() {
         if (this.currentStep > 0) {
             this.currentStep--;
@@ -240,6 +245,7 @@ export class TransactionWizard {
         }
     }
 
+// --- Actualización de updateWizardUI para incluir los circulitos ---
     async updateWizardUI() {
         const currentStepData = this.steps[this.currentStep];
         if (this.wizardSubtitle) {
@@ -252,7 +258,10 @@ export class TransactionWizard {
             }
         }
 
-        // Update step indicators
+        // Renderiza los pasos/circulitos dinámicamente
+        this.renderWizardSteps();
+
+        // Update step indicators (legacy, si tienes .wizard-step en el HTML)
         document.querySelectorAll('.wizard-step').forEach((step, index) => {
             if (index === this.currentStep) {
                 step.classList.add('active');
@@ -378,6 +387,7 @@ export class TransactionWizard {
                            class="w-full px-3 py-2 border rounded">
                 </div>
             </div>
+            <div id="nuevoClienteErrorMsg" class="mt-2 text-red-600 text-sm font-semibold"></div>
             <div class="mt-4 flex space-x-2">
                 <button type="button" id="guardarNuevoCliente" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Guardar Cliente</button>
                 <button type="button" id="cancelarNuevoCliente" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancelar</button>
@@ -464,7 +474,25 @@ export class TransactionWizard {
                         return;
                     }
 
+                    // === VALIDACIÓN DUPLICADO ===
                     try {
+                        // Obtén todos los clientes (activos y eliminados)
+                        const allClientes = await this.transaccionService.getClientes();
+                        const cedulaExists = allClientes.some(cliente => cliente.cedula === cedula);
+
+                        const errorMsgDiv = document.getElementById('nuevoClienteErrorMsg');
+                        if (cedulaExists) {
+                            // Muestra el mensaje debajo del formulario
+                            if (errorMsgDiv) {
+                                errorMsgDiv.textContent = 'Ya existe un cliente con este número de cédula. Por favor, verifica los datos e intenta nuevamente.';
+                            }
+                            window.showToast('Ya existe un cliente con este número de cédula.', 'error');
+                            return;
+                        } else {
+                            if (errorMsgDiv) errorMsgDiv.textContent = '';
+                        }
+
+                        // Crear cliente
                         const nuevoCliente = await this.transaccionService.createCliente({
                             cedula, nombre, apellido, telefono, email, direccion
                         });
@@ -477,7 +505,12 @@ export class TransactionWizard {
                         select.value = nuevoCliente.cedula;
                         this.transactionData.cliente = nuevoCliente;
                         nuevoClienteForm.classList.add('hidden');
+                        if (errorMsgDiv) errorMsgDiv.textContent = '';
                     } catch (err) {
+                        const errorMsgDiv = document.getElementById('nuevoClienteErrorMsg');
+                        if (errorMsgDiv) {
+                            errorMsgDiv.textContent = err.message || 'Error al crear cliente. Verifica los datos o si la cédula ya existe.';
+                        }
                         window.showToast('Error al crear cliente: ' + (err.message || err), 'error');
                     }
                 };
@@ -1449,22 +1482,23 @@ export class TransactionWizard {
 
     getVentaStep2Content() {
         return `
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-brand-brown">Productos a Vender</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Producto</label>
-                        <input type="text" id="ventaProductoSearch" placeholder="Buscar por nombre o código..." 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
-                        <select id="ventaProductoSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                            <option value="">Seleccionar producto</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-brand-brown">Productos a Vender</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Producto</label>
+                    <input type="text" id="ventaProductoSearch" placeholder="Buscar por nombre o código..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Producto</label>
+                    <select id="ventaProductoSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <option value="">Seleccionar producto</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                    <div class="flex flex-col">
                         <div class="flex">
                             <input type="number" id="ventaCantidad" min="1" value="1" 
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
@@ -1473,29 +1507,31 @@ export class TransactionWizard {
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
-                    </div>
-                </div>
-                
-                <div id="ventaProductsList" class="space-y-2">
-                    <!-- Selected products will appear here -->
-                </div>
-                
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium">Subtotal:</span>
-                        <span id="ventaSubtotal" class="font-bold">${this.formatCurrency(0)}</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium">Impuestos:</span>
-                        <span id="ventaImpuestos" class="font-bold">${this.formatCurrency(0)}</span>
-                    </div>
-                    <div class="flex justify-between items-center text-lg">
-                        <span class="font-bold">Total:</span>
-                        <span id="ventaTotal" class="font-bold text-brand-brown">${this.formatCurrency(0)}</span>
+                        <span id="ventaCantidadMsg" class="text-xs text-red-600 mt-1" style="display:none;"></span>
                     </div>
                 </div>
             </div>
-        `;
+            
+            <div id="ventaProductsList" class="space-y-2">
+                <!-- Selected products will appear here -->
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">Subtotal:</span>
+                    <span id="ventaSubtotal" class="font-bold">${this.formatCurrency(0)}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">Impuestos:</span>
+                    <span id="ventaImpuestos" class="font-bold">${this.formatCurrency(0)}</span>
+                </div>
+                <div class="flex justify-between items-center text-lg">
+                    <span class="font-bold">Total:</span>
+                    <span id="ventaTotal" class="font-bold text-brand-brown">${this.formatCurrency(0)}</span>
+                </div>
+            </div>
+        </div>
+    `;
     }
 
     async loadVentaStep2Data() {
@@ -1544,6 +1580,10 @@ export class TransactionWizard {
     async addVentaProduct() {
         const productSelect = document.getElementById('ventaProductoSelect');
         const cantidadInput = document.getElementById('ventaCantidad');
+        const cantidadMsg = document.getElementById('ventaCantidadMsg');
+
+        // Al intentar agregar, limpia el mensaje (salvo error actual)
+        if (cantidadMsg) cantidadMsg.style.display = 'none';
 
         if (!productSelect.value || !cantidadInput.value) {
             window.showToast('Selecciona un producto y cantidad válida.', 'error');
@@ -1556,7 +1596,6 @@ export class TransactionWizard {
             return;
         }
 
-        // Find product details from the loaded products
         const productId = parseInt(productSelect.value);
         try {
             const productos = await this.transaccionService.getProductosParaVenta();
@@ -1567,14 +1606,25 @@ export class TransactionWizard {
                 return;
             }
 
-            // --- NUEVO: stock total = disponible en tienda + almacen ---
             const stockDisponible = Number(selectedProduct.cantidadDisponible) || 0;
             const stockAlmacen = Number(selectedProduct.cantidadAlmacen) || 0;
             const stockTotal = stockDisponible + stockAlmacen;
 
-            if (cantidad > stockTotal) {
-                window.showToast(`Cantidad excede el stock total (Tienda: ${stockDisponible}, Almacén: ${stockAlmacen})`, 'error');
+            const cantidadEnVenta = this.transactionData.lineas
+                .filter(line => line.productoId === selectedProduct.id)
+                .reduce((sum, line) => sum + (parseInt(line.cantidad) || 0), 0);
+
+            const nuevaCantidadTotal = cantidadEnVenta + cantidad;
+
+            if (nuevaCantidadTotal > stockTotal) {
+                if (cantidadMsg) {
+                    cantidadMsg.textContent = `No puedes agregar más de ${stockTotal} unidades disponibles (ya tienes ${cantidadEnVenta} en la venta).`;
+                    cantidadMsg.style.display = 'block';
+                }
+                window.showToast(`No puedes agregar más de ${stockTotal} unidades disponibles (ya tienes ${cantidadEnVenta} en la venta).`, 'error');
                 return;
+            } else {
+                if (cantidadMsg) cantidadMsg.style.display = 'none';
             }
 
             const existingLineIndex = this.transactionData.lineas.findIndex(line => line.productoId === selectedProduct.id);
@@ -1600,6 +1650,7 @@ export class TransactionWizard {
 
             cantidadInput.value = 1;
             productSelect.value = '';
+            if (cantidadMsg) cantidadMsg.style.display = 'none';
             this.updateVentaProductsList();
             this.updateVentaTotals();
             window.showToast('Producto agregado exitosamente.', 'success');
@@ -3041,6 +3092,36 @@ export class TransactionWizard {
         }
         return true;
     }
+    renderWizardSteps() {
+        const stepsTitles = this.steps.map(s => s.title || 'Paso');
+        const container = document.getElementById('wizardSteps');
+        if (!container) return;
+
+        container.innerHTML = stepsTitles.map((title, idx) => {
+            const isActive = idx === this.currentStep;
+            const isComplete = idx < this.currentStep;
+            const isPending = idx > this.currentStep;
+
+            return `
+        <div class="flex flex-col items-center min-w-[60px]">
+            <div class="
+                w-10 h-10 flex items-center justify-center rounded-full
+                transition-all duration-150
+                ${isActive ? 'bg-green-600 shadow-lg ring-4 ring-green-300 text-white text-xl font-bold scale-110' : ''}
+                ${isComplete ? 'bg-green-500 text-white font-bold' : ''}
+                ${isPending ? 'bg-gray-200 text-gray-500' : ''}
+            ">
+                ${idx + 1}
+            </div>
+            <div class="mt-2 text-xs
+                ${isActive ? 'text-green-700 font-bold' : ''}
+                ${isComplete ? 'text-green-600 font-medium' : ''}
+                ${isPending ? 'text-gray-400' : ''}
+            ">${title}</div>
+        </div>
+        `;
+        }).join('');
+    }
 
     getCompraStep3Content() {
         return `
@@ -3206,6 +3287,15 @@ window.validateEmail = function(email) {
     return emailRegex.test(email);
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const productSelect = document.getElementById('ventaProductoSelect');
+    const cantidadMsg = document.getElementById('ventaCantidadMsg');
+    if (productSelect && cantidadMsg) {
+        productSelect.addEventListener('change', () => {
+            cantidadMsg.style.display = 'none';
+        });
+    }
+});
 
 // Make wizard globally accessible for HTML onclicks
 window.transactionWizard = new TransactionWizard();
