@@ -27,18 +27,6 @@ class ProductosManager {
                     handler: 'productosManager.verProducto',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-edit',
-                    handler: 'productosManager.editProducto',
-                    className: 'text-green-600 hover:text-green-700',
-                    title: 'Editar'
-                },
-                {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'productosManager.deleteProducto',
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
                 }
             ],
             searchFields: ['nombre', 'tipo', 'descripcion', 'codigo'],
