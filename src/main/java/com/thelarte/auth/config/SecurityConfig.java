@@ -43,8 +43,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public routes - no authentication required
                 .requestMatchers("/login", "/register", "/logout", "/pages/login.html", "/pages/payment-success.html").permitAll()
-                .requestMatchers("/", "/static/**", "/css/**", "/js/**", "/images/**", "/uploads/**").permitAll()
+                .requestMatchers("/", "/static/**", "/css/**", "/js/**", "/images/**", "/uploads/**", "/favicon.ico").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+
+                // Public API endpoints
+                .requestMatchers("/api/auth/user-info", "/api/finanzas/resumen").permitAll()
 
                 // Role-based page access
                 .requestMatchers("/pages/admin/**").hasRole("ADMINISTRADOR")
@@ -59,6 +62,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/suplidores/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR")
                 .requestMatchers("/api/productos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
                 .requestMatchers("/api/transacciones/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD", "CAJERO")
+                .requestMatchers("/api/clientes/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR")
+                .requestMatchers("/api/movimientos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CONTABILIDAD")
 
                 .requestMatchers("/api/dashboard/validate").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
 

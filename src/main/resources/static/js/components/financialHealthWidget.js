@@ -151,7 +151,13 @@ class FinancialHealthWidget {
 
     async loadFromFinancialEndpoint() {
         try {
-            const response = await fetch('/api/finanzas/resumen');
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch('/api/finanzas/resumen', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (response.ok) {
                 return await response.json();
             }
@@ -165,7 +171,13 @@ class FinancialHealthWidget {
     async calculateFromTransactions() {
         try {
             // Cargar transacciones
-            const response = await fetch('/api/transacciones');
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch('/api/transacciones', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
                 throw new Error('Failed to load transactions');
             }
