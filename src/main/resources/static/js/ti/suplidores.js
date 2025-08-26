@@ -35,18 +35,6 @@ class SuplidoresManager {
                     handler: 'suplidoresManager.verSuplidor',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-edit',
-                    handler: 'suplidoresManager.editSuplidor',
-                    className: 'text-green-600 hover:text-green-700',
-                    title: 'Editar'
-                },
-                {
-                    icon: 'fas fa-user-slash',
-                    handler: 'suplidoresManager.toggleSuplidorStatus',
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Desactivar/Activar suplidor'
                 }
             ],
             searchFields: ['nombre', 'ciudad', 'pais', 'email', 'rNC'],
@@ -65,7 +53,6 @@ class SuplidoresManager {
     }
 
     setupEventListeners() {
-        document.getElementById('nuevoSuplidorBtn')?.addEventListener('click', () => this.newSuplidor());
         document.getElementById('suplidorSearchInput')?.addEventListener('input', () => this.filterSuplidores());
         document.getElementById('formSuplidor')?.addEventListener('submit', (e) => this.handleSubmitSuplidor(e));
 
@@ -79,10 +66,6 @@ class SuplidoresManager {
             const id = btn.dataset.id;
             if (btn.classList.contains('ver-btn')) {
                 this.verSuplidor(id);
-            } else if (btn.classList.contains('edit-btn')) {
-                this.editSuplidor(id);
-            } else if (btn.classList.contains('delete-btn')) {
-                this.toggleSuplidorStatus(id);
             }
         });
 
@@ -418,15 +401,6 @@ class SuplidoresManager {
                     </div>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">Sin suplidores</h3>
                     <p class="text-gray-600 mb-6">${emptyMessage}</p>
-                    ${!searchTerm ? `
-                        <button onclick="suplidoresManager.newSuplidor()" class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                            <i class="fas fa-plus mr-2"></i>Agregar Primer Suplidor
-                        </button>
-                    ` : `
-                        <button onclick="document.getElementById('suplidorSearchInput').value = ''; suplidoresManager.filterSuplidores();" class="text-brand-brown hover:text-brand-light-brown">
-                            <i class="fas fa-times mr-2"></i>Limpiar búsqueda
-                        </button>
-                    `}
                 </div>
             `;
             return;
@@ -441,13 +415,7 @@ class SuplidoresManager {
             const ubicacion = [s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A';
             const ubicacionTrunc = truncate(ubicacion, 24);
             const emailTrunc = truncate(s.email || 'N/A', 24);
-
-            // Determinar si el suplidor está activo o inactivo
             const isActive = s.activo !== false;
-            const actionButtonText = isActive ? 'Eliminar' : 'Restaurar';
-            const actionButtonIcon = isActive ? 'fas fa-trash-alt' : 'fas fa-undo';
-            const actionButtonClass = isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700';
-
             return `
                 <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto ${!isActive ? 'opacity-75 border-l-4 border-red-400' : ''}">
                     <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
@@ -466,15 +434,6 @@ class SuplidoresManager {
                     <div class="flex flex-wrap gap-2 mt-auto">
                         <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
                             <i class="fas fa-eye"></i> Detalles
-                        </button>
-                        ${isActive ? `
-                            <button data-id="${s.id}" class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-xs">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                        ` : ''}
-                        <button data-id="${s.id}" class="delete-btn flex items-center gap-2 ${actionButtonClass} text-white px-3 py-2 rounded-lg transition-colors shadow-sm text-xs">
-                            <i class="${actionButtonIcon}"></i> 
-                            <span>${actionButtonText}</span>
                         </button>
                     </div>
                 </div>
