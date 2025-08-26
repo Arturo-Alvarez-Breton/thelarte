@@ -278,7 +278,7 @@ class AuthManager {
         } else if (roles.includes('TI')) {
             return '/pages/ti/usuarios.html';
         } else if (roles.includes('CONTABILIDAD')) {
-            return '/pages/contabilidad/reportes.html';
+            return '/pages/contabilidad/transacciones.html';
         } else if (roles.includes('CAJERO')) {
             return '/pages/cajero/transacciones.html';
         } else if (roles.includes('VENDEDOR')) {
