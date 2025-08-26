@@ -111,7 +111,7 @@ class StockAlertsWidget {
                                 <option value="low">Bajo stock (1-5)</option>
                                 <option value="only_almacen">Solo en almacén</option>
                                 <option value="only_tienda">Solo en tienda</option>
-                                <option value="damaged">Con unidades dañadas</option>
+<!--                                <option value="damaged">Con unidades dañadas</option>-->
 <!--                                <option value="reparacion">En reparación</option>-->
 <!--                                <option value="desbalanceado">Distribución desbalanceada</option>-->
                             </select>
@@ -154,7 +154,7 @@ class StockAlertsWidget {
 
                 const tienda = product.cantidadDisponible || 0;
                 const almacen = product.cantidadAlmacen || 0;
-                const dañados = product.cantidadDañados || 0;
+                const dañados = product.cantidadDanada || 0;
                 const enReparacion = product.cantidadReparacion || 0;
                 const totalStock = tienda + almacen + dañados + enReparacion;
 
@@ -214,7 +214,9 @@ class StockAlertsWidget {
         // Aplicar filtros
         this.filteredData = this.data.filter(product => {
             const totalStock = (product.cantidadDisponible || 0) + (product.cantidadAlmacen || 0);
-            
+            const dañados = product.cantidadDañada || product.cantidadDanados || 0;
+            const enReparacion = product.cantidadReparacion || 0;
+
             // Filtro por tipo
             if (tipo && product.tipo !== tipo) return false;
             
@@ -224,11 +226,16 @@ class StockAlertsWidget {
             // Filtro por estado de stock
             if (estado === 'zero' && totalStock > 0) return false;
             if (estado === 'low' && (totalStock === 0 || totalStock > 5)) return false;
-            if (estado === 'only_almacen' && (product.cantidadAlmacen === 0 || product.cantidadDisponible > 0)) return false;
-            if (estado === 'only_tienda' && (product.cantidadDisponible === 0 || product.cantidadAlmacen > 0)) return false;
-            if (estado === 'damaged' && product.cantidadDañados === 0) return false;
-            if (estado === 'reparacion' && product.cantidadReparacion === 0) return false;
-            if (estado === 'desbalanceado' && (product.cantidadDisponible / totalStock > 0.8 && product.cantidadAlmacen / totalStock > 0.8)) return false;
+            if (estado === 'only_almacen' && ((product.cantidadAlmacen || 0) === 0 || (product.cantidadDisponible || 0) > 0)) return false;
+            if (estado === 'only_tienda' && ((product.cantidadDisponible || 0) === 0 || (product.cantidadAlmacen || 0) > 0)) return false;
+            if (estado === 'damaged' && dañados === 0) return false;
+            if (estado === 'reparacion' && enReparacion === 0) return false;
+            if (estado === 'desbalanceado') {
+                if (totalStock === 0) return false;
+                const porcentajeTienda = (product.cantidadDisponible || 0) / totalStock;
+                const porcentajeAlmacen = (product.cantidadAlmacen || 0) / totalStock;
+                if (porcentajeTienda <= 0.8 && porcentajeAlmacen <= 0.8) return false;
+            }
 
             return true;
         });
@@ -261,8 +268,8 @@ class StockAlertsWidget {
             if (stockB === 0 && stockA > 0) return 1;
 
             // Productos con unidades dañadas tienen segunda prioridad
-            const dañadosA = a.cantidadDañados || 0;
-            const dañadosB = b.cantidadDañados || 0;
+            const dañadosA = a.cantidadDanada || 0;
+            const dañadosB = b.cantidadDanada || 0;
             if (dañadosA > 0 && dañadosB === 0) return -1;
             if (dañadosB > 0 && dañadosA === 0) return 1;
 
@@ -279,7 +286,7 @@ class StockAlertsWidget {
         listContainer.innerHTML = sortedData.map(product => {
             const stockDisponible = product.cantidadDisponible || 0;
             const stockAlmacen = product.cantidadAlmacen || 0;
-            const dañados = product.cantidadDañados || 0;
+            const dañados = product.cantidadDañada || 0;
             const enReparacion = product.cantidadReparacion || 0;
             const totalStock = stockDisponible + stockAlmacen + dañados + enReparacion;
             const totalUtilizable = stockDisponible + stockAlmacen;
