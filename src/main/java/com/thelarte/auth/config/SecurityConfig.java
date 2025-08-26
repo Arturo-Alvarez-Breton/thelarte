@@ -57,7 +57,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/**").hasAnyRole("ADMINISTRADOR", "TI")
                 .requestMatchers("/api/empleados/**").hasAnyRole("ADMINISTRADOR", "TI")
                 .requestMatchers("/api/suplidores/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR")
-                .requestMatchers("/api/productos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO")
+                .requestMatchers("/api/productos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
                 .requestMatchers("/api/transacciones/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD", "CAJERO")
                 .requestMatchers("/api/reportes/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD")
                 .requestMatchers("/api/dashboard/validate").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
