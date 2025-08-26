@@ -179,7 +179,77 @@
   </div>
   
   <!-- Load authentication scripts -->
-  <script src="/js/auth-manager.js"></script>
+      <script>
+        // Debug login process
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== LOGIN DEBUG ===');
+            console.log('API_BASE_URL:', window.API_BASE_URL || 'http://localhost:8080');
+            console.log('Current localStorage:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                console.log(`${key}: ${localStorage.getItem(key)}`);
+            }
+        });
+
+        // Manual login test function
+        window.testLogin = async function(username, password) {
+            console.log('=== TESTING LOGIN ===');
+            console.log('Username:', username);
+            console.log('Password:', password);
+
+            try {
+                const loginUrl = `${window.API_BASE_URL || ''}/login`;
+                console.log('Login URL:', loginUrl);
+
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                console.log('Login response status:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Login successful:', data);
+
+                    // Store the token
+                    localStorage.setItem('jwt_token', data.token);
+                    localStorage.setItem('userEmail', data.username);
+                    localStorage.setItem('userRole', data.role);
+
+                    console.log('Token stored successfully');
+                    return data;
+                } else {
+                    const errorText = await response.text();
+                    console.error('Login failed:', response.status, errorText);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                return null;
+            }
+        };
+
+        // Quick login functions for testing
+        window.loginAsAdmin = function() {
+            console.log('Attempting login as edwinb/1234...');
+            testLogin('edwinb', '1234');
+        };
+
+        window.loginAsJean = function() {
+            console.log('Attempting login as jeanp/1234...');
+            testLogin('jeanp', '1234');
+        };
+
+        window.loginAsArturo = function() {
+            console.log('Attempting login as arturob/1234...');
+            testLogin('arturob', '1234');
+        };
+    </script>
+    <script src="/js/auth-manager.js"></script>
   <script src="/js/login-handler.js"></script>
   <script src="/js/pages/login.js"></script>
   <script>

@@ -6,7 +6,8 @@ class AuthManager {
     constructor() {
         this.token = localStorage.getItem('jwt_token') || localStorage.getItem('authToken');
         this.userInfo = null;
-        this.initializeAuth();
+        // Don't initialize automatically - let pages call it manually
+        console.log('AuthManager: Created with token:', this.token ? 'Present' : 'Missing');
     }
 
     /**
@@ -300,23 +301,15 @@ class AuthManager {
 // Initialize global auth manager
 const authManager = new AuthManager();
 
-// Auto-check page access when DOM is loaded
+// Auto-check page access when DOM is loaded - DISABLED FOR DEBUGGING
 document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        if (authManager.token) {
-            await authManager.validateToken();
-        }
-        // Only check page access if we're not on login page
-        if (window.location.pathname !== '/pages/login.html') {
-            authManager.checkPageAccess();
-        }
-    } catch (error) {
-        console.error('Authentication check failed:', error);
-        // Only redirect if we're not already on login page
-        if (window.location.pathname !== '/pages/login.html') {
-            authManager.redirectToLogin();
-        }
-    }
+    console.log('AuthManager: Page loaded, but skipping automatic validation for debugging');
+
+    // Just log current state without validation
+    console.log('AuthManager: Current token:', authManager.token ? 'Present' : 'Missing');
+    console.log('AuthManager: Current page:', window.location.pathname);
+
+    // Don't validate or check access automatically - let pages handle it manually
 });
 
 // Export for global use

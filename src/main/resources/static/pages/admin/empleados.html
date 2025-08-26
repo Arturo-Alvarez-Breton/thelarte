@@ -179,7 +179,7 @@
     </div>
 </aside>
 
-<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <div class="flex-1 flex flex-col min-w-0 lg:ml-0">
     <header class="bg-white shadow p-2 md:p-4 flex justify-between items-center">
         <!-- Mobile hamburger menu -->
         <div class="flex items-center">
@@ -196,6 +196,11 @@
                 <i class="fas fa-pencil mr-2 hidden sm:inline"></i>
                 <span class="hidden sm:inline">Modo </span>Administrador
             </div>
+            <!-- Debug buttons -->
+            <button onclick="showDebugGuide()" class="bg-purple-500 text-white px-2 py-1 rounded text-xs">Debug Guide</button>
+            <button onclick="testServerConnection()" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Test Server</button>
+            <button onclick="clearAndReload()" class="bg-red-500 text-white px-2 py-1 rounded text-xs">Clear & Reload</button>
+            <button onclick="testAuthFlow()" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Test Auth</button>
         </div>
     </header>
 
@@ -375,7 +380,7 @@
 </div>
 
 <script>
-    // Debug script
+    // Debug script - NON-INTRUSIVE
     document.addEventListener('DOMContentLoaded', function() {
         console.log('=== DEBUG EMPLEADOS PAGE ===');
         console.log('LocalStorage contents:');
@@ -395,11 +400,160 @@
             userRole: userRole || 'Not set'
         });
 
-        if (!jwtToken && !authToken) {
-            console.warn('No authentication tokens found - redirecting to login');
-            window.location.href = '/pages/login.html';
-        }
+        // Don't redirect automatically - just log the status
+        console.log('Page will load regardless of token status for debugging');
     });
+
+    // Manual token validation function
+    window.validateTokenManual = async function() {
+        console.log('Manual token validation requested');
+        if (typeof authManager !== 'undefined' && authManager.token) {
+            try {
+                const result = await authManager.validateToken();
+                console.log('Token validation result:', result);
+                return result;
+            } catch (error) {
+                console.error('Token validation failed:', error);
+                return false;
+            }
+        } else {
+            console.warn('No auth manager or token available');
+            return false;
+        }
+    };
+
+    // Test API call function
+    window.testApiCall = async function() {
+        console.log('Testing API call to empleados...');
+        try {
+            const response = await fetch('/api/empleados/todos', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log('API Response status:', response.status);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('API Response data:', data);
+                return data;
+            } else {
+                console.error('API call failed:', response.status, response.statusText);
+                return null;
+            }
+        } catch (error) {
+            console.error('API call error:', error);
+            return null;
+        }
+    };
+
+    // Clear all localStorage and reload
+    window.clearAndReload = function() {
+        console.log('Clearing all localStorage...');
+        localStorage.clear();
+        console.log('Reloading page...');
+        window.location.reload();
+    };
+
+    // Test complete authentication flow
+    window.testAuthFlow = async function() {
+        console.log('=== TESTING COMPLETE AUTH FLOW ===');
+
+        // 1. Check tokens
+        const jwtToken = localStorage.getItem('jwt_token');
+        const authToken = localStorage.getItem('authToken');
+        console.log('1. Token check:', { jwtToken: !!jwtToken, authToken: !!authToken });
+
+        // 2. Test auth manager
+        if (typeof authManager !== 'undefined') {
+            console.log('2. Auth manager exists:', !!authManager);
+            console.log('   - Token:', authManager.token ? 'Present' : 'Missing');
+        } else {
+            console.log('2. Auth manager NOT loaded');
+        }
+
+        // 3. Test API call
+        console.log('3. Testing API call...');
+        const apiResult = await testApiCall();
+
+        return {
+            hasJwtToken: !!jwtToken,
+            hasAuthToken: !!authToken,
+            authManagerLoaded: typeof authManager !== 'undefined',
+            apiCallSuccess: apiResult !== null
+        };
+    };
+
+    // Test server connectivity
+    window.testServerConnection = async function() {
+        console.log('=== TESTING SERVER CONNECTION ===');
+        try {
+            const response = await fetch('/api/auth/user-info', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('jwt_token') || 'test'}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log('Server response:', response.status);
+            if (response.status === 401) {
+                console.log('Server is responding, but authentication failed');
+                return { connected: true, authenticated: false };
+            } else if (response.ok) {
+                console.log('Server is responding and authenticated');
+                return { connected: true, authenticated: true };
+            } else {
+                console.log('Server responded with error:', response.status);
+                return { connected: true, authenticated: false, error: response.status };
+            }
+        } catch (error) {
+            console.error('Server connection failed:', error);
+            return { connected: false, error: error.message };
+        }
+    };
+
+    // Step-by-step debugging guide
+    window.showDebugGuide = function() {
+        console.log(`
+=== DEBUGGING GUIDE ===
+1. First, test server connection:
+   - Run: testServerConnection()
+   - Should return {connected: true} if server is up
+
+2. Check if you have a token:
+   - Open browser console (F12)
+   - Look for "jwt_token" or "authToken" in localStorage
+
+3. If no token, login first:
+   - Go to /pages/login.html
+   - Use credentials: edwinb / 1234
+   - Check console for login success message
+
+4. Test the API:
+   - Run: testApiCall()
+   - Should return employee data or null
+
+5. Test complete flow:
+   - Run: testAuthFlow()
+   - Check all components are working
+
+6. Manual token validation:
+   - Run: validateTokenManual()
+   - Should validate with server
+
+If API calls fail with 401:
+- Token might be expired or invalid
+- Clear localStorage and login again
+
+If API calls fail with 500:
+- Server error, check server logs
+
+If server connection fails:
+- Server might be down
+- Check if you're on the correct URL
+- Check network connectivity
+        `);
+    };
 </script>
 <script src="/js/auth-manager.js"></script>
 <script src="/js/components/sidebar.js" type="module"></script>

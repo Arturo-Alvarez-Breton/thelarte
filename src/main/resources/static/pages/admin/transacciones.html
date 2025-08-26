@@ -281,7 +281,7 @@
 </div>
 
 <script>
-    // Debug script
+    // Debug script - NON-INTRUSIVE
     document.addEventListener('DOMContentLoaded', function() {
         console.log('=== DEBUG TRANSACCIONES PAGE ===');
         console.log('LocalStorage contents:');
@@ -301,11 +301,27 @@
             userRole: userRole || 'Not set'
         });
 
-        if (!jwtToken && !authToken) {
-            console.warn('No authentication tokens found - redirecting to login');
-            window.location.href = '/pages/login.html';
-        }
+        // Don't redirect automatically - just log the status
+        console.log('Page will load regardless of token status for debugging');
     });
+
+    // Manual token validation function
+    window.validateTokenManual = async function() {
+        console.log('Manual token validation requested');
+        if (typeof authManager !== 'undefined' && authManager.token) {
+            try {
+                const result = await authManager.validateToken();
+                console.log('Token validation result:', result);
+                return result;
+            } catch (error) {
+                console.error('Token validation failed:', error);
+                return false;
+            }
+        } else {
+            console.warn('No auth manager or token available');
+            return false;
+        }
+    };
 </script>
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
