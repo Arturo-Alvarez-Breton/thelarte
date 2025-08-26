@@ -70,8 +70,10 @@ public class LineaTransaccion {
             this.cantidad = 0;
         }
         
+        // El subtotal es precio unitario * cantidad (sin impuestos)
         this.subtotal = this.precioUnitario.multiply(BigDecimal.valueOf(this.cantidad));
         
+        // Aplicar descuentos si existen
         if (this.descuentoMonto != null) {
             this.subtotal = this.subtotal.subtract(this.descuentoMonto);
         } else if (this.descuentoPorcentaje != null) {
@@ -80,6 +82,7 @@ public class LineaTransaccion {
             this.descuentoMonto = descuento;
         }
 
+        // Calcular impuestos sobre el subtotal después de descuentos
         if (this.impuestoPorcentaje != null) {
             this.impuestoMonto = this.subtotal
                     .multiply(this.impuestoPorcentaje)
@@ -88,6 +91,7 @@ public class LineaTransaccion {
             this.impuestoMonto = BigDecimal.ZERO;
         }
 
+        // El total SIEMPRE incluye impuestos
         this.total = this.subtotal.add(this.impuestoMonto != null ? this.impuestoMonto : BigDecimal.ZERO);
     }
 

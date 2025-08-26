@@ -112,6 +112,9 @@ class TransaccionesManager {
         this.checkUrlFilters();
         await this.loadTransactions();
         this.updateTransactionCount();
+        // Inicializar la vista y los botones
+        this.updateViewButtons();
+        this.renderVista();
     }
 
     setupEventListeners() {
@@ -130,20 +133,40 @@ class TransaccionesManager {
 
     setVista(vista) {
         this.vista = vista;
+        this.updateViewButtons();
         this.renderVista();
+    }
+
+    updateViewButtons() {
+        const btnTarjetas = document.getElementById('btnVistaTarjetas');
+        const btnTabla = document.getElementById('btnVistaTabla');
+
+        if (btnTarjetas && btnTabla) {
+            if (this.vista === 'tarjetas') {
+                btnTarjetas.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
+                btnTabla.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
+            } else {
+                btnTarjetas.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors text-gray-600 hover:text-gray-900';
+                btnTabla.className = 'px-3 py-1 rounded-md text-sm font-medium transition-colors bg-white text-gray-900 shadow-sm';
+            }
+        }
     }
 
     renderVista() {
         if (this.vista === 'tarjetas') {
             document.getElementById('transaccionesListContainer').classList.remove('hidden');
             document.getElementById('transaccionesTableContainer').classList.add('hidden');
+            // Usar el TableViewManager para cambiar a vista de tarjetas
+            this.tableViewManager.switchToCardView();
             this.renderTransactions();
             this.renderPagination();
         } else {
             document.getElementById('transaccionesListContainer').classList.add('hidden');
             document.getElementById('transaccionesTableContainer').classList.remove('hidden');
+            // Usar el TableViewManager para cambiar a vista de tabla
+            this.tableViewManager.switchToTableView();
             this.renderTableTransactions();
-            this.renderTablePagination();
+            // NO renderizar paginación separada para tabla, el TableViewManager la maneja
         }
     }
 
@@ -565,14 +588,15 @@ class TransaccionesManager {
     }
 
     renderTableTransactions() {
-        // Usar el TableViewManager para mostrar datos filtrados
+        // Usar el TableViewManager para mostrar TODOS los datos filtrados
         const filtered = this.getFilteredTransactions();
-        const start = this.currentPage * this.transactionsPerPage;
-        const end = start + this.transactionsPerPage;
-        const toShow = filtered.slice(start, end);
 
-        // Actualizar datos en el TableViewManager
-        this.tableViewManager.setData(toShow);
+        // Pasar todos los datos filtrados al TableViewManager
+        // El TableViewManager se encargará de la paginación internamente
+        this.tableViewManager.setData(filtered);
+
+        // Sincronizar la página actual si es necesario
+        this.tableViewManager.currentPage = this.currentPage;
     }
 
 
@@ -587,29 +611,6 @@ class TransaccionesManager {
             return;
         }
         let paginationHtml = '<div class="flex justify-center space-x-2">';
-        for (let i = 0; i < totalPages; i++) {
-            paginationHtml += `
-            <button onclick="transaccionesManager.changePage(${i})" 
-                    class="px-3 py-1 rounded ${this.currentPage === i ? 'bg-brand-brown text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}">
-                ${i + 1}
-            </button>
-        `;
-        }
-        paginationHtml += '</div>';
-        paginationContainer.innerHTML = paginationHtml;
-    }
-
-    renderTablePagination() {
-        if (this.vista !== 'tabla') return;
-        const filtered = this.getFilteredTransactions();
-        const totalPages = Math.ceil(filtered.length / this.transactionsPerPage);
-        const paginationContainer = document.getElementById('paginacion');
-        if (!paginationContainer) return;
-        if (totalPages <= 1) {
-            paginationContainer.innerHTML = '';
-            return;
-        }
-        let paginationHtml = '<div class="flex justify-center space-x-2 my-4">';
         for (let i = 0; i < totalPages; i++) {
             paginationHtml += `
             <button onclick="transaccionesManager.changePage(${i})" 
@@ -686,13 +687,12 @@ class TransaccionesManager {
             'PENDIENTE': 'yellow',
             'CONFIRMADA': 'blue',
             'PROCESANDO': 'orange',
-            'COMPLETADA': 'green',
+            'COMPLETADA': 'green',    // En lugar de COBRADA
             'CANCELADA': 'red',
             'FACTURADA': 'purple',
             'RECIBIDA': 'indigo',
             'PAGADA': 'green',
             'ENTREGADA': 'teal',
-            'COBRADA': 'emerald',
             'DEVUELTA': 'emerald',
             'PARCIALMENTE_DEVUELTA': 'yellow'
         };
@@ -718,140 +718,178 @@ class TransaccionesManager {
         const detailsContainer = document.getElementById('detallesTransaccion');
         if (!detailsContainer) return;
 
-        // Depuración: registrar la transacción para verificar su estructura
         console.log('Datos de transacción:', transaction);
 
         detailsContainer.setAttribute('data-transaction-id', transaction.id);
 
-        // Formatear cédula para clientes (solo para ventas)
+        this.renderInitialDetails(transaction, detailsContainer);
+
+        if (transaction.contraparteId) {
+            const tipoContraparte = transaction.tipo === 'COMPRA' ? 'proveedor' : 'cliente';
+            const needsFetch = tipoContraparte === 'cliente' ?
+                (!transaction.cliente?.telefono && !transaction.cliente?.email) :
+                (!transaction.proveedor?.telefono && !transaction.proveedor?.email);
+
+            if (needsFetch) {
+                // Solo normaliza la cédula si es cliente, si es proveedor usa el id tal cual
+                const idParaBuscar = tipoContraparte === 'cliente'
+                    ? normalizarCedula(String(transaction.contraparteId))
+                    : transaction.contraparteId;
+
+                this.buscarDatosContraparte(idParaBuscar, tipoContraparte)
+                    .then(datosCompletos => {
+                        if (datosCompletos) {
+                            const transactionActualizada = {...transaction};
+                            if (tipoContraparte === 'cliente') {
+                                transactionActualizada.cliente = {...(transaction.cliente || {}), ...datosCompletos};
+                            } else {
+                                transactionActualizada.proveedor = {...(transaction.proveedor || {}), ...datosCompletos};
+                            }
+                            this.renderInitialDetails(transactionActualizada, detailsContainer);
+                        }
+                    })
+                    .catch(error => console.error('Error al obtener datos completos:', error));
+            }
+        }
+    }
+// Método para buscar datos completos de un cliente o proveedor
+    buscarDatosContraparte(id, tipo) {
+        return new Promise((resolve, reject) => {
+            // Determinar endpoint según tipo
+            const endpoint = tipo === 'cliente' ? '/api/clientes/' : '/api/suplidores/';
+
+            fetch(endpoint + id)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`Datos completos de ${tipo} obtenidos:`, data);
+                    resolve(data);
+                })
+                .catch(error => {
+                    console.error(`Error buscando datos de ${tipo}:`, error);
+                    resolve(null); // Resolvemos con null para no interrumpir el flujo
+                });
+        });
+    }
+
+// Método para renderizar los detalles iniciales y actualizados
+    renderInitialDetails(transaction, detailsContainer) {
         function formatearComoCedula(id) {
             if (!id) return '';
-
-            // Convertir a string y eliminar caracteres no numéricos
             let idStr = String(id).replace(/\D/g, '');
-
-            // Si ya tiene guiones, no reformatear
             if (idStr.includes('-')) return idStr;
-
-            // Rellenar con ceros al inicio si es necesario para llegar a 11 dígitos
-            while (idStr.length < 11) {
-                idStr = '0' + idStr;
-            }
-
-            // Aplicar formato de cédula dominicana: XXX-XXXXXXX-X
+            while (idStr.length < 11) idStr = '0' + idStr;
             if (idStr.length === 11) {
                 return `${idStr.substring(0, 3)}-${idStr.substring(3, 10)}-${idStr.substring(10)}`;
             }
-
-            return idStr; // Devolver sin formato si no tiene 11 dígitos
+            return idStr;
         }
 
-        // Añadir esta verificación para facturas grandes (superior a 250,000 pesos)
         const esFacturaGrande = transaction.total >= 250000;
 
-        // Información de la contraparte
-        let contraparteInfo = '';
+        // DATOS DE CONTACTO: Extraer teléfono y email de manera robusta
+        let telefono = '';
+        let email = '';
 
-        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
-            // CASO DE COMPRA: MOSTRAR INFORMACIÓN DEL PROVEEDOR
-            contraparteInfo = `
-        <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
-        <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>`;
-
-            // Mostrar ID del proveedor como información adicional (no formatear como RNC)
-            if (transaction.contraparteId) {
-                contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
+        if (transaction.tipo === 'COMPRA') {
+            // Buscar en proveedor primero
+            if (transaction.proveedor) {
+                telefono = transaction.proveedor.telefono || telefono;
+                email = transaction.proveedor.email || email;
             }
+        } else {
+            // Buscar en cliente primero
+            if (transaction.cliente) {
+                telefono = transaction.cliente.telefono || telefono;
+                email = transaction.cliente.email || email;
+            }
+        }
 
-            contraparteInfo += `
-        <p><strong>Teléfono:</strong> ${transaction.proveedor.telefono || 'N/A'}</p>
-        <p><strong>Email:</strong> ${transaction.proveedor.email || 'N/A'}</p>
+        // Buscar en raíz como respaldo
+        telefono = telefono || transaction.telefono || '';
+        email = email || transaction.email || '';
+
+        const mostrarTelefono = telefono ? telefono : 'N/A';
+        const mostrarEmail = email ? email : 'N/A';
+
+        // CONSTRUCCIÓN DE INFORMACIÓN DE CONTRAPARTE
+        let contraparteInfo = '';
+        if (transaction.tipo === 'COMPRA' && transaction.proveedor) {
+            contraparteInfo = `
+            <p><strong>Proveedor:</strong> ${transaction.proveedor.nombre}</p>
+            <p><strong>RNC:</strong> ${transaction.proveedor.rnc || 'N/A'}</p>
+            ${transaction.contraparteId ? `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>` : ''}
+            <p><strong>Teléfono:</strong> ${mostrarTelefono}</p>
+            <p><strong>Email:</strong> ${mostrarEmail}</p>
         `;
         } else if (transaction.cliente && (transaction.cliente.nombre || transaction.cliente.apellido)) {
-            // CASO DE VENTA CON CLIENTE: MOSTRAR INFORMACIÓN DEL CLIENTE
-            // Información básica del cliente
             contraparteInfo = `
-        <p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''}</p>`;
+            <p><strong>Cliente:</strong> ${transaction.cliente.nombre || ''} ${transaction.cliente.apellido || ''}</p>`;
 
-            // Mostrar cédula si existe
             const tieneCedula = transaction.cliente.cedula && transaction.cliente.cedula.trim() !== '';
             if (tieneCedula) {
                 contraparteInfo += `<p><strong>Cédula:</strong> ${transaction.cliente.cedula}</p>`;
-            }
-            // Si no hay cédula pero hay contraparteId, intentar formatearlo como cédula
-            else if (transaction.contraparteId) {
+            } else if (transaction.contraparteId) {
                 const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
                 contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
             }
-
-            // Mostrar advertencia si es factura grande y no tiene cédula
             if (esFacturaGrande && !tieneCedula) {
                 contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
             }
-
-            // Añadir información de contacto si existe
-            if (transaction.cliente.telefono) {
-                contraparteInfo += `<p><strong>Teléfono:</strong> ${transaction.cliente.telefono}</p>`;
-            }
-            if (transaction.cliente.email) {
-                contraparteInfo += `<p><strong>Email:</strong> ${transaction.cliente.email}</p>`;
-            }
-
-            // Mostrar ID del cliente como información adicional
+            contraparteInfo += `
+            <p><strong>Teléfono:</strong> ${mostrarTelefono}</p>
+            <p><strong>Email:</strong> ${mostrarEmail}</p>
+        `;
             if (transaction.contraparteId) {
                 contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
             }
         } else if (transaction.contraparteNombre) {
-            // CASO CON SOLO NOMBRE DE CONTRAPARTE
             if (transaction.tipo === 'COMPRA') {
-                // Para compras - mostrar nombre del proveedor y RNC si disponible
                 contraparteInfo = `<p><strong>Proveedor:</strong> ${transaction.contraparteNombre}</p>`;
-
-                // Mostrar el ID como información adicional (no como RNC)
                 if (transaction.contraparteId) {
                     contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
                 }
             } else {
-                // Para ventas - mostrar nombre del cliente y cédula si disponible
                 contraparteInfo = `<p><strong>Cliente:</strong> ${transaction.contraparteNombre}</p>`;
-
-                // Intentar formatear el contraparteId como cédula para ventas
                 if (transaction.contraparteId) {
                     const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
                     contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
                 }
-
-                // Mostrar advertencia si es factura grande
                 if (esFacturaGrande) {
                     contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
                 }
             }
+            contraparteInfo += `
+            <p><strong>Teléfono:</strong> ${mostrarTelefono}</p>
+            <p><strong>Email:</strong> ${mostrarEmail}</p>
+        `;
         } else {
-            // CASO SIN INFORMACIÓN DE CONTRAPARTE
             const etiqueta = transaction.tipo === 'COMPRA' ? 'Proveedor' : 'Cliente';
             contraparteInfo = `<p><strong>${etiqueta}:</strong> <span class="italic">Sin nombre registrado</span></p>`;
-
             if (transaction.tipo === 'COMPRA') {
-                // Para compras - mostrar el ID como información adicional
                 if (transaction.contraparteId) {
                     contraparteInfo += `<p><strong>ID en sistema:</strong> ${transaction.contraparteId}</p>`;
                 }
             } else {
-                // Para ventas - intentar formatear como cédula
                 if (transaction.contraparteId) {
                     const cedulaFormateada = formatearComoCedula(transaction.contraparteId);
                     contraparteInfo += `<p><strong>Cédula:</strong> ${cedulaFormateada}</p>`;
                 }
-
-                // Mostrar advertencia si es factura grande
                 if (esFacturaGrande) {
                     contraparteInfo += `<p class="font-bold text-red-600">ADVERTENCIA: Se requiere cédula para facturas mayores a RD$250,000</p>`;
                 }
             }
+            contraparteInfo += `
+            <p><strong>Teléfono:</strong> ${mostrarTelefono}</p>
+            <p><strong>Email:</strong> ${mostrarEmail}</p>
+        `;
         }
 
-        // El resto de la función permanece igual...
-        // Lista de productos
+        // PRODUCTOS
         const productsList = transaction.lineas && transaction.lineas.length > 0
             ? transaction.lineas.map(line => `
         <div class="flex justify-between items-center border-b pb-2 mb-2 bg-gray-50 p-2 rounded">
@@ -868,7 +906,7 @@ class TransaccionesManager {
     `).join('')
             : '<p class="text-gray-500 italic">No hay productos en esta transacción.</p>';
 
-        // Selector de estado
+        // SELECTOR DE ESTADOS
         const estadoOptions = ['PENDIENTE', 'CONFIRMADA', 'PROCESANDO', 'COMPLETADA', 'CANCELADA', 'DEVUELTA', 'PARCIALMENTE_DEVUELTA'];
         const estadoSelect = `
     <div class="flex items-center space-x-2">
@@ -881,20 +919,23 @@ class TransaccionesManager {
     </div>
     `;
 
-        // Calcular unidades totales
+        // UNIDADES TOTALES
         let totalUnidades = 0;
         if (transaction.lineas && transaction.lineas.length > 0) {
             totalUnidades = transaction.lineas.reduce((sum, line) => sum + (parseInt(line.cantidad) || 0), 0);
         }
 
-        // Verificar si es venta en cuotas
+        // PLAN DE PAGOS
         let planPagosHTML = '';
         if (transaction.tipoPago === 'ENCUOTAS' || transaction.planPagos) {
-            const planPagos = transaction.planPagos || {};
-            const montoInicial = planPagos.montoInicial || 0;
-            const montoTotal = planPagos.montoTotal || transaction.total || 0;
-            const saldoPendiente = planPagos.saldoPendiente || (transaction.total - montoInicial);
-            const cuotas = planPagos.cuotas || [];
+            const montoInicial = transaction.montoInicial || 0;
+            const montoTotal = transaction.total || 0;
+            const saldoPendiente = transaction.saldoPendiente || 0;
+            const pagos = transaction.pagos || [];
+            const pagoInicial = pagos.find(p => p.numeroCuota === 0);
+            const cuotasProgramadas = pagos.filter(p => p.numeroCuota > 0);
+            const pagosAdicionales = pagos.filter(p => p.numeroCuota === null || p.numeroCuota === undefined);
+            const todosPagos = [...cuotasProgramadas, ...pagosAdicionales];
 
             planPagosHTML = `
         <div class="mt-6 border-t pt-4">
@@ -906,7 +947,8 @@ class TransaccionesManager {
                     <p><strong>Total a financiar:</strong> ${this.formatCurrency(montoTotal - montoInicial)}</p>
                 </div>
                 <div>
-                    <p><strong>Número de cuotas:</strong> ${cuotas.length}</p>
+                    <p><strong>Número de cuotas programadas:</strong> ${cuotasProgramadas.length}</p>
+                    <p><strong>Pagos adicionales:</strong> ${pagosAdicionales.length}</p>
                     <p class="${saldoPendiente <= 0 ? 'text-green-600' : 'text-yellow-600'} font-bold">
                         <strong>Saldo pendiente:</strong> ${this.formatCurrency(saldoPendiente)}
                     </p>
@@ -914,29 +956,43 @@ class TransaccionesManager {
             </div>
             
             <div class="mb-4">
-                <h5 class="font-semibold mb-2">Cuotas registradas:</h5>
-                ${cuotas.length > 0 ? `
+                <h5 class="font-semibold mb-2">Pagos registrados:</h5>
+                ${(pagoInicial || todosPagos.length > 0) ? `
                     <div class="overflow-x-auto">
                         <table class="min-w-full bg-white border border-gray-200">
                             <thead class="bg-gray-100">
                                 <tr>
-                                    <th class="py-2 px-3 text-left text-sm font-medium text-gray-700 border-b">Cuota</th>
+                                    <th class="py-2 px-3 text-left text-sm font-medium text-gray-700 border-b">Tipo</th>
                                     <th class="py-2 px-3 text-left text-sm font-medium text-gray-700 border-b">Fecha</th>
                                     <th class="py-2 px-3 text-right text-sm font-medium text-gray-700 border-b">Monto</th>
                                     <th class="py-2 px-3 text-center text-sm font-medium text-gray-700 border-b">Estado</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                ${cuotas.map(cuota => `
+                                ${pagoInicial ? `
                                     <tr>
-                                        <td class="py-2 px-3 text-sm">${cuota.numero}</td>
-                                        <td class="py-2 px-3 text-sm">${new Date(cuota.fecha).toLocaleDateString()}</td>
-                                        <td class="py-2 px-3 text-sm text-right">${this.formatCurrency(cuota.monto)}</td>
+                                        <td class="py-2 px-3 text-sm">Inicial</td>
+                                        <td class="py-2 px-3 text-sm">${new Date(pagoInicial.fecha).toLocaleDateString()}</td>
+                                        <td class="py-2 px-3 text-sm text-right">${this.formatCurrency(pagoInicial.monto)}</td>
                                         <td class="py-2 px-3 text-sm text-center">
                                             <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                                ${cuota.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' :
-                cuota.estado === 'PAGADA' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                                                ${cuota.estado}
+                                                ${pagoInicial.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' :
+                pagoInicial.estado === 'COMPLETADO' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                                ${pagoInicial.estado}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ` : ''}
+                                ${todosPagos.map(pago => `
+                                    <tr>
+                                        <td class="py-2 px-3 text-sm">${pago.numeroCuota ? 'Cuota ' + pago.numeroCuota : 'Pago adicional'}</td>
+                                        <td class="py-2 px-3 text-sm">${new Date(pago.fecha).toLocaleDateString()}</td>
+                                        <td class="py-2 px-3 text-sm text-right">${this.formatCurrency(pago.monto)}</td>
+                                        <td class="py-2 px-3 text-sm text-center">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                                ${pago.estado === 'PENDIENTE' ? 'bg-yellow-100 text-yellow-800' :
+                pago.estado === 'COMPLETADO' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                                ${pago.estado}
                                             </span>
                                         </td>
                                     </tr>
@@ -944,35 +1000,19 @@ class TransaccionesManager {
                             </tbody>
                         </table>
                     </div>
-                ` : '<p class="text-gray-500 italic">No hay cuotas registradas aún.</p>'}
+                ` : '<p class="text-gray-500 italic">No hay pagos registrados aún.</p>'}
             </div>
-        </div>
-    `;
+        </div>`;
         }
 
-        // Añadir botón para pago con terminal si la transacción está pendiente
-        const isPendiente = transaction.estado === 'PENDIENTE';
-        const terminalPaymentButton = isPendiente ? `
-    <div class="mt-4 pt-4 border-t">
-        <h4 class="font-bold mb-3">Opciones de Pago</h4>
-        <div class="flex flex-wrap gap-2">
-            <button onclick="procesarPagoTerminal(${transaction.id})" 
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                <i class="fas fa-credit-card mr-2"></i>
-                Procesar Pago con Terminal
-            </button>
-        </div>
-    </div>
-    ` : '';
-
-        // Calcular los impuestos correctamente
+        // IMPUESTOS FORMATEADOS
         const impuestosFormateados = transaction.impuestos
             ? this.formatCurrency(transaction.impuestos)
             : (transaction.lineas && transaction.lineas.length > 0)
                 ? this.formatCurrency(transaction.lineas.reduce((sum, line) => sum + (line.impuestoMonto || 0), 0))
                 : this.formatCurrency(0);
 
-        // Renderizar todo el contenido
+        // RENDERIZAR HTML COMPLETO
         detailsContainer.innerHTML = `
     <div class="space-y-4">
         <div class="bg-blue-50 p-3 rounded-lg">
@@ -997,8 +1037,6 @@ class TransaccionesManager {
         
         ${planPagosHTML}
         
-        ${terminalPaymentButton}
-        
         <div class="bg-green-50 p-3 rounded-lg text-right">
             <p><strong>Subtotal:</strong> ${this.formatCurrency(transaction.subtotal || 0)}</p>
             <p><strong>Impuestos:</strong> ${impuestosFormateados}</p>
@@ -1006,7 +1044,7 @@ class TransaccionesManager {
         </div>
         
         <!-- Botón de abonar al final, solo para ventas en cuotas con saldo pendiente -->
-        ${(transaction.tipoPago === 'ENCUOTAS' && transaction.planPagos?.saldoPendiente > 0) ? `
+        ${(transaction.tipoPago === 'ENCUOTAS' && transaction.saldoPendiente > 0) ? `
             <div class="flex justify-end mt-4">
                 <button onclick="transaccionesManager.agregarPago(${transaction.id})" 
                         class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
@@ -1017,113 +1055,454 @@ class TransaccionesManager {
     </div>
     `;
     }
+
     cerrarModalVerTransaccion() {
         document.getElementById('modalVerTransaccion').classList.add('hidden');
     }
-
     async agregarPago(transaccionId) {
-        // Obtener la transacción actualizada
-        const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
-        const planPagos = transaccion.planPagos || {};
-        const saldoPendiente = planPagos.saldoPendiente || 0;
+        try {
+            // Obtener la transacción actualizada
+            const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+            if (!transaccion) {
+                window.showToast('No se pudo obtener la información de la transacción', 'error');
+                return;
+            }
 
-        // Si no hay saldo pendiente, no permitir más pagos
-        if (saldoPendiente <= 0) {
-            window.showToast('Esta transacción ya está completamente pagada', 'info');
-            return;
+            // Verificar si hay cuotas pendientes
+            const pagos = transaccion.pagos || [];
+            const cuotasPendientes = pagos.filter(p => p.estado === 'PENDIENTE');
+            const saldoPendiente = transaccion.saldoPendiente || 0;
+
+            console.log("Detalles del pago:", {
+                totalPagos: pagos.length,
+                cuotasPendientes: cuotasPendientes.length,
+                saldoPendiente: saldoPendiente
+            });
+
+            // Si no hay saldo pendiente, no permitir más pagos
+            if (saldoPendiente <= 0) {
+                window.showToast('Esta transacción ya está completamente pagada', 'info');
+                return;
+            }
+
+            // Si hay saldo pendiente, mostrar modal para registrar pago
+            const montoMaximo = saldoPendiente;
+
+            // Crear modal para registrar nuevo pago
+            const modal = document.createElement('div');
+            modal.id = 'modalRegistrarPago';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">Registrar Nuevo Pago</h3>
+                    <button id="cerrarModalPago" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+                        <input type="date" id="fechaPago" class="w-full border rounded-lg p-2" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                        <input type="number" id="montoPago" class="w-full border rounded-lg p-2" min="0" max="${montoMaximo}" step="0.01" value="${montoMaximo}">
+                        <p class="text-sm text-gray-500 mt-1">Saldo pendiente: ${this.formatCurrency(montoMaximo)}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                        <select id="metodoPago" class="w-full border rounded-lg p-2">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="TARJETA">Tarjeta</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+                        <textarea id="observacionesPago" class="w-full border rounded-lg p-2" rows="2"></textarea>
+                    </div>
+                    <div class="pt-4">
+                        <button id="guardarPago" class="w-full bg-brand-brown text-white py-2 rounded-lg hover:bg-brand-light-brown">
+                            Registrar Pago
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+            document.body.appendChild(modal);
+
+            // Configurar eventos
+            document.getElementById('cerrarModalPago').onclick = () => {
+                modal.remove();
+            };
+
+            document.getElementById('guardarPago').onclick = async () => {
+                try {
+                    const fechaPago = document.getElementById('fechaPago').value;
+                    const montoPago = parseFloat(document.getElementById('montoPago').value);
+                    const metodoPago = document.getElementById('metodoPago').value;
+                    const observaciones = document.getElementById('observacionesPago').value;
+
+                    // Validaciones
+                    if (!fechaPago || isNaN(montoPago) || montoPago <= 0) {
+                        window.showToast('Ingrese una fecha y monto válidos', 'error');
+                        return;
+                    }
+
+                    if (montoPago > saldoPendiente) {
+                        window.showToast(`El monto no puede exceder el saldo pendiente (${this.formatCurrency(saldoPendiente)})`, 'error');
+                        return;
+                    }
+
+                    // Si el método de pago es TARJETA, procesar con Cardnet
+                    if (metodoPago === 'TARJETA') {
+                        modal.remove(); // Cerrar el modal actual
+
+                        // Procesar pago con Cardnet
+                        await this.procesarPagoTarjetaCardnet(transaccionId, {
+                            fecha: fechaPago,
+                            monto: montoPago,
+                            metodoPago: metodoPago,
+                            observaciones: observaciones
+                        });
+
+                        return; // Salir del flujo actual, el proceso continúa en procesarPagoTarjetaCardnet
+                    }
+
+                    // Registrar el pago (para métodos que no son TARJETA)
+                    await this.transaccionService.registrarPago(transaccionId, {
+                        fecha: fechaPago,
+                        monto: montoPago,
+                        metodoPago,
+                        observaciones
+                    });
+
+                    // Cerrar modal y refrescar detalles
+                    modal.remove();
+                    window.showToast('Pago registrado exitosamente', 'success');
+
+                    // Refrescar la vista de detalles
+                    await this.viewTransactionDetails(transaccionId);
+
+                    // Actualizar lista de transacciones
+                    await this.loadTransactions();
+                } catch (error) {
+                    console.error('Error al registrar pago:', error);
+                    window.showToast('Error al registrar el pago: ' + (error.message || error), 'error');
+                }
+            };
+        } catch (error) {
+            console.error('Error al verificar el estado de pagos:', error);
+            window.showToast('Error al verificar el estado de los pagos', 'error');
         }
+    }
 
-        // Crear modal para registrar nuevo pago
+    // Nueva función para procesar pagos con tarjeta a través de Cardnet
+    async procesarPagoTarjetaCardnet(transaccionId, datosPago) {
+        try {
+            // 1. Mostrar pantalla de carga
+            this.showLoadingOverlay("Iniciando proceso de pago con tarjeta...");
+
+            // 2. Obtener datos de la transacción para el proceso de pago
+            const transaccion = await this.transaccionService.obtenerTransaccionPorId(transaccionId);
+            if (!transaccion) {
+                throw new Error("No se pudo obtener la información de la transacción");
+            }
+
+            // 3. Crear datos para la sesión de Cardnet
+            const paymentData = {
+                ordenId: `ABONO-${transaccionId}-${Date.now()}`,
+                total: datosPago.monto,
+                impuestos: 0,
+                nombre: transaccion.cliente?.nombre
+                    ? `${transaccion.cliente.nombre} ${transaccion.cliente.apellido || ''}`
+                    : transaccion.contraparteNombre || 'Cliente',
+                descripcion: `Abono a factura #${transaccion.numeroFactura || transaccion.id}`
+            };
+
+            // 4. Crear sesión indicando que es para terminal físico
+            const sessionData = await this.cardnetService.createSession(paymentData, true);
+
+            if (!sessionData || !sessionData.SESSION) {
+                throw new Error("No se pudo crear la sesión de pago para el terminal");
+            }
+
+            const sessionId = sessionData.SESSION;
+            const sessionKey = sessionData['session-key'];
+
+            // 5. Ocultar pantalla de carga y mostrar modal de proceso de terminal
+            this.hideLoadingOverlay();
+            this.showTerminalPaymentModal(sessionId, transaccionId, datosPago);
+
+        } catch (error) {
+            this.hideLoadingOverlay();
+            window.showToast(`Error al iniciar pago con tarjeta: ${error.message}`, 'error');
+            console.error('Error al procesar pago con tarjeta:', error);
+        }
+    }
+
+// Modal para pago con terminal
+    showTerminalPaymentModal(sessionId, transaccionId, datosPago) {
+        // Crear un modal para mostrar el estado del proceso en terminal
         const modal = document.createElement('div');
-        modal.id = 'modalRegistrarPago';
+        modal.id = 'terminalPaymentModal';
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
         modal.innerHTML = `
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Registrar Nuevo Pago</h3>
-                <button id="cerrarModalPago" class="text-gray-400 hover:text-gray-600">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="bg-brand-brown text-white p-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold">Pago con Terminal</h3>
+                <button id="closeTerminalModal" class="text-white hover:text-gray-300">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
-                    <input type="date" id="fechaPago" class="w-full border rounded-lg p-2" value="${new Date().toISOString().split('T')[0]}">
+        </div>
+        <div class="p-6">
+            <div id="terminalPaymentStatus" class="mb-4">
+                <div class="flex items-center justify-center mb-4">
+                    <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full"></div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-                    <input type="number" id="montoPago" class="w-full border rounded-lg p-2" min="0" max="${saldoPendiente}" step="0.01" value="${saldoPendiente}">
-                    <p class="text-sm text-gray-500 mt-1">Saldo pendiente: ${this.formatCurrency(saldoPendiente)}</p>
+                <p class="text-center text-lg font-medium" id="terminalStatusMessage">
+                    Transacción enviada al terminal
+                </p>
+                <p class="text-center text-gray-600 mt-2" id="terminalInstructions">
+                    Por favor, solicite al cliente que presente su tarjeta en el terminal.
+                </p>
+            </div>
+            
+            <div id="terminalPaymentComplete" class="text-center hidden">
+                <div class="bg-green-100 text-green-800 p-4 rounded-lg mb-4">
+                    <i class="fas fa-check-circle text-3xl text-green-500 mb-2"></i>
+                    <p class="font-bold">¡Pago completado exitosamente!</p>
+                    <p id="terminalAuthCode" class="mt-1"></p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                    <select id="metodoPago" class="w-full border rounded-lg p-2">
-                        <option value="EFECTIVO">Efectivo</option>
-                        <option value="TRANSFERENCIA">Transferencia</option>
-                        <option value="TARJETA">Tarjeta</option>
-                    </select>
+                <button id="closeTerminalPaymentComplete" 
+                        class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    Cerrar
+                </button>
+            </div>
+            
+            <div id="terminalPaymentError" class="text-center hidden">
+                <div class="bg-red-100 text-red-800 p-4 rounded-lg mb-4">
+                    <i class="fas fa-exclamation-circle text-3xl text-red-500 mb-2"></i>
+                    <p class="font-bold">Error en la transacción</p>
+                    <p id="terminalErrorMessage" class="mt-1"></p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                    <textarea id="observacionesPago" class="w-full border rounded-lg p-2" rows="2"></textarea>
-                </div>
-                <div class="pt-4">
-                    <button id="guardarPago" class="w-full bg-brand-brown text-white py-2 rounded-lg hover:bg-brand-light-brown">
-                        Registrar Pago
-                    </button>
-                </div>
+                <button id="closeTerminalPaymentError" 
+                        class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
+                    Cerrar
+                </button>
             </div>
         </div>
+    </div>
     `;
 
         document.body.appendChild(modal);
 
-        // Configurar eventos
-        document.getElementById('cerrarModalPago').onclick = () => {
-            modal.remove();
-        };
+        // Configurar los eventos
+        document.getElementById('closeTerminalModal').addEventListener('click', () => {
+            this.cancelTerminalPayment();
+        });
 
-        document.getElementById('guardarPago').onclick = async () => {
-            try {
-                const fechaPago = document.getElementById('fechaPago').value;
-                const montoPago = parseFloat(document.getElementById('montoPago').value);
-                const metodoPago = document.getElementById('metodoPago').value;
-                const observaciones = document.getElementById('observacionesPago').value;
+        document.getElementById('closeTerminalPaymentComplete')?.addEventListener('click', () => {
+            document.getElementById('terminalPaymentModal').remove();
+        });
 
-                // Validaciones
-                if (!fechaPago || isNaN(montoPago) || montoPago <= 0) {
-                    window.showToast('Ingrese una fecha y monto válidos', 'error');
-                    return;
-                }
+        document.getElementById('closeTerminalPaymentError')?.addEventListener('click', () => {
+            document.getElementById('terminalPaymentModal').remove();
+        });
 
-                if (montoPago > saldoPendiente) {
-                    window.showToast(`El monto no puede exceder el saldo pendiente (${this.formatCurrency(saldoPendiente)})`, 'error');
-                    return;
-                }
+        // Iniciar el polling para consultar estado
+        this.startPollingTerminalStatus(
+            sessionId,
+            this.handleTerminalStatusChange.bind(this),
+            (statusData) => this.handlePaymentComplete(transaccionId, datosPago, statusData),
+            this.handleTerminalPaymentError.bind(this)
+        );
+    }
+    // Método para manejar la finalización exitosa del pago
+    async handlePaymentComplete(transaccionId, datosPago, statusData) {
+        const statusDiv = document.getElementById('terminalPaymentStatus');
+        const completeDiv = document.getElementById('terminalPaymentComplete');
+        const authCodeElement = document.getElementById('terminalAuthCode');
 
-                // Registrar el pago
-                await this.transaccionService.registrarPago({
-                    transaccionId,
-                    fecha: fechaPago,
-                    monto: montoPago,
-                    metodoPago,
-                    observaciones
-                });
+        if (!statusDiv || !completeDiv) return;
 
-                // Cerrar modal y refrescar detalles
-                modal.remove();
-                window.showToast('Pago registrado exitosamente', 'success');
+        // Ocultar estado y mostrar completado
+        statusDiv.classList.add('hidden');
+        completeDiv.classList.remove('hidden');
+
+        // Mostrar código de autorización si existe
+        if (statusData.authCode && authCodeElement) {
+            authCodeElement.textContent = `Código de autorización: ${statusData.authCode}`;
+        }
+
+        try {
+            // Actualizar los datos de pago con la información de la tarjeta
+            datosPago.cardnetAuthCode = statusData.authCode || '';
+            datosPago.referenceNumber = statusData.RetrievalReferenceNumber || statusData.sessionId || '';
+            datosPago.ultimosCuatro = statusData.CreditCardNumber ? statusData.CreditCardNumber.slice(-4) : '';
+
+            // Añadir información de la tarjeta a las observaciones
+            const tarjetaInfo = `Pago con tarjeta. Auth: ${datosPago.cardnetAuthCode}, Ref: ${datosPago.referenceNumber}, Tarjeta: xxxx-xxxx-xxxx-${datosPago.ultimosCuatro}`;
+            datosPago.observaciones = datosPago.observaciones
+                ? `${datosPago.observaciones}. ${tarjetaInfo}`
+                : tarjetaInfo;
+
+            // Registrar el pago en el sistema
+            await this.transaccionService.registrarPago(transaccionId, datosPago);
+
+            // Mostrar mensaje de éxito
+            window.showToast('Pago con tarjeta registrado exitosamente', 'success');
+
+            // Cerrar el modal automáticamente después de 3 segundos
+            setTimeout(() => {
+                const modal = document.getElementById('terminalPaymentModal');
+                if (modal) modal.remove();
 
                 // Refrescar la vista de detalles
                 this.viewTransactionDetails(transaccionId);
 
-                // Opcionalmente, actualizar la lista de transacciones
-                await this.loadTransactions();
-            } catch (error) {
-                console.error('Error al registrar pago:', error);
-                window.showToast('Error al registrar el pago: ' + (error.message || error), 'error');
+                // Actualizar lista de transacciones
+                this.loadTransactions();
+            }, 3000);
+
+        } catch (error) {
+            console.error('Error al registrar pago con tarjeta:', error);
+
+            // Mostrar mensaje de error en el modal
+            statusDiv.classList.add('hidden');
+            const errorDiv = document.getElementById('terminalPaymentError');
+            if (errorDiv) {
+                errorDiv.classList.remove('hidden');
+                const errorMsg = document.getElementById('terminalErrorMessage');
+                if (errorMsg) {
+                    errorMsg.textContent = `Error al registrar el pago: ${error.message || 'Error desconocido'}`;
+                }
             }
-        };
+        }
+    }
+
+// Método para manejar cambios de estado en la transacción del terminal
+    handleTerminalStatusChange(statusData) {
+        const statusMessage = document.getElementById('terminalStatusMessage');
+        const instructions = document.getElementById('terminalInstructions');
+
+        if (!statusMessage || !instructions) return;
+
+        if (statusData.status === 'CREATED') {
+            statusMessage.textContent = 'Transacción enviada al terminal';
+            instructions.textContent = 'Por favor, solicite al cliente que presente su tarjeta en el terminal.';
+        } else if (statusData.status === 'PENDING') {
+            statusMessage.textContent = 'Esperando acción en terminal';
+            instructions.textContent = 'El terminal está procesando el pago.';
+        } else if (statusData.status === 'CANCELLED_BY_USER') {
+            this.handleTerminalPaymentError(new Error("Transacción cancelada por el usuario"));
+        } else {
+            statusMessage.textContent = statusData.message || 'Procesando...';
+        }
+    }
+
+// Método para manejar errores en el proceso de pago en terminal
+    handleTerminalPaymentError(error) {
+        const statusDiv = document.getElementById('terminalPaymentStatus');
+        const errorDiv = document.getElementById('terminalPaymentError');
+        const errorMessageElement = document.getElementById('terminalErrorMessage');
+
+        if (!statusDiv || !errorDiv) return;
+
+        // Ocultar estado y mostrar error
+        statusDiv.classList.add('hidden');
+        errorDiv.classList.remove('hidden');
+
+        // Mostrar mensaje de error
+        if (errorMessageElement) {
+            errorMessageElement.textContent = error.message || 'Error desconocido al procesar el pago';
+        }
+    }
+
+// Cancela una transacción en curso en el terminal
+    cancelTerminalPayment() {
+        // Detener polling
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+            this._pollingInterval = null;
+        }
+
+        // Cerrar modal
+        const modal = document.getElementById('terminalPaymentModal');
+        if (modal) modal.remove();
+    }
+
+// Inicia consultas periódicas al servidor para verificar estado
+    async startPollingTerminalStatus(sessionId, onStatusChange, onComplete, onError) {
+        const startTime = Date.now();
+        const maxPollingTime = 300000; // 5 minutos máximo
+        const pollingInterval = 3000; // Consultar cada 3 segundos
+
+        // Limpiar cualquier intervalo existente
+        if (this._pollingInterval) {
+            clearInterval(this._pollingInterval);
+        }
+
+        this._pollingInterval = setInterval(async () => {
+            try {
+                const statusData = await this.cardnetService.checkStatus(sessionId);
+
+                // Notificar el cambio de estado
+                if (onStatusChange) {
+                    onStatusChange(statusData);
+                }
+
+                // Si la transacción está completada
+                if (statusData.isCompleted) {
+                    clearInterval(this._pollingInterval);
+                    this._pollingInterval = null;
+                    if (onComplete) {
+                        onComplete(statusData);
+                    }
+                }
+
+                // Si ha pasado el tiempo máximo, detener
+                if (Date.now() - startTime > maxPollingTime) {
+                    clearInterval(this._pollingInterval);
+                    this._pollingInterval = null;
+                    if (onError) {
+                        onError(new Error("Tiempo de espera agotado para la transacción"));
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error consultando estado:", error);
+                clearInterval(this._pollingInterval);
+                this._pollingInterval = null;
+                if (onError) {
+                    onError(error);
+                }
+            }
+        }, pollingInterval);
+    }
+
+// Métodos de utilidad para mostrar/ocultar overlays
+    showLoadingOverlay(message = "Procesando...") {
+        const overlay = document.createElement('div');
+        overlay.id = 'paymentLoadingOverlay';
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+            <div class="animate-spin h-10 w-10 border-4 border-brand-brown border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600 font-medium">${message}</p>
+        </div>
+    `;
+        document.body.appendChild(overlay);
+    }
+
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('paymentLoadingOverlay');
+        if (overlay) overlay.remove();
     }
 
     async eliminarTransaccion(id) {
@@ -1230,133 +1609,61 @@ class TransaccionesManager {
         }
     }
 
-// Método para manejar el polling de consulta de estado
-    async startPollingTerminalStatus(sessionId, onStatusChange, onComplete, onError) {
-        const startTime = Date.now();
-        const maxPollingTime = 300000; // 5 minutos máximo
-        const pollingInterval = 3000; // Consultar cada 3 segundos
 
-        // Función para consultar estado
-        const checkStatus = async () => {
-            try {
-                const statusData = await this.cardnetService.checkStatus(sessionId);
 
-                // Notificar cambio de estado
-                if (onStatusChange) {
-                    onStatusChange(statusData);
+
+    // Modificación de handleTerminalPaymentComplete para manejar correctamente el saldo pendiente
+    handleTerminalPaymentComplete(statusData) {
+        const statusDiv = document.getElementById('terminalPaymentStatus');
+        const completeDiv = document.getElementById('terminalPaymentComplete');
+        const authCodeElement = document.getElementById('terminalAuthCode');
+
+        if (!statusDiv || !completeDiv) return;
+
+        // Ocultar estado y mostrar completado
+        statusDiv.classList.add('hidden');
+        completeDiv.classList.remove('hidden');
+
+        // Mostrar código de autorización
+        if (statusData.authCode && authCodeElement) {
+            authCodeElement.textContent = `Código de autorización: ${statusData.authCode}`;
+        }
+
+        // Guardar información para la venta
+        this.transactionData.cardnetResponse = statusData;
+        this.transactionData.cardnetAuthCode = statusData.authCode;
+        this.transactionData.referenceNumber = statusData.referenceName || statusData.sessionId;
+
+        // Si es pago en cuotas y hay cuotas que fueron cobradas con la tarjeta
+        if (this.transactionData.tipoPago === 'ENCUOTAS' && this.cuotasACobrar && this.cuotasACobrar.length > 0) {
+            // Calcular el monto total de las cuotas cobradas
+            const montoCuotasCobradas = this.cuotasACobrar.reduce((sum, cuota) => {
+                return sum + parseFloat(cuota.monto || 0);
+            }, 0);
+
+            // Recorremos las cuotas a cobrar y marcamos cada una como COMPLETADA
+            this.cuotasACobrar.forEach(cuotaCobrada => {
+                const cuota = this.transactionData.cuotasFlexibles.find(c => c.id === cuotaCobrada.id);
+                if (cuota) {
+                    cuota.estado = 'COMPLETADO';
                 }
+            });
 
-                // Si la transacción está completada
-                if (statusData.isCompleted) {
-                    if (onComplete) {
-                        onComplete(statusData);
-                    }
-                    return true; // Terminar polling
+            // Actualizar el saldo pendiente
+            if (this.transactionData.saldoPendiente) {
+                this.transactionData.saldoPendiente -= montoCuotasCobradas;
+                // Asegurar que no quede negativo
+                if (this.transactionData.saldoPendiente < 0) {
+                    this.transactionData.saldoPendiente = 0;
                 }
-
-                // Si ha pasado el tiempo máximo, detener
-                if (Date.now() - startTime > maxPollingTime) {
-                    if (onError) {
-                        onError(new Error("Tiempo de espera agotado para la transacción"));
-                    }
-                    return true; // Terminar polling
-                }
-
-                return false; // Continuar polling
-            } catch (error) {
-                if (onError) {
-                    onError(error);
-                }
-                return true; // Terminar polling en caso de error
             }
-        };
 
-        // Iniciar ciclo de polling
-        const poll = async () => {
-            const shouldStop = await checkStatus();
-            if (!shouldStop) {
-                setTimeout(poll, pollingInterval);
-            }
-        };
-
-        // Iniciar primer ciclo
-        poll();
-    }
-
-    handleTerminalStatusChange(statusData) {
-        const statusMessage = document.getElementById('terminalStatusMessage');
-        const instructions = document.getElementById('terminalInstructions');
-
-        if (statusData.status === 'CREATED') {
-            statusMessage.textContent = 'Transacción enviada al terminal';
-            instructions.textContent = 'Por favor, pida al cliente que presente su tarjeta en el terminal.';
-        } else if (statusData.status === 'PENDING') {
-            statusMessage.textContent = 'Esperando acción en terminal';
-            instructions.textContent = 'El terminal está procesando el pago.';
-        } else if (statusData.status === 'CANCELLED_BY_USER') {
-            this.handleTerminalPaymentError(new Error("Transacción cancelada por el usuario"));
-        } else {
-            statusMessage.textContent = statusData.message || 'Procesando...';
+            // Mensaje informativo
+            window.showToast(`Se marcaron ${this.cuotasACobrar.length} cuota(s) como pagadas y se actualizó el saldo pendiente`, 'success');
         }
     }
 
-    handleTerminalPaymentComplete(transaccionId, statusData) {
-        // Ocultar sección de estado y mostrar la de completado
-        document.getElementById('terminalPaymentStatus').classList.add('hidden');
-        document.getElementById('terminalPaymentComplete').classList.remove('hidden');
 
-        if (statusData.authCode) {
-            document.getElementById('terminalAuthCode').textContent =
-                `Código de autorización: ${statusData.authCode}`;
-        }
-
-        // Actualizar la transacción en base de datos
-        this.transaccionService.actualizarTransaccion(transaccionId, {
-            estado: 'COMPLETADA',
-            metodoPago: 'TARJETA',
-            observaciones: `Pago con tarjeta completado. Auth: ${statusData.authCode || 'N/A'}`
-        }).then(() => {
-            // Cambiar el estado automáticamente con notificación
-            this.cambiarEstadoAutomatico(transaccionId, 'COMPLETADA', 'Pago confirmado con tarjeta');
-
-            // Cerrar el modal automáticamente después de 3 segundos
-            setTimeout(() => {
-                this.closeTerminalPaymentModal();
-                // Actualizar los detalles si están abiertos
-                const detallesContainer = document.getElementById('detallesTransaccion');
-                if (detallesContainer &&
-                    !document.getElementById('modalVerTransaccion').classList.contains('hidden') &&
-                    detallesContainer.getAttribute('data-transaction-id') == transaccionId) {
-                    this.viewTransactionDetails(transaccionId);
-                }
-            }, 3000);
-
-            // Recargar transacciones
-            this.loadTransactions();
-        }).catch(error => {
-            console.error('Error al actualizar transacción:', error);
-            window.showToast('El pago fue procesado pero hubo un error al actualizar la transacción', 'warning');
-
-            // Recargar transacciones de todos modos
-            this.loadTransactions();
-        });
-    }
-
-    handleTerminalPaymentError(error) {
-        document.getElementById('terminalPaymentStatus').classList.add('hidden');
-        document.getElementById('terminalPaymentError').classList.remove('hidden');
-        document.getElementById('terminalErrorMessage').textContent =
-            error.message || 'Error desconocido al procesar el pago';
-
-        console.error('Error en pago con terminal:', error);
-    }
-
-    cancelTerminalPayment() {
-        if (this.terminalPaymentProcessor) {
-            this.terminalPaymentProcessor.cancelTransaction();
-        }
-        this.closeTerminalPaymentModal();
-    }
 
     closeTerminalPaymentModal() {
         document.getElementById('terminalPaymentModal').classList.add('hidden');
@@ -1386,6 +1693,23 @@ window.imprimirFactura = () => {
         window.showToast('No se puede imprimir la factura: ID de transacción no encontrado', 'error');
     }
 };
+
+export function normalizarCedula(cedula) {
+    if (!cedula) return '';
+    let soloNumeros = cedula.replace(/\D/g, '');
+    while (soloNumeros.length < 11) {
+        soloNumeros = '0' + soloNumeros;
+    }
+    if (soloNumeros.length === 11) {
+        return (
+            soloNumeros.substring(0, 3) + '-' +
+            soloNumeros.substring(3, 10) + '-' +
+            soloNumeros.substring(10)
+        );
+    }
+    return cedula;
+}
+
 // --- SIDEBAR MOBILE/HAMBURGUESA ---
 document.getElementById('hamburgerBtn')?.addEventListener('click', () => {
     document.getElementById('sidebar').classList.remove('-translate-x-full');
@@ -1399,3 +1723,4 @@ document.getElementById('sidebarOverlay')?.addEventListener('click', () => {
     document.getElementById('sidebar').classList.add('-translate-x-full');
     document.getElementById('sidebarOverlay').classList.add('hidden');
 });
+

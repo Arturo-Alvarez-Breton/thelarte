@@ -74,4 +74,7 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
      * @return Lista de pagos con el método especificado
      */
     List<Pago> findByMetodoPago(String metodoPago);
+    // Agregar este método que falta:
+    List<Pago> findByTransaccionIdAndEstado(Long transaccionId, Pago.EstadoPago estado);
+
 }

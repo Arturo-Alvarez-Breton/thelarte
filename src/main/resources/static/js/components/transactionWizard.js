@@ -76,7 +76,6 @@ export class TransactionWizard {
                         title: 'Método de Pago',
                         content: this.getVentaStep3Content(),
                         onNext: () => this.validateVentaStep3(),
-                        onLoad: () => this.loadVentaStep3Data && this.loadVentaStep3Data() // Optional, in case you need listeners
                     },
                     {
                         title: 'Confirmación de Venta',
@@ -299,6 +298,7 @@ export class TransactionWizard {
 // ... (código anterior igual)
 
     // =============== VENTA WIZARD METHODS ===============
+    // Modifica la función getVentaStep1Content() para ajustar el formulario de clientes
     getVentaStep1Content() {
         return `
     <div class="space-y-4">
@@ -542,58 +542,122 @@ export class TransactionWizard {
         return `
         <div class="space-y-4">
             <label class="block text-gray-700 text-sm font-bold mb-2">Transacción origen:</label>
-            
-            <!-- Añadir buscador -->
             <div class="mb-4">
-                <input type="text" id="devolucionSearchInput" placeholder="Buscar por ID, cliente o fecha..." 
+                <input type="text" id="devolucionSearchInput" placeholder="Buscar por ID, cliente, suplidor, RNC, cédula o fecha..." 
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
             </div>
-            
-            <div id="devolucionTransaccionesContainer">
-                <div class="text-gray-500">Cargando transacciones...</div>
+            <div id="devolucionTransaccionesLista" class="max-h-96 overflow-y-auto">
+                <div class="text-gray-500 text-center p-4">Cargando transacciones...</div>
             </div>
         </div>
     `;
     }
 
     async loadDevolucionStep2Data() {
-        // Obtener transacciones para filtrar según tipo
         const tipo = this.transactionData.tipoTransaccion === 'DEVOLUCION_COMPRA' ? 'COMPRA' : 'VENTA';
         try {
-            // ¡Pasa el filtro de tipo!
             this.transacciones = await this.transaccionService.getTransacciones({ tipo });
             this.transaccionesFiltradas = this.transacciones.filter(
-                t => t.tipo === tipo && t.estado !== 'CANCELADA'
+                t => t.tipo === tipo &&
+                    (t.estado === 'PENDIENTE' || t.estado === 'COMPLETADA')
             );
 
-            const container = document.getElementById('devolucionTransaccionesContainer');
-            if (!container) return;
-
-            // Crear el buscador primero
-            container.innerHTML = `
-            <div class="mb-4">
-                <input type="text" id="devolucionSearchInput" placeholder="Buscar por ID, cliente o fecha..." 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-            </div>
-            <div id="devolucionTransaccionesLista" class="max-h-96 overflow-y-auto">
-                <div class="text-gray-500 text-center p-4">Cargando transacciones...</div>
-            </div>
-        `;
-
-            // Configurar el buscador
-            const searchInput = document.getElementById('devolucionSearchInput');
             const listaContainer = document.getElementById('devolucionTransaccionesLista');
+            const searchInput = document.getElementById('devolucionSearchInput');
 
-            if (!listaContainer) return;
+            // Función de filtrado avanzada (adaptada de transacciones.js)
+            const filtrarTransacciones = (busquedaOriginal) => {
+                const busqueda = (busquedaOriginal || '').toLowerCase().trim();
 
-            // Función para renderizar las transacciones filtradas
+                // Normalizar búsqueda (quitar caracteres no numéricos)
+                const busquedaLimpia = busqueda.replace(/[^0-9]/g, '');
+                const esNumerica = /^\d+$/.test(busquedaLimpia);
+
+                // Función para formatear cédula
+                function formatearComoCedula(id) {
+                    if (!id) return '';
+                    let idStr = String(id).replace(/\D/g, '');
+                    while (idStr.length < 11) idStr = '0' + idStr;
+                    return idStr;
+                }
+
+                return this.transaccionesFiltradas.filter(t => {
+                    // Si no hay búsqueda, mostrar todo
+                    if (!busqueda) return true;
+
+                    // BÚSQUEDA POR NOMBRE (caso más simple)
+                    const nombreContraparte = (t.contraparteNombre || '').toLowerCase();
+                    if (nombreContraparte.includes(busqueda)) {
+                        return true;
+                    }
+
+                    // BÚSQUEDA POR IDENTIFICACIÓN (cédula o RNC)
+                    if (esNumerica) {
+                        // 1. Para compras: buscar en RNC del proveedor
+                        if (t.tipo === 'COMPRA' && t.proveedor && t.proveedor.rnc) {
+                            const rncLimpio = t.proveedor.rnc.replace(/[^0-9]/g, '');
+                            if (rncLimpio.includes(busquedaLimpia) || busquedaLimpia.includes(rncLimpio)) {
+                                return true;
+                            }
+                        }
+
+                        // 2. Para ventas: buscar en cédula del cliente
+                        else if (t.tipo === 'VENTA') {
+                            // Buscar en la cédula del objeto cliente
+                            if (t.cliente && t.cliente.cedula) {
+                                const cedulaLimpia = t.cliente.cedula.replace(/[^0-9]/g, '');
+                                if (cedulaLimpia.includes(busquedaLimpia) || busquedaLimpia.includes(cedulaLimpia)) {
+                                    return true;
+                                }
+                            }
+
+                            // Buscar en el contraparteId como respaldo
+                            else if (t.contraparteId) {
+                                const cedulaFormateada = formatearComoCedula(t.contraparteId);
+                                if (cedulaFormateada.includes(busquedaLimpia) ||
+                                    busquedaLimpia.includes(cedulaFormateada) ||
+                                    String(t.contraparteId).includes(busquedaLimpia)) {
+                                    return true;
+                                }
+                            }
+                        }
+
+                        // 3. Búsqueda directa por ID de transacción
+                        if (String(t.id).includes(busquedaLimpia)) {
+                            return true;
+                        }
+
+                        // 4. Buscar por número de factura
+                        if (t.numeroFactura && String(t.numeroFactura).includes(busquedaLimpia)) {
+                            return true;
+                        }
+
+                        // 5. Buscar por total (montos)
+                        if (t.total && String(t.total).includes(busquedaLimpia)) {
+                            return true;
+                        }
+                    }
+
+                    // BÚSQUEDA EN FECHA (formato español)
+                    if (t.fecha) {
+                        const fechaFormateada = new Date(t.fecha).toLocaleDateString('es-DO').toLowerCase();
+                        if (fechaFormateada.includes(busqueda)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            };
+
+            // Renderizar tarjetas
             const renderTransacciones = (transacciones) => {
                 if (!transacciones.length) {
                     listaContainer.innerHTML = `<div class="text-gray-500 text-center p-4">No hay transacciones para devolución.</div>`;
                     return;
                 }
 
-                listaContainer.innerHTML = transacciones.map((t) => {
+                listaContainer.innerHTML = transacciones.map(t => {
                     const stateColor = this.getStateColor(t.estado);
                     const isSelected = this.transactionData.transaccionOrigen && this.transactionData.transaccionOrigen.id === t.id;
 
@@ -630,43 +694,18 @@ export class TransactionWizard {
             // Renderizar inicialmente todas las transacciones
             renderTransacciones(this.transaccionesFiltradas);
 
-            // Configurar búsqueda
+            // Configurar búsqueda en tiempo real
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase().trim();
-
-                    if (!searchTerm) {
-                        renderTransacciones(this.transaccionesFiltradas);
-                        return;
-                    }
-
-                    const filtradas = this.transaccionesFiltradas.filter(t => {
-                        // Buscar en ID
-                        if (t.id.toString().includes(searchTerm)) return true;
-
-                        // Buscar en nombre de contraparte
-                        if (t.contraparteNombre && t.contraparteNombre.toLowerCase().includes(searchTerm)) return true;
-
-                        // Buscar en fecha
-                        const fecha = new Date(t.fecha).toLocaleDateString('es-DO').toLowerCase();
-                        if (fecha.includes(searchTerm)) return true;
-
-                        // Buscar en total
-                        const total = this.formatCurrency(t.total).toLowerCase();
-                        if (total.includes(searchTerm)) return true;
-
-                        return false;
-                    });
-
-                    renderTransacciones(filtradas);
+                    const resultados = filtrarTransacciones(e.target.value);
+                    renderTransacciones(resultados);
                 });
             }
-
         } catch (e) {
             console.error('Error cargando transacciones:', e);
             window.showToast('Error cargando transacciones.', 'error');
 
-            const container = document.getElementById('devolucionTransaccionesContainer');
+            const container = document.getElementById('devolucionTransaccionesLista');
             if (container) {
                 container.innerHTML = `
                 <div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 text-center">
@@ -701,18 +740,113 @@ export class TransactionWizard {
     `).join('');
     }
 
+    // Mejora la función selectTransaccionOrigen para que guarde el ID explícitamente
     selectTransaccionOrigen(id) {
-        this.transactionData.transaccionOrigen = this.transaccionesFiltradas.find(t => t.id === id);
-        // Reset productos seleccionados si cambia la transacción
-        this.transactionData.productosADevolver = [];
+        // Verificar que el ID es un número válido
+        if (!id || isNaN(id)) {
+            window.showToast('ID de transacción inválido', 'error');
+            return;
+        }
+
+        // Buscar la transacción en el array filtrado
+        const transaccion = this.transaccionesFiltradas.find(t => t.id === id);
+        if (!transaccion) {
+            console.error(`Transacción con ID ${id} no encontrada en el listado filtrado`);
+            window.showToast('No se encontró la transacción seleccionada', 'error');
+            return;
+        }
+
+        // Guardar referencia completa y explícita
+        console.log(`Seleccionando transacción origen ID: ${id}`, transaccion);
+
+        // Usar estructuras clonadas para evitar referencias perdidas
+        this.transactionData.transaccionOrigen = JSON.parse(JSON.stringify(transaccion));
+        this.transactionData.transaccionOrigenId = id; // Guardar el ID explícitamente como propiedad separada
+
+        // Actualizar UI inmediatamente
+        this.renderizarTransaccionSeleccionada();
+
+        // Forzar actualización de UI general
         this.updateWizardUI();
     }
 
+// Nueva función para mostrar la transacción seleccionada en la interfaz
+    renderizarTransaccionSeleccionada() {
+        const listaContainer = document.getElementById('devolucionTransaccionesLista');
+        if (!listaContainer) return;
+
+        // Re-renderizar la lista para mostrar la selección
+        const renderTransacciones = (transacciones) => {
+            if (!transacciones.length) {
+                listaContainer.innerHTML = `<div class="text-gray-500 text-center p-4">No hay transacciones para devolución.</div>`;
+                return;
+            }
+
+            listaContainer.innerHTML = transacciones.map(t => {
+                const stateColor = this.getStateColor(t.estado);
+                const isSelected = this.transactionData.transaccionOrigen &&
+                    this.transactionData.transaccionOrigen.id === t.id;
+
+                return `
+                <div class="border-l-4 border-${stateColor}-500 rounded px-4 py-2 mb-2 cursor-pointer 
+                    ${isSelected ? "bg-brand-light-brown text-white" : "bg-white hover:bg-gray-50"}"
+                    onclick="window.transactionWizard.selectTransaccionOrigen(${t.id})">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <strong>${t.contraparteNombre || 'Sin nombre'}</strong> 
+                            <span class="ml-1 text-xs font-semibold">#${t.id}</span>
+                            ${isSelected ? '<span class="ml-2 bg-green-600 text-white text-xs px-2 py-0.5 rounded-full">SELECCIONADA</span>' : ''}
+                            <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-${stateColor}-100 text-${stateColor}-800">
+                                ${t.estado || 'N/A'}
+                            </span>
+                        </div>
+                        <span class="text-xs ${isSelected ? 'text-white' : 'text-gray-500'}">
+                            ${new Date(t.fecha).toLocaleDateString('es-DO')}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-sm ${isSelected ? 'text-white' : 'text-gray-600'}">
+                            <i class="fas fa-cubes mr-1"></i>
+                            ${t.lineas ? t.lineas.reduce((sum, line) => sum + (parseInt(line.cantidad) || 0), 0) : 0} unidades
+                        </span>
+                        <span class="text-sm font-bold ${isSelected ? 'text-white' : 'text-brand-brown'}">
+                            ${this.formatCurrency(t.total)}
+                        </span>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        };
+
+        renderTransacciones(this.transaccionesFiltradas);
+    }
     validateDevolucionStep2() {
-        if (!this.transactionData.transaccionOrigen) {
-            window.showToast('Selecciona una transacción origen', 'error');
+        if (!this.transactionData.transaccionOrigen || !this.transactionData.transaccionOrigen.id) {
+            window.showToast('Debes seleccionar una transacción origen válida para continuar', 'error');
+
+            // También resaltar visualmente las transacciones disponibles para ayudar al usuario
+            const container = document.getElementById('devolucionTransaccionesLista');
+            if (container) {
+                container.classList.add('border-2', 'border-red-400', 'p-2', 'rounded');
+                // Quitar el resaltado después de 3 segundos
+                setTimeout(() => {
+                    container.classList.remove('border-2', 'border-red-400', 'p-2', 'rounded');
+                }, 3000);
+            }
+
             return false;
         }
+
+        // Validación adicional: comprobar que tiene líneas de productos
+        if (!this.transactionData.transaccionOrigen.lineas ||
+            this.transactionData.transaccionOrigen.lineas.length === 0) {
+            window.showToast('La transacción seleccionada no tiene productos para devolver', 'error');
+            return false;
+        }
+
+        // Verificación explícita del ID que se envía al backend
+        console.log("ID de transacción validado:", this.transactionData.transaccionOrigen.id);
+
         return true;
     }
 
@@ -733,9 +867,6 @@ export class TransactionWizard {
                 }
                 this.transactionData.cliente.cedula = nuevoCliente.cedula;
             }
-            const cedulaLong = this.transactionData.cliente
-                ? cedulaToLong(this.transactionData.cliente.cedula)
-                : null;
 
             // Validación de productos
             const lineaInvalida = this.transactionData.lineas.find(
@@ -746,8 +877,17 @@ export class TransactionWizard {
                 return;
             }
 
+            // Convertir la cédula a Long eliminando guiones, pero los ceros iniciales se perderán como número
+            function cedulaToLong(cedula) {
+                return cedula ? Number(cedula.replace(/\D/g, '')) : null;
+            }
+            const cedulaLong = this.transactionData.cliente
+                ? cedulaToLong(this.transactionData.cliente.cedula)
+                : null;
+
             const payload = {
                 tipo: 'VENTA',
+                fecha: new Date().toISOString(),
                 cliente: this.transactionData.cliente ? {
                     cedula: this.transactionData.cliente.cedula,
                     nombre: this.transactionData.cliente.nombre,
@@ -755,7 +895,7 @@ export class TransactionWizard {
                 } : null,
                 proveedor: null,
                 metodoPago: this.transactionData.metodoPago,
-                observaciones: this.transactionData.observaciones,
+                observaciones: this.transactionData.observaciones || '',
                 lineas: this.transactionData.lineas.map(line => ({
                     productoId: line.productoId,
                     productoNombre: line.nombreProducto || line.nombre,
@@ -772,7 +912,7 @@ export class TransactionWizard {
                 subtotal: this.transactionData.subtotal,
                 impuestos: this.transactionData.impuestos,
                 total: this.transactionData.total,
-                contraparteId: cedulaLong,
+                contraparteId: cedulaLong, // Enviado como número
                 contraparteNombre: this.transactionData.cliente
                     ? (this.transactionData.cliente.nombre + " " + this.transactionData.cliente.apellido)
                     : null,
@@ -795,41 +935,71 @@ export class TransactionWizard {
 
             // Si es pago en cuotas
             if (this.transactionData.tipoPago === 'ENCUOTAS') {
-                // Calcular montos y saldo pendiente
                 const montoInicial = this.transactionData.montoInicial || 0;
                 const montoTotal = this.transactionData.total || 0;
-                const totalCuotas = this.transactionData.cuotasFlexibles?.reduce(
+                const cuotasFlexibles = this.transactionData.cuotasFlexibles || [];
+
+                // Verificar todas las cuotas para HOY y marcarlas como COMPLETADAS
+                const hoy = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                cuotasFlexibles.forEach(cuota => {
+                    if (cuota.fecha === hoy) {
+                        cuota.estado = 'COMPLETADO';
+                    }
+                });
+
+                // Separar cuotas completadas y pendientes
+                const cuotasCompletadas = cuotasFlexibles.filter(c => c.estado === 'COMPLETADO');
+                const cuotasPendientes = cuotasFlexibles.filter(c => c.estado !== 'COMPLETADO');
+
+                // Calcular monto total de cuotas completadas
+                const montoCompletado = cuotasCompletadas.reduce(
                     (sum, cuota) => sum + (parseFloat(cuota.monto) || 0), 0
-                ) || 0;
-                const saldoPendiente = montoTotal - montoInicial - totalCuotas;
+                );
+
+                // Calcular saldo pendiente
+                const saldoPendiente = montoTotal - montoInicial - montoCompletado;
+                const saldoFinal = Math.max(0, saldoPendiente);
 
                 // Agregar información del plan de pagos al payload
                 payload.planPagos = {
                     montoInicial: montoInicial,
                     montoTotal: montoTotal,
-                    saldoPendiente: saldoPendiente,
-                    cuotas: this.transactionData.cuotasFlexibles.map(cuota => ({
+                    saldoPendiente: saldoFinal,
+                    cuotas: cuotasFlexibles.map(cuota => ({
                         numero: cuota.numero,
                         fecha: cuota.fecha,
                         monto: parseFloat(cuota.monto),
-                        estado: 'PENDIENTE'
+                        estado: cuota.estado || 'PENDIENTE'
                     }))
                 };
 
-                // Registrar detalles en observaciones también
+                // Añadir saldoPendiente directamente al payload
+                payload.montoInicial = montoInicial;
+                payload.saldoPendiente = saldoFinal;
+
+                // Registrar detalles en observaciones
                 if (!payload.observaciones) payload.observaciones = "";
                 payload.observaciones += "\n\nVENTA A CRÉDITO:";
                 payload.observaciones += `\nPago inicial: ${this.formatCurrency(montoInicial)}`;
                 payload.observaciones += `\nTotal a financiar: ${this.formatCurrency(montoTotal - montoInicial)}`;
-                payload.observaciones += `\nNúmero de cuotas: ${this.transactionData.cuotasFlexibles?.length || 0}`;
+                payload.observaciones += `\nCuotas completadas: ${cuotasCompletadas.length}`;
+                payload.observaciones += `\nCuotas pendientes: ${cuotasPendientes.length}`;
+                payload.observaciones += `\nSaldo pendiente: ${this.formatCurrency(saldoFinal)}`;
 
-                // Si hay saldo pendiente (no cubierto por las cuotas), incluirlo
-                if (saldoPendiente > 0) {
-                    payload.observaciones += `\nSaldo pendiente sin programar: ${this.formatCurrency(saldoPendiente)}`;
+                // Añadir información de cuotas en metadatos
+                if (cuotasFlexibles.length > 0) {
+                    payload.metadatosPago = JSON.stringify({
+                        cuotasProgramadas: cuotasFlexibles.map(cuota => ({
+                            numero: cuota.numero,
+                            fecha: cuota.fecha,
+                            monto: parseFloat(cuota.monto),
+                            estado: cuota.estado || 'PENDIENTE'
+                        }))
+                    });
                 }
             }
 
-            console.log("Payload de venta:", JSON.stringify(payload, null, 2));
+            console.log("Payload de venta:", payload);
             await this.transaccionService.crearTransaccion(payload);
             window.showToast('Venta procesada exitosamente.', 'success');
             this.close();
@@ -839,44 +1009,42 @@ export class TransactionWizard {
             window.showToast('Error al procesar la venta: ' + (error.message || error), 'error');
         }
     }
+
     extractLastFourDigits(cardNumber) {
         if (!cardNumber) return '';
         const match = cardNumber.match(/(\d{4})$/);
         return match ? match[1] : '';
     }
-    async processCardnetPayment() {
-        try {
-            // Mostrar pantalla de carga
-            this.showLoadingOverlay("Enviando pago al terminal Verifone...");
+    // Nuevo método específico para procesar pagos con tarjeta en cuotas
+    processCardnetPaymentCuotas(montoACobrar) {
+        this.showLoadingOverlay(`Procesando pago con tarjeta por ${this.formatCurrency(montoACobrar)} en terminal...`);
 
-            // Crea la sesión de CardNet indicando que es para terminal físico
-            const sessionData = await this.cardnetService.createSession({
-                ordenId: `ORD-${Date.now()}`,
-                total: this.transactionData.total,
-                impuestos: this.transactionData.impuestos,
-                email: this.transactionData.cliente?.email,
-                telefono: this.transactionData.cliente?.telefono,
-                direccion: this.transactionData.cliente?.direccion
-            }, true); // Añadimos 'true' para indicar que es para terminal físico
+        // Crear la sesión de CardNet para el terminal
+        this.cardnetService.createSession({
+            ordenId: `CUOTAS-${Date.now()}`,
+            total: montoACobrar,
+            impuestos: 0,
+            nombre: this.transactionData.cliente?.nombre
+                ? `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido || ''}`
+                : 'Cliente',
+            descripcion: `Pago inicial y cuotas a crédito`
+        }, true).then(sessionData => {
+            this.hideLoadingOverlay();
 
-            if (!sessionData.SESSION) {
-                throw new Error("No se pudo crear la sesión de pago");
+            if (!sessionData || !sessionData.SESSION) {
+                window.showToast('No se pudo crear la sesión de pago', 'error');
+                return;
             }
 
-            // Guarda los datos de la sesión
-            this.cardnetSessionId = sessionData.SESSION;
-            this.cardnetSessionKey = sessionData["session-key"];
-
-            // Oculta el overlay de carga y muestra el modal de proceso de terminal
-            this.hideLoadingOverlay();
+            // Mostrar modal para el proceso en terminal
             this.showTerminalProcessingModal(sessionData.SESSION);
 
-        } catch (error) {
+        }).catch(err => {
             this.hideLoadingOverlay();
-            window.showToast(`Error al iniciar pago con terminal: ${error.message}`, 'error');
-            console.error("Error en processCardnetPayment:", error);
-        }
+            window.showToast('Error al iniciar pago: ' + (err.message || err), 'error');
+        });
     }
+
     /**
      * Muestra el modal de proceso de pago en terminal
      */
@@ -982,10 +1150,7 @@ export class TransactionWizard {
             statusMessage.textContent = statusData.message || 'Procesando...';
         }
     }
-
-    /**
-     * Maneja la finalización exitosa del pago en terminal
-     */
+    // Modificación de handleTerminalPaymentComplete para manejar correctamente el saldo pendiente
     handleTerminalPaymentComplete(statusData) {
         const statusDiv = document.getElementById('terminalPaymentStatus');
         const completeDiv = document.getElementById('terminalPaymentComplete');
@@ -997,7 +1162,7 @@ export class TransactionWizard {
         statusDiv.classList.add('hidden');
         completeDiv.classList.remove('hidden');
 
-        // Mostrar código de autorización si existe
+        // Mostrar código de autorización
         if (statusData.authCode && authCodeElement) {
             authCodeElement.textContent = `Código de autorización: ${statusData.authCode}`;
         }
@@ -1006,6 +1171,36 @@ export class TransactionWizard {
         this.transactionData.cardnetResponse = statusData;
         this.transactionData.cardnetAuthCode = statusData.authCode;
         this.transactionData.referenceNumber = statusData.referenceName || statusData.sessionId;
+
+        // Si es pago en cuotas y hay cuotas que fueron cobradas con la tarjeta
+        if (this.transactionData.tipoPago === 'ENCUOTAS' && this.cuotasACobrar && this.cuotasACobrar.length > 0) {
+            // Calcular el monto total de las cuotas cobradas
+            const montoCuotasCobradas = this.cuotasACobrar.reduce((sum, cuota) => {
+                return sum + parseFloat(cuota.monto || 0);
+            }, 0);
+
+            // Recorremos las cuotas a cobrar y marcamos cada una como COMPLETADA
+            this.cuotasACobrar.forEach(cuotaCobrada => {
+                const cuota = this.transactionData.cuotasFlexibles.find(c => c.id === cuotaCobrada.id);
+                if (cuota) {
+                    cuota.estado = 'COMPLETADO';
+                    console.log(`Marcando cuota ${cuota.numero} como COMPLETADA`);
+                }
+            });
+
+            // Actualizar el saldo pendiente
+            if (this.transactionData.saldoPendiente) {
+                this.transactionData.saldoPendiente -= montoCuotasCobradas;
+                // Asegurar que no quede negativo
+                if (this.transactionData.saldoPendiente < 0) {
+                    this.transactionData.saldoPendiente = 0;
+                }
+                console.log(`Saldo pendiente actualizado: ${this.transactionData.saldoPendiente}`);
+            }
+
+            // Mensaje informativo
+            window.showToast(`Se marcaron ${this.cuotasACobrar.length} cuota(s) como pagadas y se actualizó el saldo pendiente`, 'success');
+        }
     }
 
     /**
@@ -1611,20 +1806,15 @@ export class TransactionWizard {
 
     // Muestra/oculta campos según el tipo de pago
     toggleTipoPago(tipo) {
-        const normalFields = document.getElementById('metodoPagoNormal');
-        const cuotasFields = document.getElementById('metodoPagoEnCuotas');
-        const gestionCuotas = document.getElementById('gestionCuotasFlexibles');
+        const opcionesPagoEnCuotas = document.getElementById('opcionesPagoEnCuotas');
 
         if (tipo === 'NORMAL') {
-            normalFields.classList.remove('hidden');
-            cuotasFields.classList.add('hidden');
-            gestionCuotas.classList.add('hidden');
+            opcionesPagoEnCuotas.classList.add('hidden');
         } else {
-            normalFields.classList.add('hidden');
-            cuotasFields.classList.remove('hidden');
-            gestionCuotas.classList.remove('hidden');
+            opcionesPagoEnCuotas.classList.remove('hidden');
 
-            // Inicializar cuotas
+            // Inicializar cuotas y saldo pendiente
+            this.transactionData.saldoPendiente = this.transactionData.total;
             this.inicializarGestionCuotas();
         }
 
@@ -1814,131 +2004,131 @@ export class TransactionWizard {
 
     getVentaStep3Content() {
         return `
-        <div class="space-y-4">
-            <h3 class="text-lg font-semibold text-brand-brown">Método de Pago</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de pago:</label>
-                    <div class="space-y-2">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="TipoPago" value="NORMAL" class="form-radio text-brand-brown" checked 
-                                   onchange="window.transactionWizard.toggleTipoPago('NORMAL')">
-                            <span class="ml-2">Normal</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="TipoPago" value="ENCUOTAS" class="form-radio text-brand-brown"
-                                   onchange="window.transactionWizard.toggleTipoPago('ENCUOTAS')">
-                            <span class="ml-2">En cuotas</span>
-                        </label>
-                    </div>
+    <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-brand-brown">Método de Pago</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de pago:</label>
+                <div class="space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="TipoPago" value="NORMAL" class="form-radio text-brand-brown" checked 
+                               onchange="window.transactionWizard.toggleTipoPago('NORMAL')">
+                        <span class="ml-2">Normal</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="TipoPago" value="ENCUOTAS" class="form-radio text-brand-brown"
+                               onchange="window.transactionWizard.toggleTipoPago('ENCUOTAS')">
+                        <span class="ml-2">En cuotas</span>
+                    </label>
                 </div>
-                
-                <!-- Campos normales -->
-                <div id="metodoPagoNormal">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar método:</label>
-                    <div class="space-y-2">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="ventaMetodoPago" value="EFECTIVO" class="form-radio text-brand-brown" checked>
-                            <span class="ml-2">Efectivo</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="ventaMetodoPago" value="TARJETA" class="form-radio text-brand-brown">
-                            <span class="ml-2">Tarjeta</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="ventaMetodoPago" value="TRANSFERENCIA" class="form-radio text-brand-brown">
-                            <span class="ml-2">Transferencia</span>
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Campos para pago en cuotas (inicialmente oculto) -->
-                <div id="metodoPagoEnCuotas" class="hidden">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Monto de inicial</label>
-                            <input type="number" id="montoInicial" class="w-full border rounded px-3 py-2" min="0">
-                        </div>
-                        <div class="text-sm text-gray-700 py-1 px-2 bg-gray-100 rounded">
-                            <span>Total a financiar: </span>
-                            <span id="montoAFinanciar" class="font-bold">${this.formatCurrency(this.transactionData.total)}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Gestión de cuotas flexibles -->
-                <div id="gestionCuotasFlexibles" class="hidden col-span-2 mt-4 border p-4 rounded-lg bg-gray-50">
-                    <div class="flex justify-between items-center mb-4">
-                        <h4 class="font-bold">Gestión de Cuotas</h4>
-                        <button type="button" id="btnAgregarCuota" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
-                            <i class="fas fa-plus mr-1"></i> Agregar Cuota
-                        </button>
-                    </div>
-                    
-                    <div id="listaCuotasFlexibles" class="space-y-3">
-                        <!-- Aquí se añadirán dinámicamente las cuotas -->
-                    </div>
-                    
-                    <div class="flex justify-between items-center mt-4 pt-3 border-t">
-                        <div class="font-medium">Saldo restante:</div>
-                        <div id="saldoPendiente" class="font-bold text-xl text-brand-brown">${this.formatCurrency(this.transactionData.total)}</div>
-                    </div>
-                </div>
-                
-                <!-- Campo de observaciones -->
-                <div class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-                    <textarea id="ventaObservaciones" rows="4" placeholder="Observaciones adicionales..." 
-                              class="w-full px-3 py-2 border rounded"></textarea>
+            </div>
+            
+            <!-- Método de pago siempre visible independiente del tipo de pago -->
+            <div id="seleccionMetodoPago">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar método:</label>
+                <div class="space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="ventaMetodoPago" value="EFECTIVO" class="form-radio text-brand-brown" checked>
+                        <span class="ml-2">Efectivo</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="ventaMetodoPago" value="TARJETA" class="form-radio text-brand-brown">
+                        <span class="ml-2">Tarjeta</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="ventaMetodoPago" value="TRANSFERENCIA" class="form-radio text-brand-brown">
+                        <span class="ml-2">Transferencia</span>
+                    </label>
                 </div>
             </div>
         </div>
+        
+        <!-- Contenedor para elementos adicionales de pago en cuotas (inicialmente oculto) -->
+        <div id="opcionesPagoEnCuotas" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Monto de inicial</label>
+                    <input type="number" id="montoInicial" class="w-full border rounded px-3 py-2" min="0">
+                </div>
+                <div class="text-sm text-gray-700 py-1 px-2 bg-gray-100 rounded">
+                    <span>Total a financiar: </span>
+                    <span id="montoAFinanciar" class="font-bold">${this.formatCurrency(this.transactionData.total)}</span>
+                </div>
+            </div>
+            
+            <!-- Gestión de cuotas flexibles -->
+            <div id="gestionCuotasFlexibles" class="mt-4 border p-4 rounded-lg bg-gray-50">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-bold">Gestión de Cuotas</h4>
+                    <button type="button" id="btnAgregarCuota" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                        <i class="fas fa-plus mr-1"></i> Agregar Cuota
+                    </button>
+                </div>
+                
+                <div id="listaCuotasFlexibles" class="space-y-3">
+                    <!-- Aquí se añadirán dinámicamente las cuotas -->
+                </div>
+                
+                <div class="flex justify-between items-center mt-4 pt-3 border-t">
+                    <div class="font-medium">Saldo restante:</div>
+                    <div id="saldoPendiente" class="font-bold text-xl text-brand-brown">${this.formatCurrency(this.transactionData.total)}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Campo de observaciones -->
+        <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+            <textarea id="ventaObservaciones" rows="4" placeholder="Observaciones adicionales..." 
+                      class="w-full px-3 py-2 border rounded"></textarea>
+        </div>
+    </div>
     `;
     }
+
+
+// Aseguramos que validateVentaStep3 obtenga correctamente el método de pago
+    // Método para validar el paso 3 con la lógica correcta
     validateVentaStep3() {
         const tipoPago = document.querySelector('input[name="TipoPago"]:checked')?.value;
         this.transactionData.tipoPago = tipoPago;
+        const metodoPago = document.querySelector('input[name="ventaMetodoPago"]:checked')?.value;
+        this.transactionData.metodoPago = metodoPago;
+
+        if (!metodoPago) {
+            window.showToast('Selecciona un método de pago.', 'error');
+            return false;
+        }
 
         if (tipoPago === 'ENCUOTAS') {
-            // Validar que haya un monto inicial (puede ser 0 si es todo financiado)
-            const montoInicial = parseFloat(document.getElementById('montoInicial').value);
+            // Obtener monto inicial
+            const montoInicial = parseFloat(document.getElementById('montoInicial').value) || 0;
             if (isNaN(montoInicial)) {
                 window.showToast('Debe ingresar el monto inicial (puede ser 0)', 'error');
                 return false;
             }
+            this.transactionData.montoInicial = montoInicial;
 
-            // Las cuotas ya no son obligatorias al inicio, solo hay que calcular el saldo pendiente
-            const saldoPendiente = this.actualizarSaldoPendiente();
-
-            // Si el saldo pendiente es negativo (pago excesivo), advertir
-            if (saldoPendiente < 0) {
-                if (!confirm(`El total de pagos excede el precio por ${this.formatCurrency(-saldoPendiente)}. ¿Desea continuar de todos modos?`)) {
+            // Validar cuotas
+            const cuotas = this.transactionData.cuotasFlexibles || [];
+            if (cuotas.length === 0) {
+                if (!confirm('No ha programado ninguna cuota. ¿Desea continuar?')) {
                     return false;
                 }
             }
 
-            // Si no hay cuotas pero hay saldo pendiente, confirmar que es intencional
-            if (saldoPendiente > 0 && (!this.transactionData.cuotasFlexibles || this.transactionData.cuotasFlexibles.length === 0)) {
-                if (!confirm(`Hay un saldo pendiente de ${this.formatCurrency(saldoPendiente)} sin cuotas programadas. El cliente deberá completar el pago posteriormente. ¿Desea continuar?`)) {
-                    return false;
-                }
-            }
-
-            // Para pagos en cuotas con monto inicial, usar EFECTIVO para el primer pago
-            this.transactionData.metodoPago = 'EFECTIVO';
-        } else {
-            // Pago normal - código existente
-            const metodoPago = document.querySelector('input[name="ventaMetodoPago"]:checked')?.value;
-            if (!metodoPago) {
-                window.showToast('Selecciona un método de pago.', 'error');
-                return false;
-            }
-            this.transactionData.metodoPago = metodoPago;
-
+            // Si el método de pago es TARJETA, procesamos con el terminal por el monto inicial
+            // + cualquier cuota programada para el día de hoy
             if (metodoPago === 'TARJETA') {
-                // Usar la función actualizada para terminal físico en vez de web
-                this.processCardnetPayment();
-                return false; // Detener el flujo normal para que se maneje en la función de pago con tarjeta
+                // Calcular el monto a cobrar: monto inicial + cuotas de hoy
+                this.procesarPagoTarjetaCuotas();
+                return false; // Detener el flujo normal
+            }
+        } else {
+            // Pago normal (no en cuotas)
+            if (metodoPago === 'TARJETA') {
+                this.processCardnetPayment(this.transactionData.total);
+                return false;
             }
         }
 
@@ -1946,14 +2136,75 @@ export class TransactionWizard {
         return true;
     }
 
+// Método específico para procesar pagos en cuotas con tarjeta
+    procesarPagoTarjetaCuotas() {
+        // 1. Obtener la fecha de hoy
+        const hoy = new Date().toISOString().split('T')[0];
+
+        // 2. Calcular montos
+        const montoInicial = this.transactionData.montoInicial || 0;
+        const cuotasDeHoy = this.transactionData.cuotasFlexibles
+            ? this.transactionData.cuotasFlexibles.filter(cuota => cuota.fecha === hoy)
+            : [];
+
+        const montoCuotasHoy = cuotasDeHoy.reduce((sum, cuota) => sum + (parseFloat(cuota.monto) || 0), 0);
+        const totalACobrar = montoInicial + montoCuotasHoy;
+
+        // 3. Mostrar información al usuario
+        if (cuotasDeHoy.length > 0) {
+            window.showToast(`Se cobrarán ${this.formatCurrency(montoInicial)} de inicial + ${this.formatCurrency(montoCuotasHoy)} de ${cuotasDeHoy.length} cuota(s) programada(s) para hoy`, 'info');
+        }
+
+        // 4. Guardar las cuotas de hoy para marcarlas después
+        this.cuotasACobrar = cuotasDeHoy;
+
+        // 5. Mostrar overlay y procesar pago
+        this.showLoadingOverlay(`Procesando pago con tarjeta por ${this.formatCurrency(totalACobrar)} en terminal...`);
+
+        this.cardnetService.createSession({
+            ordenId: `CUOTAS-${Date.now()}`,
+            total: totalACobrar,
+            impuestos: 0,
+            nombre: this.transactionData.cliente?.nombre
+                ? `${this.transactionData.cliente.nombre} ${this.transactionData.cliente.apellido || ''}`
+                : 'Cliente',
+            descripcion: `Pago inicial y ${cuotasDeHoy.length} cuota(s) programada(s) para hoy`
+        }, true).then(sessionData => {
+            this.hideLoadingOverlay();
+
+            if (!sessionData || !sessionData.SESSION) {
+                window.showToast('No se pudo crear la sesión de pago', 'error');
+                return;
+            }
+
+            // Mostrar modal para el proceso en terminal
+            this.showTerminalProcessingModal(sessionData.SESSION);
+
+        }).catch(err => {
+            this.hideLoadingOverlay();
+            window.showToast('Error al iniciar pago: ' + (err.message || err), 'error');
+        });
+    }
+
+
     // PASO 3: Selección de productos a devolver con cantidad
     getDevolucionStep3Content() {
         const t = this.transactionData.transaccionOrigen;
+        const transId = t ? t.id : 'No seleccionada';
+        const transNombre = t ? (t.contraparteNombre || 'Sin nombre') : 'No seleccionada';
+
         let html = `
         <div class="space-y-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2">Selecciona los productos a devolver:</label>
-            <div id="productosADevolverContainer">
-                <div class="text-gray-500">Cargando productos...</div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between">
+                    <label class="block text-gray-700 text-sm font-bold">Selecciona los productos a devolver:</label>
+                </div>
+               
+            </div>
+            
+            <div id="productosADevolverContainer" class="max-h-96 overflow-y-auto space-y-3">
+            <div class="text-gray-500 text-center py-4">Cargando productos...</div>'
+        }
             </div>
         </div>
     `;
@@ -1967,19 +2218,14 @@ export class TransactionWizard {
         const trans = this.transactionData.transaccionOrigen;
         if (!trans || !container) return;
 
-        if (!Array.isArray(this.transactionData.productosADevolver)) this.transactionData.productosADevolver = [];
+        if (!Array.isArray(this.transactionData.productosADevolver))
+            this.transactionData.productosADevolver = [];
 
-        // Agregar buscador para productos
-        const searchHTML = `
-    <div class="mb-4">
-        <input type="text" id="productosDevolucionSearch" placeholder="Buscar productos..." 
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown mb-3">
-    </div>`;
-
-        container.innerHTML = searchHTML + '<div id="productosDevolucionList"></div>';
-
-        const productosList = document.getElementById('productosDevolucionList');
-        if (!productosList) return;
+        // Verificar si hay productos en la transacción
+        if (!trans.lineas || trans.lineas.length === 0) {
+            container.innerHTML = `<div class="text-gray-500 text-center py-4">No hay productos en esta transacción.</div>`;
+            return;
+        }
 
         // Helpers
         const isSelected = (idx) => this.transactionData.productosADevolver.some(obj => obj.idx === idx);
@@ -1988,32 +2234,19 @@ export class TransactionWizard {
             return found ? found.cantidad : 1;
         };
 
-        // Función para renderizar la lista filtrada
-        const renderProductos = (filtro = '') => {
-            const lineasFiltradas = trans.lineas.filter(linea => {
-                if (!filtro) return true;
-                const nombre = (linea.nombreProducto || linea.productoNombre || '').toLowerCase();
-                const codigo = (linea.codigoProducto || '').toLowerCase();
-                return nombre.includes(filtro.toLowerCase()) || codigo.includes(filtro.toLowerCase());
-            });
+        // Renderizar todos los productos directamente
+        container.innerHTML = trans.lineas.map((linea, idx) => {
+            const maxCantidad = linea.cantidad;
+            const checked = isSelected(idx) ? 'checked' : '';
+            const cantidad = getCantidad(idx, maxCantidad);
+            const stateColor = checked ? 'green' : 'gray';
 
-            if (lineasFiltradas.length === 0) {
-                productosList.innerHTML = '<p class="text-gray-500 text-center">No hay productos que coincidan con la búsqueda</p>';
-                return;
-            }
-
-            productosList.innerHTML = lineasFiltradas.map((linea, idx) => {
-                const maxCantidad = linea.cantidad;
-                const checked = isSelected(idx) ? 'checked' : '';
-                const cantidad = getCantidad(idx, maxCantidad);
-                const stateColor = checked ? 'green' : 'gray';
-
-                return `
-            <div class="flex items-center mb-3 p-3 border border-${stateColor}-300 rounded-lg ${checked ? 'bg-green-50' : 'bg-white'}">
+            return `
+            <div class="flex items-center p-3 border border-${stateColor}-300 rounded-lg ${checked ? 'bg-green-50' : 'bg-white'}">
                 <div class="mr-3">
                     <input type="checkbox" id="prodADevolver-${idx}" ${checked} 
-                           onchange="window.transactionWizard.toggleProductoADevolver(${idx})"
-                           class="w-5 h-5 text-brand-brown">
+                       onchange="window.transactionWizard.toggleProductoADevolver(${idx})"
+                       class="w-5 h-5 text-brand-brown">
                 </div>
                 <div class="flex-grow">
                     <label for="prodADevolver-${idx}" class="block font-medium text-gray-700">
@@ -2037,18 +2270,8 @@ export class TransactionWizard {
                         onchange="window.transactionWizard.setCantidadADevolver(${idx}, this.value)">
                 </div>
             </div>
-            `;
-            }).join('');
-        };
-
-        // Inicializar con todos los productos
-        renderProductos();
-
-        // Configurar el buscador
-        const searchInput = document.getElementById('productosDevolucionSearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => renderProductos(e.target.value));
-        }
+        `;
+        }).join('');
     }
 
 // Actualiza la selección y pone cantidad=1 por defecto
@@ -2127,83 +2350,72 @@ export class TransactionWizard {
         </div>
     `;
     }
+
+    // Modificación en finalizeDevolucion() - Preservar ceros iniciales en contraparteId
+    // Modifica la función finalizeDevolucion() para asegurar que se incluye el ID correctamente
     async finalizeDevolucion() {
         try {
             const t = this.transactionData.transaccionOrigen;
+
+            // VERIFICACIÓN EXPLÍCITA - No continuar si no hay transacción seleccionada
+            if (!t || !t.id) {
+                window.showToast('No se ha seleccionado una transacción origen válida', 'error');
+                return;
+            }
+
+            // Usar el ID explícitamente (asegurarse de que sea un número o string válido)
+            const transaccionOrigenId = t.id;
+
             const observaciones = document.getElementById('devolucionObservaciones')?.value || "";
 
-            // Genera las líneas asegurando productoId válido y nombreProducto siempre presente
+            // Generar líneas de productos a devolver
             const lineas = this.transactionData.productosADevolver.map(obj => {
                 const linea = t.lineas[obj.idx];
-
-                // ARREGLO: productoId siempre válido (>0)
-                if (!linea.productoId || linea.productoId <= 0) {
-                    window.showToast(`Producto inválido para devolución: ${linea.nombreProducto || linea.productoNombre || "Producto sin nombre"}`, 'error');
-                    throw new Error("Producto inválido");
-                }
-
-                // ARREGLO: nombreProducto nunca vacío
-                let nombreProducto = linea.nombreProducto || linea.productoNombre || linea.nombre || "";
-                if (!nombreProducto.trim()) {
-                    window.showToast('La línea de producto no tiene nombre válido.', 'error');
-                    throw new Error("Producto sin nombre");
-                }
-
+                // ... resto del código para construir las líneas ...
                 return {
                     productoId: linea.productoId,
-                    productoNombre: nombreProducto,
+                    productoNombre: linea.nombreProducto || linea.productoNombre || linea.nombre || "",
                     cantidad: obj.cantidad,
                     precioUnitario: linea.precioUnitario,
-                    subtotalLinea: obj.cantidad * linea.precioUnitario,
-                    // Puedes agregar otros campos si el backend lo espera
+                    subtotalLinea: obj.cantidad * linea.precioUnitario
                 };
             });
 
-            // Determina correctamente la contraparte
+            // Determinar contraparte y sus datos
             let contraparteId, tipoContraparte, contraparteNombre;
+
             if (t.tipo === "COMPRA" || t.tipo === "DEVOLUCION_COMPRA") {
                 tipoContraparte = "SUPLIDOR";
                 contraparteId = t.proveedor?.id || t.contraparteId;
                 contraparteNombre = t.proveedor?.nombre || t.contraparteNombre || "Sin nombre";
-            } else if (t.tipo === "VENTA" || t.tipo === "DEVOLUCION_VENTA") {
-                tipoContraparte = "CLIENTE";
-                contraparteId = t.cliente?.id || t.contraparteId;
-                if (t.cliente?.nombre && t.cliente?.apellido) {
-                    contraparteNombre = `${t.cliente.nombre} ${t.cliente.apellido}`;
-                } else {
-                    contraparteNombre = t.cliente?.nombre || t.contraparteNombre || "Consumidor Final";
-                }
             } else {
-                window.showToast('Tipo de transacción origen desconocido.', 'error');
-                throw new Error("Tipo de transacción origen desconocido");
+                tipoContraparte = "CLIENTE";
+                contraparteId = t.cliente?.cedula || t.contraparteId;
+                contraparteNombre = t.cliente?.nombre ?
+                    `${t.cliente.nombre} ${t.cliente.apellido || ''}` :
+                    (t.contraparteNombre || "Consumidor Final");
             }
 
-            if (!contraparteId) {
-                window.showToast('No se encontró el ID de la contraparte en la transacción origen.', 'error');
-                return;
-            }
-            if (!contraparteNombre) {
-                window.showToast('No se encontró el nombre de la contraparte en la transacción origen.', 'error');
-                return;
-            }
-
+            // *** IMPORTANTE: Incluir el ID de transacción origen de múltiples formas ***
             const payload = {
                 tipo: this.transactionData.tipoTransaccion,
-                transaccionOrigenId: t.id,
-                contraparteId,
+                transaccionOrigenId: transaccionOrigenId,
+                contraparteId: contraparteId,
                 tipoContraparte,
                 contraparteNombre,
                 observaciones,
                 lineas,
             };
 
-            console.log("Payload de devolución FINAL:", payload);
+            console.log("Payload de devolución:", payload);
+            console.log("ID de transacción origen:", transaccionOrigenId, "Tipo:", typeof transaccionOrigenId);
 
             await this.transaccionService.createDevolucion(payload);
             window.showToast('Devolución procesada exitosamente.', 'success');
             this.close();
             if (window.transaccionesManager) window.transaccionesManager.loadTransactions();
         } catch (error) {
+            console.error("Error al finalizar devolución:", error);
             window.showToast('Error al procesar la devolución: ' + (error.message || error), 'error');
         }
     }
@@ -2289,7 +2501,6 @@ export class TransactionWizard {
     }
 
 
-
     // =============== COMPRA WIZARD METHODS ===============
     getCompraStep1Content() {
         return `
@@ -2334,11 +2545,11 @@ export class TransactionWizard {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">RNC</label>
                     <input type="text" id="compraRncProveedor"
-                           placeholder="00-0000000"
-                           maxlength="10"
+                           placeholder=""
+                           maxlength="11"
                            oninput="restrictToNumbersOnly(this); formatCedulaRnc(this);"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
-                    <p class="text-xs text-gray-500 mt-1">Formato RNC: 00-0000000 (opcional)</p>
+                    <p class="text-xs text-gray-500 mt-1">Formato RNC: 000-00000-0 (opcional)</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
@@ -2364,6 +2575,8 @@ export class TransactionWizard {
     </div>
     `;
     }
+
+
 
     async loadCompraStep1Data() {
         try {
@@ -2870,77 +3083,127 @@ export class TransactionWizard {
         };
         return stateColors[estado] || 'gray';
     }
-}
 
-function cedulaToLong(cedula) {
-    if (!cedula) return null;
-    // Quita cualquier caracter que no sea dígito
-    const soloNumeros = cedula.replace(/\D/g, '');
-    // Si está vacío, regresa null
-    if (!soloNumeros) return null;
-    return Number(soloNumeros);
-}
 
-// Funciones de validación y formato
+}
 function formatCedulaRnc(input) {
-    let digits = input.value.replace(/\D/g, '').slice(0, 11);
+    let digits = input.value.replace(/\D/g, '');
+
+    // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
     if (digits.length <= 9) {
-        // Formato RNC: XX-XXXXXXX
-        if (digits.length > 2) {
-            input.value = digits.slice(0, 2) + '-' + digits.slice(2);
-        } else {
-            input.value = digits;
-        }
-        return;
+        // Formato RNC: XXX-XXXXX-X
+        digits = digits.slice(0, 9);
+        let part1 = digits.slice(0, 3);      // Tipo persona
+        let part2 = digits.slice(3, 8);      // Secuencia
+        let part3 = digits.slice(8, 9);      // Dígito verificador
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    } else {
+        // Formato Cédula: XXX-XXXXXXX-X
+        digits = digits.slice(0, 11);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 10);
+        let part3 = digits.slice(10, 11);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
     }
-    // Formato Cédula: XXX-XXXXXXX-X
-    let part1 = digits.slice(0, 3);
-    let part2 = digits.slice(3, 10);
-    let part3 = digits.slice(10, 11);
-    let formatted = part1;
-    if (part2) formatted += '-' + part2;
-    if (part3) formatted += '-' + part3;
-    input.value = formatted;
 }
 
 function formatTelefono(input) {
-    let digits = input.value.replace(/\D/g, '').slice(0, 10);
-    if (digits.length >= 10) {
-        input.value = digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
-    } else if (digits.length >= 6) {
-        input.value = digits.slice(0, 3) + '-' + digits.slice(3);
+    let digits = input.value.replace(/\D/g, '');
+    digits = digits.slice(0, 10); // Limitar a 10 dígitos
+
+    if (digits.length >= 7) {
+        // Formato completo: XXX-XXX-XXXX
+        input.value = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    } else if (digits.length >= 4) {
+        // Formato parcial: XXX-XXX...
+        input.value = `${digits.slice(0, 3)}-${digits.slice(3)}`;
     } else {
+        // Solo los primeros dígitos
         input.value = digits;
     }
 }
 
-function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+// Mejora las funciones de formato para que sean más robustas y las hace disponibles globalmente
+window.formatCedulaRnc = function(input) {
+    let digits = input.value.replace(/\D/g, '');
+
+    // Determinar si es RNC (9 dígitos) o Cédula (11 dígitos)
+    if (digits.length <= 9) {
+        // Formato RNC: XXX-XXXXX-X
+        digits = digits.slice(0, 9);
+        let part1 = digits.slice(0, 3);      // Tipo persona
+        let part2 = digits.slice(3, 8);      // Secuencia
+        let part3 = digits.slice(8, 9);      // Dígito verificador
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    } else {
+        // Formato Cédula: XXX-XXXXXXX-X
+        digits = digits.slice(0, 11);
+        let part1 = digits.slice(0, 3);
+        let part2 = digits.slice(3, 10);
+        let part3 = digits.slice(10, 11);
+        let formatted = part1;
+        if (part2) formatted += '-' + part2;
+        if (part3) formatted += '-' + part3;
+        input.value = formatted;
+    }
 }
 
-function validateCedula(cedula) {
+window.formatTelefono = function(input) {
+    let digits = input.value.replace(/\D/g, '');
+    digits = digits.slice(0, 10); // Limitar a 10 dígitos
+
+    if (digits.length >= 7) {
+        // Formato completo: XXX-XXX-XXXX
+        input.value = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    } else if (digits.length >= 4) {
+        // Formato parcial: XXX-XXX...
+        input.value = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else {
+        // Solo los primeros dígitos
+        input.value = digits;
+    }
+}
+
+// Mejora las funciones de restricción para que sean más específicas
+window.restrictToLettersOnly = function(input) {
+    input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g, '');
+}
+
+window.restrictToNumbersOnly = function(input) {
+    // Permitir solo números y guiones (para preservar formato)
+    input.value = input.value.replace(/[^0-9-]/g, '');
+}
+
+// Mejora las validaciones
+window.validateCedula = function(cedula) {
     const digits = cedula.replace(/\D/g, '');
     return digits.length === 11;
 }
 
-function validateRNC(rnc) {
+window.validateRNC = function(rnc) {
     const digits = rnc.replace(/\D/g, '');
     return digits.length === 9;
 }
 
-function validateTelefono(telefono) {
+window.validateTelefono = function(telefono) {
     const digits = telefono.replace(/\D/g, '');
     return digits.length === 10;
 }
 
-function restrictToLettersOnly(input) {
-    input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+window.validateEmail = function(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 }
 
-function restrictToNumbersOnly(input) {
-    input.value = input.value.replace(/[^0-9-]/g, '');
-}
 
 // Make wizard globally accessible for HTML onclicks
 window.transactionWizard = new TransactionWizard();

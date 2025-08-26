@@ -2,6 +2,8 @@ package com.thelarte.transacciones.controller;
 
 import com.thelarte.transacciones.dto.PagoDTO;
 import com.thelarte.transacciones.model.Pago;
+import com.thelarte.transacciones.model.Transaccion;
+import com.thelarte.transacciones.repository.TransaccionRepository;
 import com.thelarte.transacciones.service.TransaccionService;
 import com.thelarte.shared.exception.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +29,8 @@ public class PagoController {
 
     @Autowired
     private TransaccionService transaccionService;
+    @Autowired
+    private TransaccionRepository transaccionRepository;
 
     /**
      * Registra un nuevo pago para una transacción
@@ -205,5 +210,24 @@ public class PagoController {
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @PutMapping("/{pagoId}/completar")
+    public ResponseEntity<?> completarPago(@PathVariable Long pagoId) {
+        try {
+            Pago pagoCompletado = transaccionService.completarPago(pagoId);
+
+            // Recalcular saldo pendiente de la transacción asociada
+            Transaccion transaccion = pagoCompletado.getTransaccion();
+            BigDecimal saldoPendiente = transaccionService.calcularSaldoPendienteReal(transaccion);
+            transaccion.setSaldoPendiente(saldoPendiente);
+            transaccionRepository.save(transaccion);
+
+            return ResponseEntity.ok(transaccionService.pagoToDTO(pagoCompletado));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
