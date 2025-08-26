@@ -34,7 +34,7 @@
         }
 
         /* Filter buttons styling */
-        .filter-btn {
+        .filter-btn, .view-toggle-btn {
             position: relative;
             transition: all 0.3s ease;
             overflow: hidden;
@@ -43,7 +43,7 @@
             border: 2px solid #e5e7eb;
         }
 
-        .filter-btn:before {
+        .filter-btn:before, .view-toggle-btn:before {
             content: '';
             position: absolute;
             top: 0;
@@ -54,17 +54,17 @@
             transition: left 0.5s;
         }
 
-        .filter-btn:hover:before {
+        .filter-btn:hover:before, .view-toggle-btn:hover:before {
             left: 100%;
         }
 
-        .filter-btn:hover {
+        .filter-btn:hover, .view-toggle-btn:hover {
             background: #f3f4f6;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        .filter-btn.active {
+        .filter-btn.active, .view-toggle-btn.active {
             background: #8B4513 !important; /* Light brown */
             color: white !important;
             border-color: #8B4513;
@@ -218,6 +218,17 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                 <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Clientes</h2>
                 <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <!-- View Toggle -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button id="btnCardView" class="view-toggle-btn active px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                            <i class="fas fa-th mr-1"></i>
+                            <span class="hidden sm:inline">Tarjetas</span>
+                        </button>
+                        <button id="btnTableView" class="view-toggle-btn px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                            <i class="fas fa-table mr-1"></i>
+                            <span class="hidden sm:inline">Tabla</span>
+                        </button>
+                    </div>
                     <!-- Filtro de estado -->
                     <div class="flex bg-gray-100 rounded-lg p-1">
                         <button id="btnClientesActivos" class="filter-btn active px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-activos">
@@ -241,8 +252,13 @@
                 <input type="text" id="clientSearchInput" placeholder="Buscar clientes..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
             </div>
+            <!-- Card View Container -->
             <div id="clientesListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
                 <!-- Clientes se cargarán aquí -->
+            </div>
+            <!-- Table View Container -->
+            <div id="transaccionesTableContainer">
+                <!-- Table will be inserted here by TableViewManager -->
             </div>
             <div id="clientesPagination" class="flex justify-center mt-6"></div>
         </section>
@@ -376,3 +392,4 @@
 <script src="/js/services/logoutHandler.js"></script>
 </body>
 </html>
+
