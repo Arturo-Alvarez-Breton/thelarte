@@ -23,38 +23,50 @@
 #### **Usuarios y Datos:**
 - `R__15_Usuarios_Por_Defecto_Roles.sql` - **USUARIOS POR DEFECTO**
 
+#### **Scripts de Ejecución:**
+- `run_clean_install.sql` - **INSTALACIÓN LIMPIA COMPLETA** (Elimina todo y recrea)
+
 ## 🚀 **Estrategia de Migración**
 
-### **Flujo Seguro:**
+### **Flujo con Limpieza Completa:**
 ```bash
 # Flyway ejecuta automáticamente en orden:
 V0 → R__01 → V1 → V2 → V3 → ... → V9 → R__15
 
-# V0: Valida estado actual (NO ELIMINA)
-# R__01: Verifica consistencia
-# V1-V9: Crea tablas faltantes (IF NOT EXISTS)
+# V0: 🗑️ ELIMINA TODAS LAS TABLAS Y DATOS
+# R__01: Verifica estado post-limpieza
+# V1-V9: Crea toda la estructura desde cero
 # R__15: Crea usuarios por defecto
 ```
 
-### **Características de Seguridad:**
-- ✅ **NO ELIMINA** datos existentes
-- ✅ **PRESERVA** información actual
-- ✅ **CREA** solo lo que falta
-- ✅ **VALIDA** consistencia
+### **Características:**
+- ⚠️ **ELIMINA TODOS LOS DATOS EXISTENTES**
+- ✅ **CREA ESTRUCTURA COMPLETAMENTE LIMPIA**
+- ✅ **RESETEA SECUENCIAS** a valores iniciales
 - ✅ **IDEMPOTENT** - Se puede ejecutar múltiples veces
+
+### **Ejecución:**
+```bash
+# Para instalación completamente limpia (ELIMINA TODO):
+psql -d tu_base_datos -f run_clean_install.sql
+
+# O ejecutar automáticamente con Flyway:
+mvn spring-boot:run  # V0 eliminará todo automáticamente
+```
 
 ## 🎯 **Resultado**
 
-### **Si la BD ya tiene datos:**
-- ✅ **Mantiene todas las tablas existentes**
-- ✅ **Crea solo las tablas faltantes**
-- ✅ **Valida estructura y datos**
-- ✅ **Agrega usuarios por defecto**
+### **Siempre (con cualquier estado de BD):**
+- 🗑️ **ELIMINA TODAS LAS TABLAS Y DATOS EXISTENTES**
+- ✅ **CREA TODA LA ESTRUCTURA DESDE CERO**
+- ✅ **ESTABLECE USUARIOS POR DEFECTO**
+- ✅ **RESETEA TODAS LAS SECUENCIAS**
 
-### **Si la BD está vacía:**
-- ✅ **Crea todas las tablas**
-- ✅ **Establece estructura completa**
-- ✅ **Agrega usuarios por defecto**
+### **Resultado Final:**
+- ✅ **Base de datos completamente limpia**
+- ✅ **Estructura fresca y consistente**
+- ✅ **Usuarios listos para usar**
+- ✅ **Secuencias reseteadas**
 
 ## 👥 **Usuarios Creados**
 
@@ -90,10 +102,10 @@ spring.flyway.ignore-missing-migrations=true
 
 ## 📝 **Notas Importantes**
 
-- ⚠️ **La migración V0 NO ELIMINA NADA** - Solo valida
-- 🔄 **Las migraciones V1-V9 usan IF NOT EXISTS** - Seguras
-- 👥 **R__15 crea usuarios si no existen** - Idempotent
-- 🛡️ **Compatible con bases de datos existentes**
-- 🎯 **Ideal para entornos con datos reales**
+- ⚠️ **V0 ELIMINA TODOS LOS DATOS EXISTENTES** - ¡Backup recomendado!
+- 🔄 **Las migraciones V1-V9 crean estructura desde cero**
+- 👥 **R__15 crea usuarios por defecto** - Siempre se ejecuta
+- 🛡️ **Convierte cualquier BD al estado inicial**
+- 🎯 **Ideal para instalación limpia** - Estructura fresca garantizada
 
-**¡Esta estrategia es completamente segura y preserva todos los datos existentes!** 🚀
+**¡Esta estrategia garantiza una base de datos completamente limpia y fresca!** 🗑️✨

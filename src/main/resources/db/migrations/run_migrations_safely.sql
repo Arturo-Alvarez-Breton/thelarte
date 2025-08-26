@@ -1,25 +1,26 @@
 -- ========================================================================================
--- SCRIPT DE EJECUCIÓN SEGURA DE MIGRACIONES
+-- SCRIPT DE EJECUCIÓN CON LIMPIEZA COMPLETA DE MIGRACIONES
 -- Sistema de gestión de muebles y decoración - The Larte
 -- ========================================================================================
--- Este script ejecuta las migraciones principales de manera segura
--- Compatible con bases de datos existentes (NO ELIMINA DATOS)
+-- ⚠️  ADVERTENCIA: Este script ELIMINA TODOS LOS DATOS EXISTENTES
+-- Ejecuta migraciones con limpieza completa y recreación de estructura
 -- ========================================================================================
 
 -- ===== VERIFICACIÓN PREVIA =====
 DO $$
 BEGIN
     RAISE NOTICE '=====================================';
-    RAISE NOTICE 'INICIANDO MIGRACIONES SEGURAS';
+    RAISE NOTICE 'INICIANDO MIGRACIONES CON LIMPIEZA COMPLETA';
     RAISE NOTICE '=====================================';
-    RAISE NOTICE 'Este script es compatible con BD existentes';
-    RAISE NOTICE 'NO se eliminarán datos existentes';
+    RAISE NOTICE '⚠️  ADVERTENCIA: Este script ELIMINA TODOS LOS DATOS';
+    RAISE NOTICE 'V0 eliminará todas las tablas con sus datos';
+    RAISE NOTICE 'Se creará una estructura completamente limpia';
     RAISE NOTICE '=====================================';
 END $$;
 
 -- ===== EJECUTAR MIGRACIONES EN ORDEN =====
 
--- 1. V0 - Validación inicial (NO elimina nada)
+-- 1. V0 - Limpieza completa (ELIMINA TODAS LAS TABLAS Y DATOS)
 \i V0__Clean_Database.sql
 
 -- 2. R__01 - Validación y baseline
