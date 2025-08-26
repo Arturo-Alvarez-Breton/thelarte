@@ -1,5 +1,6 @@
 package com.thelarte.transacciones.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.PagoDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
@@ -53,6 +54,7 @@ public class TransaccionService {
     private UserService userService;
 
     // --- UNIDAD SERVICE/REPOSITORY ELIMINADOS ---
+    @Transactional
     public Transaccion crearTransaccion(Transaccion transaccion) {
         // Asignar la transacción a cada línea para que se guarde el transaccion_id
         if (transaccion.getLineas() != null) {
@@ -82,7 +84,7 @@ public class TransaccionService {
         // === LOGICA PARA DEVOLUCIONES ===
         if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_COMPRA ||
                 transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
-
+            // [Código de devoluciones existente...]
             if (transaccion.getTransaccionOrigenId() == null) {
                 throw new IllegalArgumentException("La devolución requiere el ID de la transacción original");
             }
@@ -99,16 +101,11 @@ public class TransaccionService {
                         producto.setCantidadDisponible(
                                 (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) - cantidad
                         );
-                        // No sumar a cantidadDevuelta (el producto se va del inventario)
                     } else if (transaccion.getTipo() == Transaccion.TipoTransaccion.DEVOLUCION_VENTA) {
                         // Sumar a devueltos, opcional sumar a disponible si regresa al inventario
                         producto.setCantidadDevuelta(
                                 (producto.getCantidadDevuelta() != null ? producto.getCantidadDevuelta() : 0) + cantidad
                         );
-                        // Si el producto regresa al stock disponible, descomenta la siguiente línea:
-                        // producto.setCantidadDisponible(
-                        //     (producto.getCantidadDisponible() != null ? producto.getCantidadDisponible() : 0) + cantidad
-                        // );
                     }
                     productoRepository.save(producto);
                 }
@@ -150,27 +147,171 @@ public class TransaccionService {
         // Guardar la transacción primero para obtener su ID
         transaccion = transaccionRepository.save(transaccion);
 
-        // Si es una venta en cuotas con monto inicial, registrar el pago inicial
+        // Procesamiento de ventas en cuotas
         if (transaccion.getTipo() == Transaccion.TipoTransaccion.VENTA &&
-                transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS &&
-                transaccion.getMontoInicial() != null &&
-                transaccion.getMontoInicial().compareTo(BigDecimal.ZERO) > 0) {
+                transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS) {
 
-            // Crear el registro del pago inicial
-            Pago pagoInicial = new Pago();
-            pagoInicial.setTransaccion(transaccion);
-            pagoInicial.setFecha(LocalDate.now());
-            pagoInicial.setMonto(transaccion.getMontoInicial());
-            pagoInicial.setMetodoPago(transaccion.getMetodoPago());
-            pagoInicial.setEstado(Pago.EstadoPago.COMPLETADO);
-            pagoInicial.setObservaciones("Pago inicial");
-            pagoInicial.setNumeroCuota(0); // 0 indica que es el pago inicial
+            // Asegurarnos de que montoInicial no sea null
+            if (transaccion.getMontoInicial() == null) {
+                transaccion.setMontoInicial(BigDecimal.ZERO);
+                // Actualizar transacción con el montoInicial
+                transaccion = transaccionRepository.save(transaccion);
+            }
 
-            // Guardar el pago inicial
-            pagoRepository.save(pagoInicial);
+            // Registrar el pago inicial si es mayor que cero
+            if (transaccion.getMontoInicial().compareTo(BigDecimal.ZERO) > 0) {
+                Pago pagoInicial = new Pago();
+                pagoInicial.setTransaccion(transaccion);
+                pagoInicial.setFecha(LocalDate.now());
+                pagoInicial.setMonto(transaccion.getMontoInicial());
+                pagoInicial.setMetodoPago(transaccion.getMetodoPago());
+                pagoInicial.setEstado(Pago.EstadoPago.COMPLETADO);
+                pagoInicial.setObservaciones("Pago inicial");
+                pagoInicial.setNumeroCuota(0); // 0 indica que es el pago inicial
+                pagoRepository.save(pagoInicial);
+
+                System.out.println("Pago inicial registrado: " + pagoInicial.getMonto());
+            }
+
+            // Procesar las cuotas programadas desde los metadatos
+            if (transaccion.getMetadatosPago() != null && !transaccion.getMetadatosPago().isEmpty()) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, Object> metadata = mapper.readValue(transaccion.getMetadatosPago(), Map.class);
+
+                    if (metadata.containsKey("cuotasProgramadas")) {
+                        List<Map<String, Object>> cuotasData = (List<Map<String, Object>>) metadata.get("cuotasProgramadas");
+                        System.out.println("Procesando " + cuotasData.size() + " cuotas programadas");
+
+                        // Obtener la fecha actual para comparar
+                        LocalDate fechaActual = LocalDate.now();
+
+                        for (Map<String, Object> cuotaData : cuotasData) {
+                            Pago cuota = new Pago();
+                            cuota.setTransaccion(transaccion);
+                            cuota.setNumeroCuota(Integer.parseInt(cuotaData.get("numero").toString()));
+                            cuota.setFecha(LocalDate.parse(cuotaData.get("fecha").toString()));
+                            cuota.setMonto(new BigDecimal(cuotaData.get("monto").toString()));
+
+                            // Determinar si la cuota es para hoy
+                            boolean esCuotaDeHoy = cuota.getFecha().equals(fechaActual);
+
+                            // Si la cuota es para hoy, marcarla como COMPLETADA
+                            if (esCuotaDeHoy) {
+                                cuota.setEstado(Pago.EstadoPago.COMPLETADO);
+                                cuota.setMetodoPago(transaccion.getMetodoPago()); // Usar el método de pago principal
+                                cuota.setObservaciones("Cuota #" + cuota.getNumeroCuota() + " pagada al crear la transacción");
+                                System.out.println("Cuota " + cuota.getNumeroCuota() + " COMPLETADA (fecha actual): " + cuota.getMonto());
+                            } else {
+                                cuota.setEstado(Pago.EstadoPago.PENDIENTE);
+                                cuota.setMetodoPago("PENDIENTE"); // Se definirá al momento de pagar
+                                cuota.setObservaciones("Cuota programada #" + cuota.getNumeroCuota());
+                                System.out.println("Cuota " + cuota.getNumeroCuota() + " registrada como PENDIENTE: " + cuota.getMonto());
+                            }
+
+                            pagoRepository.save(cuota);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error al procesar cuotas programadas: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            // CORRECCIÓN: Recalcular el saldo pendiente después de procesar todos los pagos
+            BigDecimal saldoPendiente = calcularSaldoPendienteReal(transaccion);
+            transaccion.setSaldoPendiente(saldoPendiente);
+            transaccion = transaccionRepository.save(transaccion);
+            System.out.println("Saldo pendiente final recalculado: " + saldoPendiente);
         }
 
         return transaccion;
+    }
+
+
+
+    /**
+     * Marca un pago como completado y actualiza el saldo pendiente de la transacción
+     * @param pagoId ID del pago a completar
+     * @return El pago actualizado
+     * @throws EntityNotFoundException si el pago no existe
+     * @throws IllegalStateException si el pago ya está cancelado
+     */
+    @Transactional
+    public Pago completarPago(Long pagoId) {
+        // Obtener el pago
+        Pago pago = pagoRepository.findById(pagoId)
+                .orElseThrow(() -> new EntityNotFoundException("Pago no encontrado con ID: " + pagoId));
+
+        // Verificar que no esté cancelado
+        if (pago.getEstado() == Pago.EstadoPago.CANCELADO) {
+            throw new IllegalStateException("No se puede completar un pago que ya está cancelado");
+        }
+
+        // Si ya está completado, solo retornarlo
+        if (pago.getEstado() == Pago.EstadoPago.COMPLETADO) {
+            return pago;
+        }
+
+        // Cambiar estado a completado
+        pago.setEstado(Pago.EstadoPago.COMPLETADO);
+
+        // Guardar el pago
+        Pago pagoGuardado = pagoRepository.save(pago);
+
+        // Actualizar el saldo pendiente de la transacción
+        Transaccion transaccion = pago.getTransaccion();
+        BigDecimal saldoPendiente = calcularSaldoPendienteReal(transaccion);
+        transaccion.setSaldoPendiente(saldoPendiente);
+
+        // Si el saldo pendiente es cero o negativo, actualizar el estado de la transacción
+        if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+            transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+        }
+
+        transaccionRepository.save(transaccion);
+
+        return pagoGuardado;
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal calcularSaldoPendienteReal(Transaccion transaccion) {
+        // Sumar todos los pagos realizados
+        BigDecimal totalPagado = BigDecimal.ZERO;
+
+        // Importante: NO incluir el pago inicial aquí, ya que se registra como un pago en la tabla
+        // y lo contabilizaremos al recorrer los pagos
+
+        // Obtener todos los pagos y filtrar los COMPLETADOS
+        List<Pago> pagos = pagoRepository.findByTransaccionId(transaccion.getId());
+
+        System.out.println("Calculando saldo pendiente para transacción ID: " + transaccion.getId());
+        System.out.println("Total de la transacción: " + transaccion.getTotal());
+        System.out.println("Total de pagos encontrados: " + pagos.size());
+
+        for (Pago pago : pagos) {
+            // Solo sumar los pagos COMPLETADOS
+            if (pago.getEstado() == Pago.EstadoPago.COMPLETADO) {
+                totalPagado = totalPagado.add(pago.getMonto());
+                System.out.println("Sumando pago completado: " + pago.getMonto() +
+                        " (tipo: " + (pago.getNumeroCuota() == 0 ? "Inicial" :
+                        "Cuota " + pago.getNumeroCuota()) + ")");
+            }
+        }
+
+        // El saldo pendiente es el total menos lo pagado
+        BigDecimal saldoPendiente = transaccion.getTotal().subtract(totalPagado);
+
+        // Asegurar que no sea negativo
+        if (saldoPendiente.compareTo(BigDecimal.ZERO) < 0) {
+            saldoPendiente = BigDecimal.ZERO;
+        }
+
+        System.out.println("Total a pagar: " + transaccion.getTotal() +
+                ", Total pagado: " + totalPagado +
+                ", Saldo pendiente calculado: " + saldoPendiente);
+
+        return saldoPendiente;
     }
 
     public Transaccion actualizarTransaccion(Long id, Transaccion transaccion) {
@@ -232,7 +373,7 @@ public class TransaccionService {
         validateTransactionBusinessRules(existingTransaction);
         validatePaymentMetadata(existingTransaction);
         procesarLineasTransaccion(existingTransaction);
-        calcularTotalesTransaccion(existingTransaction);
+
 
         return transaccionRepository.save(existingTransaction);
     }
@@ -459,20 +600,21 @@ public class TransaccionService {
         transaccion.setFechaEntregaReal(LocalDateTime.now());
         return transaccionRepository.save(transaccion);
     }
-
-    public Transaccion marcarComoCobrada(Long id) {
+    // Actualización del método marcarComoCobrada -> ahora es marcarComoCompletada
+    public Transaccion marcarComoCompletada(Long id) {
         Transaccion transaccion = transaccionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Transacción no encontrada con ID: " + id));
         if (transaccion.getTipo() != Transaccion.TipoTransaccion.VENTA) {
-            throw new IllegalStateException("Solo las ventas pueden marcarse como cobradas");
+            throw new IllegalStateException("Solo las ventas pueden marcarse como completadas");
         }
-        transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+        transaccion.setEstado(Transaccion.EstadoTransaccion.COMPLETADA);
         // Si es venta en cuotas, establecer saldo pendiente a cero
         if (transaccion.getTipoPago() == Transaccion.TipoPago.ENCUOTAS) {
             transaccion.setSaldoPendiente(BigDecimal.ZERO);
         }
         return transaccionRepository.save(transaccion);
     }
+
 
     public Transaccion facturarVenta(Long id, String numeroFactura) {
         Transaccion transaccion = transaccionRepository.findById(id)
@@ -586,27 +728,36 @@ public class TransaccionService {
 
     private void calcularTotalesTransaccion(Transaccion transaccion) {
         if (transaccion.getLineas() == null || transaccion.getLineas().isEmpty()) {
-            transaccion.setSubtotal(BigDecimal.ZERO);
-            transaccion.setImpuestos(BigDecimal.ZERO);
-            transaccion.setTotal(BigDecimal.ZERO);
+            // Solo asignar valores si son nulos
+            if (transaccion.getSubtotal() == null) transaccion.setSubtotal(BigDecimal.ZERO);
+            if (transaccion.getImpuestos() == null) transaccion.setImpuestos(BigDecimal.ZERO);
+            if (transaccion.getTotal() == null) transaccion.setTotal(BigDecimal.ZERO);
             return;
         }
 
-        BigDecimal subtotal = transaccion.getLineas().stream()
-                .map(LineaTransaccion::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Calcular y asignar subtotal solo si es nulo
+        if (transaccion.getSubtotal() == null) {
+            BigDecimal subtotal = transaccion.getLineas().stream()
+                    .map(LineaTransaccion::getSubtotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            transaccion.setSubtotal(subtotal);
+        }
 
-        BigDecimal impuestos = transaccion.getLineas().stream()
-                .map(linea -> linea.getImpuestoMonto() != null ? linea.getImpuestoMonto() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Calcular y asignar impuestos solo si es nulo
+        if (transaccion.getImpuestos() == null) {
+            BigDecimal impuestos = transaccion.getLineas().stream()
+                    .map(linea -> linea.getImpuestoMonto() != null ? linea.getImpuestoMonto() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            transaccion.setImpuestos(impuestos);
+        }
 
-        BigDecimal total = transaccion.getLineas().stream()
-                .map(LineaTransaccion::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        transaccion.setSubtotal(subtotal);
-        transaccion.setImpuestos(impuestos);
-        transaccion.setTotal(total);
+        // Calcular y asignar total solo si es nulo
+        if (transaccion.getTotal() == null) {
+            BigDecimal total = transaccion.getLineas().stream()
+                    .map(LineaTransaccion::getTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            transaccion.setTotal(total);
+        }
     }
 
     /**
@@ -891,9 +1042,6 @@ public class TransaccionService {
             transaccion.getLineas().add(linea);
         }
 
-        // Recalcular totales de la transacción
-        calcularTotalesTransaccion(transaccion);
-
         return transaccionRepository.save(transaccion);
     }
 
@@ -1037,6 +1185,7 @@ public class TransaccionService {
      * @param pagoDTO Datos del pago
      * @return El pago registrado
      */
+    // Asegurarnos que este método modifique la transacción y maneje los estados correctamente
     @Transactional
     public Pago registrarPago(Long transaccionId, PagoDTO pagoDTO) {
         Transaccion transaccion = transaccionRepository.findById(transaccionId)
@@ -1054,17 +1203,7 @@ public class TransaccionService {
         // Verificar que el monto no exceda el saldo pendiente
         if (transaccion.getSaldoPendiente() == null) {
             // Si no tiene saldo pendiente registrado, calcularlo
-            BigDecimal montoInicial = transaccion.getMontoInicial() != null ? transaccion.getMontoInicial() : BigDecimal.ZERO;
-            BigDecimal saldoPendiente = transaccion.getTotal().subtract(montoInicial);
-
-            // Restar pagos existentes
-            if (transaccion.getPagos() != null && !transaccion.getPagos().isEmpty()) {
-                BigDecimal totalPagado = transaccion.getPagos().stream()
-                        .map(Pago::getMonto)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                saldoPendiente = saldoPendiente.subtract(totalPagado);
-            }
-
+            BigDecimal saldoPendiente = calcularSaldoPendienteReal(transaccion);
             transaccion.setSaldoPendiente(saldoPendiente);
         }
 
@@ -1089,9 +1228,9 @@ public class TransaccionService {
         BigDecimal nuevoSaldo = transaccion.getSaldoPendiente().subtract(pagoDTO.getMonto());
         transaccion.setSaldoPendiente(nuevoSaldo);
 
-        // Si el saldo pendiente es 0 o negativo, actualizar el estado de la transacción
+        // Si el saldo pendiente es 0 o negativo, actualizar el estado de la transacción a COMPLETADA
         if (nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0) {
-            transaccion.setEstado(Transaccion.EstadoTransaccion.COBRADA);
+            transaccion.setEstado(Transaccion.EstadoTransaccion.COMPLETADA);
         }
 
         // Guardar transacción con el saldo actualizado

@@ -298,23 +298,27 @@ export class TransaccionService {
             throw error;
         }
     }
-    // Añadir este método en TransaccionService.js
-    async registrarPago(datosPago) {
-        const url = `/api/transacciones/${datosPago.transaccionId}/pagos`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datosPago)
-        });
+    async registrarPago(transaccionId, pagoData) {
+        try {
+            // CORREGIR: URL cambiada de /api/transacciones/{id}/pagos a /api/pagos/transacciones/{id}
+            const response = await fetch(`/api/pagos/transacciones/${transaccionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(pagoData)
+            });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al registrar el pago');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Error al registrar el pago: ${errorData.error || response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error al registrar pago:', error);
+            throw error;
         }
-
-        return await response.json();
     }
 
     async createCliente(clienteData) {
@@ -505,10 +509,44 @@ export class TransaccionService {
     }
 
     // En transaccionService.js
-    async createDevolucion(payload) {
+    // Método corregido en transaccionService.js
+    async createDevolucion(devolucionData) {
         try {
+            // Verificar y extraer explícitamente el ID de transacción origen
+            const transaccionOrigenId = devolucionData.transaccionOrigenId ||
+                devolucionData.transaccionOrigen ||
+                devolucionData.transaccion_origen_id ||
+                devolucionData.id_transaccion_origen;
+
+            if (!transaccionOrigenId) {
+                console.error("Falta el ID de transacción origen en:", devolucionData);
+                throw new Error("El ID de la transacción origen es obligatorio para una devolución");
+            }
+
+            // Asegurar que el tipo sea DEVOLUCION_COMPRA o DEVOLUCION_VENTA
+            if (!devolucionData.tipo ||
+                (devolucionData.tipo !== 'DEVOLUCION_COMPRA' && devolucionData.tipo !== 'DEVOLUCION_VENTA')) {
+                throw new Error("Tipo de devolución inválido");
+            }
+
+            // Crear una copia limpia del payload con el formato esperado por el backend
+            const payload = {
+                tipo: devolucionData.tipo,
+                transaccionOrigenId: transaccionOrigenId,
+                contraparteId: devolucionData.contraparteId,
+                tipoContraparte: devolucionData.tipoContraparte,
+                contraparteNombre: devolucionData.contraparteNombre,
+                observaciones: devolucionData.observaciones || "",
+                lineas: devolucionData.lineas || []
+            };
+
+            // Log detallado para depuración
+            console.log("Enviando devolución al backend:", JSON.stringify(payload, null, 2));
+            console.log("ID de transacción origen:", transaccionOrigenId, "Tipo:", typeof transaccionOrigenId);
+
+            // CORRECCIÓN: Usar this.baseUrl en lugar de this.apiUrl (que no existe)
             const authToken = this.getAuthToken();
-            const response = await fetch('/api/transacciones', {
+            const response = await fetch(`${this.baseUrl}/transacciones`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -516,11 +554,25 @@ export class TransaccionService {
                 },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error('Error al procesar la devolución');
+
+            if (!response.ok) {
+                // Intentar obtener detalles del error
+                try {
+                    const errorData = await response.json();
+                    console.error("Error del servidor:", errorData);
+                    throw new Error(errorData.mensaje || errorData.message || `Error ${response.status}: ${response.statusText}`);
+                } catch (parseError) {
+                    // Si no podemos parsear el JSON, obtenemos el texto crudo
+                    const errorText = await response.text();
+                    console.error("Error del servidor (texto):", errorText);
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+            }
+
             return await response.json();
         } catch (error) {
-            console.error('Error en createDevolucion:', error);
-            throw error;
+            console.error('Error detallado en createDevolucion:', error);
+            throw error; // Propagar el error para mejor depuración
         }
     }
 

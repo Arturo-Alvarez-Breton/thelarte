@@ -2,6 +2,7 @@ package com.thelarte.transacciones.controller;
 
 import com.thelarte.transacciones.dto.LineaTransaccionDTO;
 import com.thelarte.transacciones.dto.TransaccionDTO;
+import com.thelarte.transacciones.model.LineaTransaccion;
 import com.thelarte.transacciones.model.Transaccion;
 import com.thelarte.transacciones.service.TransaccionService;
 import jakarta.persistence.EntityNotFoundException;
@@ -11,11 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -38,27 +39,241 @@ public class TransaccionController {
     }
 
     @PostMapping
-    public ResponseEntity<TransaccionDTO> crearTransaccion(@RequestBody Transaccion transaccion) {
+    public ResponseEntity<TransaccionDTO> crearTransaccion(@RequestBody Map<String, Object> payload) {
         try {
             // Validar campos obligatorios
-            if (transaccion.getContraparteId() == null) {
-                throw new IllegalArgumentException("contraparteId es obligatorio");
-            }
-            if (transaccion.getTipo() == null) {
+            if (!payload.containsKey("tipo")) {
                 throw new IllegalArgumentException("tipo de transacción es obligatorio");
             }
 
-            System.out.println("Recibida petición para crear transacción: " + transaccion.getTipo());
-            System.out.println("ContraparteId: " + transaccion.getContraparteId());
+            // Crear objeto Transaccion con los datos básicos
+            Transaccion transaccion = new Transaccion();
+
+            // Asignar tipo de transacción
+            String tipo = (String) payload.get("tipo");
+            transaccion.setTipo(Transaccion.TipoTransaccion.valueOf(tipo));
+
+            // Asignar fecha (por defecto ahora si no se proporciona)
+            if (payload.containsKey("fecha")) {
+                String fechaStr = (String) payload.get("fecha");
+                Instant instant = Instant.parse(fechaStr);
+                transaccion.setFecha(LocalDateTime.ofInstant(instant, ZoneId.systemDefault()));
+            } else {
+                transaccion.setFecha(LocalDateTime.now());
+            }
+
+            // Asignar contraparte
+            if (payload.containsKey("contraparteId")) {
+                Object contraparteId = payload.get("contraparteId");
+                if (contraparteId instanceof Number) {
+                    transaccion.setContraparteId(((Number) contraparteId).longValue());
+                } else if (contraparteId instanceof String) {
+                    transaccion.setContraparteId(Long.valueOf((String) contraparteId));
+                }
+            }
+
+            if (payload.containsKey("contraparteNombre")) {
+                transaccion.setContraparteNombre((String) payload.get("contraparteNombre"));
+            }
+
+            if (payload.containsKey("tipoContraparte")) {
+                transaccion.setTipoContraparte(Transaccion.TipoContraparte.valueOf((String) payload.get("tipoContraparte")));
+            }
+
+            // Asignar otros campos básicos
+            if (payload.containsKey("vendedorId")) {
+                Object vendedorId = payload.get("vendedorId");
+                if (vendedorId != null) {
+                    if (vendedorId instanceof Number) {
+                        transaccion.setVendedorId(((Number) vendedorId).longValue());
+                    } else if (vendedorId instanceof String) {
+                        transaccion.setVendedorId(Long.valueOf((String) vendedorId));
+                    }
+                }
+            }
+
+            if (payload.containsKey("observaciones")) {
+                transaccion.setObservaciones((String) payload.get("observaciones"));
+            }
+
+            if (payload.containsKey("metodoPago")) {
+                transaccion.setMetodoPago((String) payload.get("metodoPago"));
+            }
+
+            // Asignar montos
+            if (payload.containsKey("subtotal")) {
+                Object subtotal = payload.get("subtotal");
+                if (subtotal instanceof Number) {
+                    transaccion.setSubtotal(new BigDecimal(subtotal.toString()));
+                }
+            }
+
+            if (payload.containsKey("impuestos")) {
+                Object impuestos = payload.get("impuestos");
+                if (impuestos instanceof Number) {
+                    transaccion.setImpuestos(new BigDecimal(impuestos.toString()));
+                }
+            }
+
+            if (payload.containsKey("total")) {
+                Object total = payload.get("total");
+                if (total instanceof Number) {
+                    transaccion.setTotal(new BigDecimal(total.toString()));
+                }
+            }
+
+            // Asignar campos específicos para pagos a plazos
+            if (payload.containsKey("tipoPago")) {
+                String tipoPago = (String) payload.get("tipoPago");
+                transaccion.setTipoPago(Transaccion.TipoPago.valueOf(tipoPago));
+
+                // Si es en cuotas, procesar montoInicial y saldoPendiente
+                if (tipoPago.equals("ENCUOTAS") && payload.containsKey("planPagos")) {
+                    Map<String, Object> planPagos = (Map<String, Object>) payload.get("planPagos");
+
+                    if (planPagos.containsKey("montoInicial")) {
+                        Object montoInicial = planPagos.get("montoInicial");
+                        if (montoInicial instanceof Number) {
+                            transaccion.setMontoInicial(new BigDecimal(montoInicial.toString()));
+                        }
+                    }
+
+                    if (planPagos.containsKey("saldoPendiente")) {
+                        Object saldoPendiente = planPagos.get("saldoPendiente");
+                        if (saldoPendiente instanceof Number) {
+                            transaccion.setSaldoPendiente(new BigDecimal(saldoPendiente.toString()));
+                        }
+                    }
+                }
+            }
+
+            // Guardar los metadatos de pago si existen
+            if (payload.containsKey("metadatosPago")) {
+                transaccion.setMetadatosPago(payload.get("metadatosPago").toString());
+            }
+
+            // === ARREGLO: Asignar transaccionOrigenId correctamente y loguear ===
+            if (payload.containsKey("transaccionOrigenId")) {
+                Object transaccionOrigenId = payload.get("transaccionOrigenId");
+                Long id = null;
+                try {
+                    if (transaccionOrigenId instanceof Number) {
+                        id = ((Number) transaccionOrigenId).longValue();
+                    } else if (transaccionOrigenId instanceof String) {
+                        String val = ((String) transaccionOrigenId).trim();
+                        if (!val.isEmpty()) id = Long.valueOf(val);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error parseando transaccionOrigenId: " + transaccionOrigenId + " - " + e.getMessage());
+                }
+                transaccion.setTransaccionOrigenId(id);
+            } else {
+                transaccion.setTransaccionOrigenId(null);
+            }
+
+            // LOG DEBUG ROBUSTO
+            System.out.println("=== DEBUG transaccionOrigenId en Controller ===");
+            System.out.println("payload.get(transaccionOrigenId): " + payload.get("transaccionOrigenId"));
+            System.out.println("transaccion.getTransaccionOrigenId(): " + transaccion.getTransaccionOrigenId());
+
+            // Procesar líneas
+            if (payload.containsKey("lineas")) {
+                List<Map<String, Object>> lineasData = (List<Map<String, Object>>) payload.get("lineas");
+                List<LineaTransaccion> lineas = new ArrayList<>();
+
+                for (Map<String, Object> lineaData : lineasData) {
+                    LineaTransaccion linea = new LineaTransaccion();
+
+                    if (lineaData.containsKey("productoId")) {
+                        Object productoId = lineaData.get("productoId");
+                        if (productoId instanceof Number) {
+                            linea.setProductoId(((Number) productoId).longValue());
+                        }
+                    }
+
+                    if (lineaData.containsKey("productoNombre")) {
+                        linea.setProductoNombre((String) lineaData.get("productoNombre"));
+                    }
+
+                    if (lineaData.containsKey("cantidad")) {
+                        Object cantidad = lineaData.get("cantidad");
+                        if (cantidad instanceof Number) {
+                            linea.setCantidad(((Number) cantidad).intValue());
+                        }
+                    }
+
+                    if (lineaData.containsKey("precioUnitario")) {
+                        Object precio = lineaData.get("precioUnitario");
+                        if (precio instanceof Number) {
+                            linea.setPrecioUnitario(new BigDecimal(precio.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("subtotal")) {
+                        Object subtotal = lineaData.get("subtotal");
+                        if (subtotal instanceof Number) {
+                            linea.setSubtotal(new BigDecimal(subtotal.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("impuestoPorcentaje")) {
+                        Object impuestoPorcentaje = lineaData.get("impuestoPorcentaje");
+                        if (impuestoPorcentaje instanceof Number) {
+                            linea.setImpuestoPorcentaje(new BigDecimal(impuestoPorcentaje.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("impuestoMonto")) {
+                        Object impuestoMonto = lineaData.get("impuestoMonto");
+                        if (impuestoMonto instanceof Number) {
+                            linea.setImpuestoMonto(new BigDecimal(impuestoMonto.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("total")) {
+                        Object total = lineaData.get("total");
+                        if (total instanceof Number) {
+                            linea.setTotal(new BigDecimal(total.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("descuentoPorcentaje")) {
+                        Object descuentoPorcentaje = lineaData.get("descuentoPorcentaje");
+                        if (descuentoPorcentaje instanceof Number) {
+                            linea.setDescuentoPorcentaje(new BigDecimal(descuentoPorcentaje.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("descuentoMonto")) {
+                        Object descuentoMonto = lineaData.get("descuentoMonto");
+                        if (descuentoMonto instanceof Number) {
+                            linea.setDescuentoMonto(new BigDecimal(descuentoMonto.toString()));
+                        }
+                    }
+
+                    if (lineaData.containsKey("observaciones")) {
+                        linea.setObservaciones((String) lineaData.get("observaciones"));
+                    }
+
+                    lineas.add(linea);
+                }
+
+                transaccion.setLineas(lineas);
+            }
+
+            System.out.println("Creando transacción: " + transaccion.getTipo() +
+                    ", montoInicial=" + transaccion.getMontoInicial() +
+                    ", tipoPago=" + transaccion.getTipoPago());
+
             Transaccion nuevaTransaccion = transaccionService.crearTransaccion(transaccion);
             return new ResponseEntity<>(transaccionService.toDTO(nuevaTransaccion), HttpStatus.CREATED);
+
         } catch (Exception e) {
             System.err.println("Error al crear transacción: " + e.getMessage());
             e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
-
     @GetMapping
     public ResponseEntity<List<TransaccionDTO>> obtenerTodas() {
         List<TransaccionDTO> dtos = transaccionService.obtenerTodas()
@@ -273,16 +488,6 @@ public class TransaccionController {
         }
     }
 
-    @PutMapping("/{id}/completar")
-    public ResponseEntity<TransaccionDTO> completarTransaccion(@PathVariable Long id) {
-        try {
-            Transaccion transaccionCompletada = transaccionService.completarTransaccion(id);
-            return new ResponseEntity<>(transaccionService.toDTO(transaccionCompletada), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
     @PutMapping("/{id}/cancelar")
     public ResponseEntity<TransaccionDTO> cancelarTransaccion(@PathVariable Long id) {
         try {
@@ -329,18 +534,17 @@ public class TransaccionController {
         }
     }
 
-    @PutMapping("/{id}/cobrar")
-    public ResponseEntity<TransaccionDTO> marcarComoCobrada(@PathVariable Long id) {
+    @PutMapping("/{id}/completar")
+    public ResponseEntity<TransaccionDTO> marcarComoCompletada(@PathVariable Long id) {
         try {
-            Transaccion transaccionCobrada = transaccionService.marcarComoCobrada(id);
-            return new ResponseEntity<>(transaccionService.toDTO(transaccionCobrada), HttpStatus.OK);
+            Transaccion transaccionCompletada = transaccionService.marcarComoCompletada(id);
+            return new ResponseEntity<>(transaccionService.toDTO(transaccionCompletada), HttpStatus.OK);
         } catch (IllegalStateException e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
-
     @PutMapping("/{id}/facturar")
     public ResponseEntity<TransaccionDTO> facturarVenta(@PathVariable Long id, @RequestParam String numeroFactura) {
         try {

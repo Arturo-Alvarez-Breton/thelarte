@@ -1,13 +1,8 @@
-// src/main/resources/static/js/printable/imprimirFactu.js
 export function imprimirFactura(transaccion) {
     console.log("Datos de transacción para factura:", transaccion);
 
     // Función auxiliar para extraer el nombre del cliente de manera robusta
     function obtenerNombreCliente(transaccion) {
-        // Imprimir para depuración
-        console.log("Cliente en transacción:", transaccion.cliente);
-
-        // Verificar si existe el cliente y sus propiedades
         if (transaccion.cliente) {
             if (transaccion.cliente.nombre && transaccion.cliente.apellido) {
                 return `${transaccion.cliente.nombre} ${transaccion.cliente.apellido}`.trim();
@@ -19,25 +14,52 @@ export function imprimirFactura(transaccion) {
                 return transaccion.cliente;
             }
         }
-
-        // Alternativas comunes
         if (transaccion.clienteNombre) return transaccion.clienteNombre;
         if (transaccion.nombreCliente) return transaccion.nombreCliente;
         if (transaccion.contraparteNombre) return transaccion.contraparteNombre;
-
-        // Si hay lineas y la primera linea tiene cliente
         if (transaccion.lineas && transaccion.lineas.length > 0 && transaccion.lineas[0].cliente) {
             const lineaCliente = transaccion.lineas[0].cliente;
             if (typeof lineaCliente === 'string') return lineaCliente;
             if (lineaCliente.nombre) return lineaCliente.nombre;
         }
-
         return 'Consumidor Final';
     }
 
-    // Obtener el nombre del cliente de forma robusta
+    // Función para obtener cédula o RNC del cliente
+    function obtenerCedulaRNC(transaccion) {
+        // Si es COMPRA, busca RNC
+        if (transaccion.tipo === 'COMPRA' || transaccion.tipo === 'DEVOLUCION_COMPRA') {
+            // RNC en proveedor
+            if (transaccion.proveedor && transaccion.proveedor.rnc) {
+                return transaccion.proveedor.rnc;
+            }
+        }
+        // Si es VENTA, busca cédula en cliente o contraparteId
+        if (transaccion.cliente && transaccion.cliente.cedula) {
+            return transaccion.cliente.cedula;
+        }
+        if (transaccion.contraparteId) {
+            // Si tiene 9 dígitos => RNC, si tiene 11 => cédula
+            let idStr = String(transaccion.contraparteId).replace(/\D/g, '');
+            if (idStr.length === 11) {
+                // Formatear tipo cédula
+                return `${idStr.substring(0, 3)}-${idStr.substring(3, 10)}-${idStr.substring(10)}`;
+            }
+            if (idStr.length === 9) {
+                // Formatear tipo RNC
+                return `${idStr.substring(0, 2)}-${idStr.substring(2)}`;
+            }
+            return idStr;
+        }
+        return '';
+    }
+
+    // Obtener el nombre y cédula/RNC del cliente
     const nombreCliente = obtenerNombreCliente(transaccion);
-    console.log("Nombre del cliente obtenido:", nombreCliente);
+    const cedulaRNC = obtenerCedulaRNC(transaccion);
+
+    // Determinar si es obligatorio mostrar cédula/RNC en factura
+    const mostrarCedulaRNC = (Number(transaccion.total) >= 250000);
 
     // Crear un elemento temporal que contendrá la estructura de la factura
     const facturaElement = document.createElement('div');
@@ -49,22 +71,27 @@ export function imprimirFactura(transaccion) {
                 <h2 style="font-size: 20px; margin: 0; font-weight: 700; color: #000;">FACTURA #${transaccion.numeroFactura || transaccion.id}</h2>
             </div>
             
-            <!-- Información del cliente y empresa - formato más compacto -->
+            <!-- Información del cliente y empresa -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
                 <div style="flex: 1;">
                     <p style="margin: 3px 0; font-size: 14px;"><strong>Cliente:</strong> ${nombreCliente}</p>
                     <p style="margin: 3px 0; font-size: 14px;"><strong>Fecha:</strong> ${new Date(transaccion.fecha).toLocaleDateString()}</p>
                     <p style="margin: 3px 0; font-size: 14px;"><strong>Método de Pago:</strong> ${transaccion.metodoPago || 'N/A'}</p>
+                    ${
+        mostrarCedulaRNC
+            ? `<p style="margin: 3px 0; font-size: 14px;"><strong>Cédula/RNC:</strong> ${cedulaRNC || '<span style="color:red">REQUERIDO</span>'}</p>`
+            : (cedulaRNC ? `<p style="margin: 3px 0; font-size: 14px;"><strong>Cédula/RNC:</strong> ${cedulaRNC}</p>` : '')
+    }
                 </div>
                 <div style="flex: 1; text-align: right;">
                     <p style="margin: 3px 0; font-size: 14px;"><strong>ThelArte</strong></p>
                     <p style="margin: 3px 0; font-size: 14px;"><strong>RNC:</strong> XXXXXXXX</p>
-                    <p style="margin: 3px 0; font-size: 14px;"><strong>Dirección:</strong> XXXXXXXX</p>
-                    <p style="margin: 3px 0; font-size: 14px;"><strong>Tel:</strong> XXXXXXXX</p>
+                    <p style="margin: 3px 0; font-size: 14px;"><strong>Dirección:</strong>Ave. Juan Pablo Duarte esq. la salle Plaza Zona Rosa, Santiago de los Caballeros 51000</p>
+                    <p style="margin: 3px 0; font-size: 14px;"><strong>Tel:</strong> 809-581-9319</p>
                 </div>
             </div>
             
-            <!-- Tabla de productos - formato más compacto -->
+            <!-- Tabla de productos -->
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                 <thead>
                     <tr style="background-color: #f3f3f3;">
@@ -106,14 +133,14 @@ export function imprimirFactura(transaccion) {
                 </tfoot>
             </table>
             
-            <!-- Mensaje de agradecimiento con términos juntos para ahorrar espacio -->
+            <!-- Mensaje de agradecimiento -->
             <div style="text-align: center; margin: 10px 0; background-color: #f7f7f7; padding: 10px; border-radius: 4px;">
                 <p style="font-size: 16px; font-weight: bold; margin: 0 0 5px 0;">¡Gracias por su compra!</p>
                 <p style="font-size: 13px; color: #555; margin: 0;">Para cualquier consulta contacte al (809) XXX-XXXX</p>
                 <p style="font-size: 11px; margin-top: 8px; color: #666;">Los productos adquiridos tienen garantía según lo establecido por el fabricante. Para reclamos presente esta factura.</p>
             </div>
             
-            <!-- Sección para firma del cliente - más compacta -->
+            <!-- Sección para firma del cliente -->
             <div style="margin-top: 20px;">
                 <div style="width: 50%; margin: 0 auto; text-align: center;">
                     <div style="border-bottom: 1px solid #000; margin-bottom: 6px; height: 25px;"></div>
