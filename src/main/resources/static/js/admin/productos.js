@@ -165,6 +165,7 @@ class ProductosManager {
         document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => this.newProducto());
         document.getElementById('productoSearchInput')?.addEventListener('input', () => this.filterProductos());
         document.getElementById('productoTipoFilter')?.addEventListener('change', () => this.filterProductos());
+        document.getElementById('productoDisponibilidadFilter')?.addEventListener('change', () => this.filterProductos());
         document.getElementById('formProducto')?.addEventListener('submit', (e) => this.handleSubmitProducto(e));
 
         // Event listener para el campo tipo de producto
@@ -305,11 +306,21 @@ class ProductosManager {
             // Aplicar filtros de búsqueda
             const searchValue = (document.getElementById('productoSearchInput')?.value || '').trim().toLowerCase();
             const tipoValue = (document.getElementById('productoTipoFilter')?.value || '').trim().toLowerCase();
+            const disponibilidadValue = (document.getElementById('productoDisponibilidadFilter')?.value || '').trim().toLowerCase();
 
             let filtered = currentProductos;
+
+            // Filtro por tipo
             if (tipoValue) {
                 filtered = filtered.filter(p => p.tipo && p.tipo.toLowerCase() === tipoValue);
             }
+
+            // Filtro por disponibilidad/stock
+            if (disponibilidadValue) {
+                filtered = filtered.filter(p => this.matchesDisponibilidadFilter(p, disponibilidadValue));
+            }
+
+            // Filtro por búsqueda de texto
             if (searchValue) {
                 filtered = filtered.filter(p =>
                     (p.nombre && p.nombre.toLowerCase().includes(searchValue)) ||
@@ -346,6 +357,38 @@ class ProductosManager {
             this.renderPagination();
         } finally {
             this.hideLoading();
+        }
+    }
+
+    // Nuevo método para verificar si un producto coincide con el filtro de disponibilidad
+    matchesDisponibilidadFilter(producto, filterValue) {
+        const disponible = producto.cantidadDisponible || 0;
+        const almacen = producto.cantidadAlmacen || 0;
+        const reservada = producto.cantidadReservada || 0;
+        const danada = producto.cantidadDanada || 0;
+        const devuelta = producto.cantidadDevuelta || 0;
+
+        const totalStock = disponible + almacen + reservada + danada + devuelta;
+
+        switch (filterValue) {
+            case 'disponible':
+                return disponible > 0;
+            case 'almacen':
+                return almacen > 0;
+            case 'reservada':
+                return reservada > 0;
+            case 'danada':
+                return danada > 0;
+            case 'devuelta':
+                return devuelta > 0;
+            case 'sin_stock':
+                return totalStock === 0;
+            case 'solo_almacen':
+                return almacen > 0 && disponible === 0 && reservada === 0 && danada === 0 && devuelta === 0;
+            case 'solo_disponible':
+                return disponible > 0 && almacen === 0 && reservada === 0 && danada === 0 && devuelta === 0;
+            default:
+                return true;
         }
     }
 

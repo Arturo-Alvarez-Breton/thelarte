@@ -216,7 +216,7 @@
                     </button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <input type="text" id="productoSearchInput" placeholder="Buscar productos..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
                 <select id="productoTipoFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
                     <option value="">Todos los tipos</option>
@@ -225,6 +225,17 @@
                     <option value="oficina">Oficina</option>
                     <option value="decoracion">Decoración</option>
                     <option value="otro">Otro</option>
+                </select>
+                <select id="productoDisponibilidadFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Todos los estados</option>
+                    <option value="disponible">Con stock disponible</option>
+                    <option value="almacen">Con stock en almacén</option>
+                    <option value="reservada">Con stock reservado</option>
+                    <option value="danada">Con stock dañado</option>
+                    <option value="devuelta">Con stock devuelto</option>
+                    <option value="sin_stock">Sin stock</option>
+                    <option value="solo_almacen">Solo en almacén</option>
+                    <option value="solo_disponible">Solo disponible</option>
                 </select>
                 <div></div>
             </div>
