@@ -39,7 +39,7 @@ BEGIN
             EXECUTE format('DROP TABLE IF EXISTS %I CASCADE', table_name);
             RAISE NOTICE '🗑️  Eliminada tabla: %', table_name;
         ELSE
-            RAISE NOTICE 'ℹ️  Tabla % no existe (ya está limpia)', table_name);
+            RAISE NOTICE 'ℹ️  Tabla % no existe (ya está limpia)', table_name;
         END IF;
     END LOOP;
 
