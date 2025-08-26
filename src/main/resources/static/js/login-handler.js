@@ -51,6 +51,7 @@ class LoginHandler {
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include', // Important: include cookies in requests
                 body: JSON.stringify({ username, password })
             });
 
@@ -58,11 +59,11 @@ class LoginHandler {
                 const data = await response.json();
 
                 if (data.token) {
-                    // Store token
+                    // Store token in localStorage for API requests
                     localStorage.setItem('jwt_token', data.token);
 
-                    // Set token in cookie for server-side validation - 30 minutes
-                    document.cookie = `jwt_token=${data.token}; path=/; max-age=1800; secure; samesite=strict`;
+                    // Note: The secure HttpOnly cookie is automatically set by the server
+                    // We don't need to manually set cookies from JavaScript anymore
 
                     // Update auth manager
                     if (window.authManager) {
@@ -266,73 +267,52 @@ class LoginHandler {
             });
         }
     }
+
+    showLoading(show) {
+        // Add loading state management
+        const submitBtn = this.loginForm?.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            if (show) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Iniciando sesión...';
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Iniciar Sesión';
+            }
+        }
+    }
 }
 
-// Logout function for global use
+// Enhanced logout function with proper server coordination
 async function logout() {
     try {
-        // Llamar al backend para eliminar la cookie httpOnly
-        await fetch('/logout', {
+        // Call the backend to clear the HttpOnly cookie
+        const response = await fetch('/logout', {
             method: 'POST',
-            credentials: 'include',
+            credentials: 'include', // Important: include cookies
             headers: {
                 'Content-Type': 'application/json'
             }
         });
+
+        if (!response.ok) {
+            console.warn('Server logout returned non-200 status:', response.status);
+        }
     } catch (error) {
         console.warn('Error during server logout:', error);
         // Continue with client-side cleanup even if server request fails
     } finally {
-        // Limpiar localStorage y sessionStorage
+        // Clear client-side storage
         localStorage.clear();
         sessionStorage.clear();
 
-        // Función más agresiva para eliminar cookies
-        function deleteCookie(name, path = '/', domain = null) {
-            const domainPart = domain ? `domain=${domain};` : '';
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domainPart}`;
+        // Clear auth manager state
+        if (window.authManager) {
+            window.authManager.logout();
+        } else {
+            // Force redirect if no authManager
+            window.location.href = '/pages/login.html';
         }
-
-        // Lista de cookies a eliminar
-        const cookiesToClear = ['jwt_token', 'JSESSIONID', 'session_id'];
-
-        cookiesToClear.forEach(cookieName => {
-            // Clear for current domain and various paths
-            deleteCookie(cookieName, '/');
-            deleteCookie(cookieName, '/pages/');
-            deleteCookie(cookieName, '');
-
-            // Clear with domain variations
-            const hostname = window.location.hostname;
-            deleteCookie(cookieName, '/', hostname);
-            deleteCookie(cookieName, '/', `.${hostname}`);
-
-            // Clear for localhost scenarios
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                deleteCookie(cookieName, '/', 'localhost');
-                deleteCookie(cookieName, '/', '127.0.0.1');
-            }
-
-            // Clear for parent domains
-            const domainParts = hostname.split('.');
-            while (domainParts.length > 1) {
-                const domain = domainParts.join('.');
-                deleteCookie(cookieName, '/', domain);
-                deleteCookie(cookieName, '/', `.${domain}`);
-                domainParts.shift();
-            }
-        });
-
-        // Forzar recarga de la página después de limpiar cookies
-        setTimeout(() => {
-            // Limpiar auth manager
-            if (window.authManager) {
-                window.authManager.logout();
-            } else {
-                // Forzar redirección si no hay authManager
-                window.location.href = '/pages/login.html';
-            }
-        }, 100);
     }
 }
 

@@ -2,25 +2,25 @@ package com.thelarte.auth.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import com.thelarte.auth.config.JwtConfig;
+import com.thelarte.auth.security.JwtTokenProvider;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * @deprecated This service is deprecated. Use JwtTokenProvider instead for all JWT operations.
+ * This class is kept for backward compatibility but delegates all operations to JwtTokenProvider.
+ */
+@Deprecated
 @Service
 public class JwtService {
-    private final JwtConfig jwtConfig;
+    private final JwtTokenProvider jwtTokenProvider;
     private final SecretKey secretKey;
 
-    public JwtService(JwtConfig jwtConfig, SecretKey secretKey) {
-        this.jwtConfig = jwtConfig;
+    public JwtService(JwtTokenProvider jwtTokenProvider, SecretKey secretKey) {
+        this.jwtTokenProvider = jwtTokenProvider;
         this.secretKey = secretKey;
     }
 
@@ -41,27 +41,8 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
-    }
-
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        return Jwts.builder()
-                .setClaims(extraClaims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtConfig.getJwtExpiration()))
-                .signWith(secretKey, SignatureAlgorithm.HS256)
-                .compact();
-    }
-
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    public boolean isTokenValid(String token) {
+        return jwtTokenProvider.validateToken(token);
     }
 
     private Date extractExpiration(String token) {

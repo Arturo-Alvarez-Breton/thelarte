@@ -4,6 +4,7 @@ import com.thelarte.auth.dto.AuthResponse;
 import com.thelarte.auth.dto.LoginRequest;
 import com.thelarte.auth.dto.RegisterRequest;
 import com.thelarte.auth.service.AuthService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,12 @@ import java.time.Duration;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${server.ssl.enabled:false}")
+    private boolean sslEnabled;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -30,13 +37,13 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
 
-        // Create HTTP-only cookie for JWT token (for browser navigation) - 30 minutes expiration
+        // Create secure HTTP-only cookie for JWT token - 30 minutes expiration
         ResponseCookie jwtCookie = ResponseCookie.from("jwt_token", response.getToken())
                 .httpOnly(true)
-                .secure(false) // Set to true for HTTPS in production
+                .secure(cookieSecure || sslEnabled) // Use secure cookies in production/HTTPS
                 .path("/")
-                .maxAge(Duration.ofMinutes(30)) // Changed to 30 minutes
-                .sameSite("Lax")
+                .maxAge(Duration.ofMinutes(30))
+                .sameSite("Strict") // Changed to Strict for better security
                 .build();
 
         return ResponseEntity.ok()
@@ -55,43 +62,17 @@ public class AuthController {
     }
 
     private ResponseEntity<Void> performLogout() {
-        // Create multiple cookie clearing headers to ensure removal
-        ResponseCookie clearCookieHttpOnly = ResponseCookie.from("jwt_token", "")
+        // Create a single, effective cookie clearing response
+        ResponseCookie clearCookie = ResponseCookie.from("jwt_token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure || sslEnabled)
                 .path("/")
                 .maxAge(Duration.ZERO)
-                .sameSite("Lax")
-                .build();
-
-        ResponseCookie clearCookieNonHttpOnly = ResponseCookie.from("jwt_token", "")
-                .httpOnly(false)
-                .secure(false)
-                .path("/")
-                .maxAge(Duration.ZERO)
-                .sameSite("Lax")
-                .build();
-
-        // Additional clearing for different path variations
-        ResponseCookie clearCookieRoot = ResponseCookie.from("jwt_token", "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(Duration.ZERO)
-                .build();
-
-        ResponseCookie clearCookieRootNonHttpOnly = ResponseCookie.from("jwt_token", "")
-                .httpOnly(false)
-                .secure(false)
-                .path("/")
-                .maxAge(Duration.ZERO)
+                .sameSite("Strict")
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, clearCookieHttpOnly.toString())
-                .header(HttpHeaders.SET_COOKIE, clearCookieNonHttpOnly.toString())
-                .header(HttpHeaders.SET_COOKIE, clearCookieRoot.toString())
-                .header(HttpHeaders.SET_COOKIE, clearCookieRootNonHttpOnly.toString())
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
                 .build();
     }
 }
