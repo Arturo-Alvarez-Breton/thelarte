@@ -382,21 +382,20 @@ export class TransaccionService {
         }
     }
 
-    async reactivateCliente(cedula) {
-        console.log('Reactivating client:', cedula);
+    async restaurarCliente(cedula) {
+        console.log('Restoring client with cedula:', cedula);
         try {
             const authToken = this.getAuthToken();
-                    const response = await fetch(`/api/clientes/${cedula}/restaurar`, {
+            const response = await fetch(`/api/clientes/${cedula}/restaurar`, {
                 method: 'POST',
                 headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             return { success: true };
         } catch (error) {
-            console.error('Error reactivating client:', error);
+            console.error('Error restoring client:', error);
             throw error;
         }
     }

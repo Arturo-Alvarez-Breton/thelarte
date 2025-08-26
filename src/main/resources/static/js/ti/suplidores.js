@@ -441,6 +441,389 @@ class SuplidoresManager {
         }).join('');
     }
 
+    renderMobileButtons(suplidor) {
+        const isActive = suplidor.activo !== false;
+        if (!isActive) {
+            return `
+                <div class="space-y-2">
+                    <div class="grid grid-cols-1 gap-2">
+                        <button 
+                            data-id="${suplidor.id}" 
+                            class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                            title="Ver detalles"
+                        >
+                            <i class="fas fa-eye text-xs"></i>
+                            <span>Ver</span>
+                        </button>
+                        <button 
+                            data-id="${suplidor.id}" 
+                            class="restore-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            title="Restaurar suplidor"
+                        >
+                            <i class="fas fa-undo text-xs"></i>
+                            <span>Restaurar</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="space-y-2">
+                <div class="grid grid-cols-1 gap-2">
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
+                        title="Ver detalles"
+                    >
+                        <i class="fas fa-eye text-xs"></i>
+                        <span>Ver</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTabletButtons(suplidor) {
+        const isActive = suplidor.activo !== false;
+        if (!isActive) {
+            return `
+                <div class="flex flex-wrap gap-1.5 justify-center">
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                        title="Ver detalles"
+                    >
+                        <i class="fas fa-eye"></i>
+                        <span>Ver</span>
+                    </button>
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="restore-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
+                        title="Restaurar suplidor"
+                    >
+                        <i class="fas fa-undo"></i>
+                        <span>Restaurar</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="flex flex-wrap gap-1.5 justify-center">
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
+                    title="Ver detalles"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+            </div>
+        `;
+    }
+
+    renderDesktopButtons(suplidor) {
+        const isActive = suplidor.activo !== false;
+        if (!isActive) {
+            return `
+                <div class="flex flex-wrap gap-2">
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                        title="Ver detalles"
+                    >
+                        <i class="fas fa-eye"></i>
+                        <span>Detalles</span>
+                    </button>
+                    <button 
+                        data-id="${suplidor.id}" 
+                        class="restore-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
+                        title="Restaurar suplidor"
+                    >
+                        <i class="fas fa-undo"></i>
+                        <span>Restaurar</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="flex flex-wrap gap-2">
+                <button 
+                    data-id="${suplidor.id}" 
+                    class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
+                    title="Ver detalles"
+                >
+                    <i class="fas fa-eye"></i>
+                    <span>Detalles</span>
+                </button>
+            </div>
+        `;
+    }
+
+    // ---------------- GEO ----------------
+
+    async loadCountries() {
+        try {
+            const res = await fetch('/api/geo/countries');
+            this.countries = await res.json();
+            const sel = document.getElementById('suplidorPaisSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Seleccione un país...</option>' + this.countries
+                .map(c => `<option value="${c.iso2}">${c.name}</option>`)
+                .join('');
+        } catch (e) {
+            console.error('Error cargando países:', e);
+            window.showToast?.('No se pudieron cargar los países.', 'error');
+        }
+    }
+
+    async populateCities(iso2, preselectCity = '') {
+        const citySelect = document.getElementById('suplidorCiudadSelect');
+        if (!citySelect) return;
+
+        if (!iso2) {
+            citySelect.disabled = true;
+            citySelect.innerHTML = '<option value="">Seleccione un país primero...</option>';
+            return;
+        }
+
+        citySelect.disabled = true;
+        citySelect.innerHTML = '<option value="">Cargando ciudades...</option>';
+
+        try {
+            let cities = this.citiesByIso2.get(iso2);
+            if (!cities) {
+                const res = await fetch(`/api/geo/countries/${encodeURIComponent(iso2)}/cities`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                cities = await res.json();
+                this.citiesByIso2.set(iso2, cities);
+            }
+
+            if (!Array.isArray(cities) || cities.length === 0) {
+                citySelect.innerHTML = '<option value="">No hay ciudades disponibles</option>';
+                citySelect.disabled = false;
+                return;
+            }
+
+            citySelect.innerHTML = '<option value="">Seleccione una ciudad...</option>' + cities
+                .map(city => `<option value="${city}">${city}</option>`)
+                .join('');
+            citySelect.disabled = false;
+
+            if (preselectCity) {
+                const opt = Array.from(citySelect.options).find(o => o.value.toLowerCase() === preselectCity.toLowerCase());
+                if (opt) {
+                    citySelect.value = opt.value;
+                }
+            }
+        } catch (e) {
+            console.error('Error cargando ciudades:', e);
+            window.showToast?.('No se pudieron cargar las ciudades.', 'error');
+            citySelect.innerHTML = '<option value="">Error cargando ciudades</option>';
+            citySelect.disabled = false;
+        }
+    }
+
+    // ---------------- Teléfono (intl-tel-input) ----------------
+
+    initTelInput(input, initialIso2 = 'DO', presetValue = '') {
+        if (!window.intlTelInput) return;
+        // Asegura ISO2 en minúscula para la librería
+        const iso2 = (initialIso2 || 'DO').toLowerCase();
+
+        const iti = window.intlTelInput(input, {
+            initialCountry: iso2,
+            allowDropdown: false,           // El país lo controla el select de País
+            autoPlaceholder: 'polite',      // Muestra ejemplo para guiar al usuario
+            formatOnDisplay: true,
+            nationalMode: false,            // Muestra +código país y valida internacional
+            utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/22.0.2/js/utils.min.js',
+            separateDialCode: false,
+            strictMode: true
+        });
+
+        // Si había valor preestablecido, colócalo mediante la API
+        if (presetValue) {
+            try { iti.setNumber(String(presetValue)); } catch {}
+        }
+
+        // Guarda la instancia
+        this.telInputs.set(input, iti);
+
+        // Limpia mensajes de error al escribir
+        input.addEventListener('input', () => {
+            const err = input.nextElementSibling?.classList?.contains('text-red-500') ? input.nextElementSibling : null;
+            input.classList.remove('border-red-500');
+            if (err) { err.classList.add('hidden'); err.textContent = ''; }
+        });
+    }
+
+    destroyTelInput(input) {
+        const iti = this.telInputs.get(input);
+        if (iti) {
+            try { iti.destroy(); } catch {}
+            this.telInputs.delete(input);
+        }
+    }
+
+    destroyAllTelInputs() {
+        this.telInputs.forEach((iti, input) => {
+            try { iti.destroy(); } catch {}
+        });
+        this.telInputs.clear();
+    }
+
+    updateAllTelInputsCountry(iso2) {
+        const country = (iso2 || 'DO').toLowerCase();
+        this.telInputs.forEach((iti) => {
+            try { iti.setCountry(country); } catch {}
+        });
+    }
+
+    getValidatedPhonesE164OrErrors() {
+        const results = [];
+        let firstInvalid = null;
+
+        this.telInputs.forEach((iti, input) => {
+            const raw = input.value.trim();
+            if (!raw) return; // permitir vacíos (se filtran luego)
+            const valid = iti.isValidNumber();
+            if (!valid && !firstInvalid) {
+                firstInvalid = { input, message: 'Número de teléfono inválido para el país seleccionado' };
+            }
+            const e164 = valid ? iti.getNumber(intlTelInputUtils.numberFormat.E164) : raw;
+            results.push({ e164, valid, input });
+        });
+
+        return { results, firstInvalid };
+    }
+
+    // ---------------- CRUD Suplidores ----------------
+
+    async loadSuplidores() {
+        this.showLoading();
+        try {
+            const busqueda = document.getElementById('suplidorSearchInput')?.value || null;
+            // Obtener todos los suplidores (activos e inactivos)
+            const allSuplidores = await this.suplidorService.getSuplidores();
+
+            // Separar suplidores activos e inactivos basado en el campo 'activo'
+            this.suplidoresActivos = allSuplidores.filter(s => s.activo !== false);
+            this.suplidoresInactivos = allSuplidores.filter(s => s.activo === false);
+
+            // Actualizar contadores
+            this.updateCounters();
+
+            // Actualizar estilos de los botones según la vista actual
+            this.updateFilterButtons();
+
+            // Determinar qué suplidores mostrar según la vista actual
+            const currentSuplidores = this.currentView === 'activos' ? this.suplidoresActivos : this.suplidoresInactivos;
+
+            // Aplicar filtro de búsqueda si existe
+            let filtered = currentSuplidores;
+            if (busqueda) {
+                filtered = currentSuplidores.filter(s =>
+                    (s.nombre && s.nombre.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.ciudad && s.ciudad.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.pais && s.pais.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.email && s.email.toLowerCase().includes(busqueda.toLowerCase())) ||
+                    (s.rNC && s.rNC.toLowerCase().includes(busqueda.toLowerCase()))
+                );
+            }
+
+            // Configurar paginación
+            this.totalSuplidores = filtered.length;
+            this.totalPages = Math.ceil(this.totalSuplidores / this.suplidoresPerPage) || 1;
+
+            // Aplicar paginación
+            const start = this.currentPage * this.suplidoresPerPage;
+            const end = start + this.suplidoresPerPage;
+            this.filteredSuplidores = filtered.slice(start, end);
+
+            // Guardar referencia a todos los suplidores
+            this.allSuplidores = allSuplidores;
+
+            // Update table view with current data
+            this.tableViewManager.setData(this.filteredSuplidores);
+
+            this.renderSuplidores();
+            this.renderPagination();
+        } catch (error) {
+            console.error('Error loading suppliers:', error);
+            this.suplidoresActivos = [];
+            this.suplidoresInactivos = [];
+            this.filteredSuplidores = [];
+            this.totalSuplidores = 0;
+            this.totalPages = 1;
+            this.updateCounters();
+            this.updateFilterButtons();
+            this.tableViewManager.setData([]);
+            this.renderSuplidores();
+            this.renderPagination();
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    renderSuplidores() {
+        const container = document.getElementById('suplidoresListContainer');
+        if (!container) return;
+
+        if (this.filteredSuplidores.length === 0) {
+            const searchTerm = document.getElementById('suplidorSearchInput')?.value;
+            const emptyMessage = searchTerm ?
+                `No se encontraron suplidores que coincidan con "${searchTerm}".` :
+                'No hay suplidores registrados.';
+            container.innerHTML = `
+                <div class="text-center py-12 col-span-full">
+                    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-truck text-3xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Sin suplidores</h3>
+                    <p class="text-gray-600 mb-6">${emptyMessage}</p>
+                </div>
+            `;
+            return;
+        }
+
+        function truncate(str, max) {
+            if (!str) return '';
+            return str.length > max ? str.slice(0, max - 1) + '…' : str;
+        }
+
+        container.innerHTML = this.filteredSuplidores.map(s => {
+            const ubicacion = [s.ciudad, s.pais].filter(Boolean).join(', ') || 'N/A';
+            const ubicacionTrunc = truncate(ubicacion, 24);
+            const emailTrunc = truncate(s.email || 'N/A', 24);
+            const isActive = s.activo !== false;
+            return `
+                <div class="suplidor-card bg-white rounded-lg shadow-md p-4 flex flex-col justify-between min-h-[220px] max-w-full mx-auto ${!isActive ? 'opacity-75 border-l-4 border-red-400' : ''}">
+                    <h3 class="text-lg font-semibold flex items-center gap-2 mb-3">
+                        <i class='fas fa-truck ${isActive ? 'text-brand-brown' : 'text-gray-400'}'></i> 
+                        ${truncate(s.nombre, 32)}
+                        ${!isActive ? '<span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full ml-2">Inactivo</span>' : ''}
+                    </h3>
+                    <div class="space-y-2 text-sm text-gray-600 mb-4">
+                        <p title="${ubicacion}"><i class="fas fa-map-marker-alt w-4"></i> ${ubicacionTrunc}</p>
+                        <p title="${s.email || ''}"><i class="fas fa-envelope w-4"></i> ${emailTrunc}</p>
+                        ${s.telefonos && s.telefonos.length > 0 ?
+            `<p><i class="fas fa-phone w-4"></i> ${truncate(s.telefonos[0], 20)}</p>` :
+            '<p><i class="fas fa-phone w-4"></i> Sin teléfono</p>'
+        }
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-auto">
+                        <button data-id="${s.id}" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-xs">
+                            <i class="fas fa-eye"></i> Detalles
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     filterSuplidores() {
         const searchTerm = document.getElementById('suplidorSearchInput')?.value || '';
         this.tableViewManager.filterData(searchTerm);

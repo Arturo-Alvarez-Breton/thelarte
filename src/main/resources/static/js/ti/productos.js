@@ -27,24 +27,6 @@ class ProductosManager {
                     handler: 'productosManager.verProducto',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-exchange-alt',
-                    handler: 'productosManager.verMovimientosProducto',
-                    className: 'text-blue-600 hover:text-blue-700',
-                    title: 'Movimientos'
-                },
-                {
-                    icon: 'fas fa-edit',
-                    handler: 'productosManager.editProducto',
-                    className: 'text-green-600 hover:text-green-700',
-                    title: 'Editar'
-                },
-                {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'productosManager.deleteProducto',
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
                 }
             ],
             searchFields: ['nombre', 'tipo', 'descripcion', 'codigo'],
@@ -59,31 +41,18 @@ class ProductosManager {
         const isVerticalScreen = window.innerHeight > window.innerWidth;
 
         if (isVerticalScreen || this.isMobile) {
-            // Vertical screen or mobile: only show name and price
+            // Vertical screen or mobile: only show name and type
             return [
                 { header: 'Nombre', field: 'nombre' },
-                {
-                    header: 'Precio',
-                    field: 'precioVenta',
-                    formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
-                }
+                { header: 'Tipo', field: 'tipo' }
             ];
         } else {
-            // Horizontal screen: show all info
+            // Horizontal screen: show name, type and description
             return [
                 { header: 'Código', field: 'codigo' },
                 { header: 'Nombre', field: 'nombre' },
                 { header: 'Tipo', field: 'tipo' },
-                {
-                    header: 'Precio Venta',
-                    field: 'precioVenta',
-                    formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
-                },
-                {
-                    header: 'Precio Compra',
-                    field: 'precioCompra',
-                    formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
-                }
+                { header: 'Descripción', field: 'descripcion' }
             ];
         }
     }
@@ -162,10 +131,10 @@ class ProductosManager {
     }
 
     setupEventListeners() {
-        document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => this.newProducto());
+        // document.getElementById('nuevoProductoBtn')?.addEventListener('click', () => this.newProducto());
         document.getElementById('productoSearchInput')?.addEventListener('input', () => this.filterProductos());
         document.getElementById('productoTipoFilter')?.addEventListener('change', () => this.filterProductos());
-        document.getElementById('formProducto')?.addEventListener('submit', (e) => this.handleSubmitProducto(e));
+        // document.getElementById('formProducto')?.addEventListener('submit', (e) => this.handleSubmitProducto(e));
 
         // Event listener para el campo tipo de producto
         document.getElementById('productoTipo')?.addEventListener('change', (e) => this.handleTipoChange(e));
@@ -182,14 +151,8 @@ class ProductosManager {
 
             if (btn.classList.contains('ver-btn')) {
                 this.verProducto(id);
-            } else if (btn.classList.contains('edit-btn')) {
-                this.editProducto(id);
-            } else if (btn.classList.contains('delete-btn')) {
-                this.deleteProducto(id);
-            } else if (btn.classList.contains('reactivate-btn')) {
-                this.reactivateProducto(id);
-            } else if (btn.classList.contains('movimientos-btn')) {
-                this.verMovimientosProducto(id);
+            } else if (btn.classList.contains('restore-btn')) {
+                this.restaurarProducto(id);
             }
         });
 
@@ -515,17 +478,6 @@ class ProductosManager {
                                 <span class="text-xs leading-relaxed line-clamp-2">${producto.descripcion}</span>
                             </div>
                             ` : ''}
-                            
-                            <div class="flex items-center justify-between mt-2">
-                                <div class="text-brand-brown font-bold text-lg">
-                                    $${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}
-                                </div>
-                                ${!this.isMobile ? `
-                                <div class="text-xs text-gray-500">
-                                    Costo: $${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}
-                                </div>
-                                ` : ''}
-                            </div>
                         </div>
                         
                         <div class="mt-4 pt-3 border-t border-gray-100">
@@ -541,7 +493,7 @@ class ProductosManager {
         if (producto.eliminado) {
             return `
                 <div class="space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 gap-2">
                         <button 
                             data-id="${producto.id}" 
                             class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
@@ -552,11 +504,11 @@ class ProductosManager {
                         </button>
                         <button 
                             data-id="${producto.id}" 
-                            class="reactivate-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                            title="Reactivar producto"
+                            class="restore-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                            title="Restaurar producto"
                         >
                             <i class="fas fa-undo text-xs"></i>
-                            <span>Reactivar</span>
+                            <span>Restaurar</span>
                         </button>
                     </div>
                 </div>
@@ -565,7 +517,7 @@ class ProductosManager {
 
         return `
             <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 gap-2">
                     <button 
                         data-id="${producto.id}" 
                         class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
@@ -573,24 +525,6 @@ class ProductosManager {
                     >
                         <i class="fas fa-eye text-xs"></i>
                         <span>Ver</span>
-                    </button>
-                    <button 
-                        data-id="${producto.id}" 
-                        class="edit-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                        title="Editar producto"
-                    >
-                        <i class="fas fa-edit text-xs"></i>
-                        <span>Editar</span>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 gap-2">
-                    <button 
-                        data-id="${producto.id}" 
-                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                        title="Eliminar producto"
-                    >
-                        <i class="fas fa-trash-alt text-xs"></i>
-                        <span>Eliminar</span>
                     </button>
                 </div>
             </div>
@@ -611,11 +545,11 @@ class ProductosManager {
                     </button>
                     <button 
                         data-id="${producto.id}" 
-                        class="reactivate-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
-                        title="Reactivar producto"
+                        class="restore-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
+                        title="Restaurar producto"
                     >
                         <i class="fas fa-undo"></i>
-                        <span>Reactivar</span>
+                        <span>Restaurar</span>
                     </button>
                 </div>
             `;
@@ -630,30 +564,6 @@ class ProductosManager {
                 >
                     <i class="fas fa-eye"></i>
                     <span>Ver</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="movimientos-btn flex items-center gap-1 bg-blue-600 text-white px-2.5 py-1.5 rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
-                    title="Movimientos"
-                >
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Mov</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="edit-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
-                    title="Editar producto"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Edit</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
-                    title="Eliminar producto"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Del</span>
                 </button>
             </div>
         `;
@@ -673,11 +583,11 @@ class ProductosManager {
                     </button>
                     <button 
                         data-id="${producto.id}" 
-                        class="reactivate-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
-                        title="Reactivar producto"
+                        class="restore-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
+                        title="Restaurar producto"
                     >
                         <i class="fas fa-undo"></i>
-                        <span>Reactivar</span>
+                        <span>Restaurar</span>
                     </button>
                 </div>
             `;
@@ -692,30 +602,6 @@ class ProductosManager {
                 >
                     <i class="fas fa-eye"></i>
                     <span>Detalles</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="movimientos-btn flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Movimientos"
-                >
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Movimientos</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Editar producto"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Editar</span>
-                </button>
-                <button 
-                    data-id="${producto.id}" 
-                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Eliminar producto"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Eliminar</span>
                 </button>
             </div>
         `;
@@ -797,16 +683,6 @@ class ProductosManager {
         this.loadProductos();
     }
 
-    newProducto() {
-        this.currentProducto = null;
-        this.clearForm();
-        document.getElementById('modalProductoTitle').textContent = 'Nuevo Producto';
-        document.getElementById('btnProductoIcon').className = 'fas fa-plus mr-2';
-        document.getElementById('btnProductoText').textContent = 'Crear Producto';
-        document.getElementById('modalProducto').classList.remove('hidden');
-        document.getElementById('productoNombre').disabled = false;
-    }
-
     async verProducto(id) {
         const allProductos = [...this.productosActivos, ...this.productosEliminados];
         const producto = allProductos.find(p => String(p.id) === String(id));
@@ -867,108 +743,35 @@ class ProductosManager {
             }
         }
 
-        // Llenar datos
+        // Llenar datos (sin precios)
         document.getElementById('detalleProductoNombre').textContent = producto.nombre || 'Sin nombre';
         document.getElementById('detalleProductoTipo').textContent = producto.tipo || 'N/A';
         document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
-        document.getElementById('detalleProductoPrecioVenta').textContent =
-            `$${producto.precioVenta ? Number(producto.precioVenta).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
-        document.getElementById('detalleProductoPrecioCompra').textContent =
-            `$${producto.precioCompra ? Number(producto.precioCompra).toLocaleString('es-DO', { minimumFractionDigits: 2 }) : '0.00'}`;
 
         // Mostrar modal
         this.currentProducto = producto;
         document.getElementById('modalVerProducto').classList.remove('hidden');
     }
 
-    async editProducto(id) {
-        const allProductos = [...this.productosActivos, ...this.productosEliminados];
-        const producto = allProductos.find(p => String(p.id) === String(id));
-        if (!producto) {
-            window.showToast('Producto no encontrado.', 'error');
-            return;
-        }
-        this.currentProducto = producto;
-        this.fillForm(producto);
-        document.getElementById('modalProductoTitle').textContent = 'Editar Producto';
-        document.getElementById('btnProductoIcon').className = 'fas fa-save mr-2';
-        document.getElementById('btnProductoText').textContent = 'Actualizar Producto';
-        document.getElementById('productoNombre').disabled = false;
-        document.getElementById('modalProducto').classList.remove('hidden');
-    }
+    async restaurarProducto(id) {
+        if (!confirm('¿Estás seguro de que deseas restaurar este producto?')) return;
 
-    async deleteProducto(id) {
-        if (!confirm(`¿Estás seguro de que deseas eliminar el producto?`)) return;
         try {
-            await this.productoService.deleteProducto(id);
-            window.showToast('Producto eliminado exitosamente.', 'success');
-            await this.loadProductos();
-        } catch (error) {
-            window.showToast('Error al eliminar el producto.', 'error');
-        }
-    }
+            const allProductos = [...this.productosActivos, ...this.productosEliminados];
+            const producto = allProductos.find(p => String(p.id) === String(id));
 
-    async reactivateProducto(id) {
-        if (!confirm(`¿Estás seguro de que deseas reactivar el producto?`)) return;
-        try {
-            await this.productoService.reactivateProducto(id);
-            window.showToast('Producto reactivado exitosamente.', 'success');
-            await this.loadProductos();
-        } catch (error) {
-            window.showToast('Error al reactivar el producto.', 'error');
-        }
-    }
-
-    async handleSubmitProducto(e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-
-        // Determinar el tipo final del producto
-        let tipoFinal = formData.get('tipo');
-        if (tipoFinal === 'otro') {
-            const otroTipo = formData.get('otroTipo');
-            if (otroTipo && otroTipo.trim()) {
-                tipoFinal = otroTipo.trim().toLowerCase();
-            } else {
-                showError('productoTipo', 'Debe especificar el tipo de producto');
+            if (!producto) {
+                window.showToast('Producto no encontrado.', 'error');
                 return;
             }
-        }
 
-        const productoData = {
-            nombre: formData.get('nombre'),
-            tipo: tipoFinal,
-            descripcion: formData.get('descripcion'),
-            precioVenta: formData.get('precioVenta') ? parseFloat(formData.get('precioVenta')) : null,
-            precioCompra: formData.get('precioCompra') ? parseFloat(formData.get('precioCompra')) : null,
-        };
-
-        // Foto (base64)
-        const fotoInput = document.getElementById('productoFoto');
-        if (fotoInput && fotoInput.files.length > 0) {
-            productoData.fotoBase64 = await this.getBase64(fotoInput.files[0]);
-        } else if (this.currentProducto && this.currentProducto.fotoUrl) {
-            productoData.fotoBase64 = this.currentProducto.fotoUrl;
-        }
-
-        if (!validateFormProducto(productoData)) {
-            return;
-        }
-
-        try {
-            if (this.currentProducto) {
-                await this.productoService.updateProducto(this.currentProducto.id, productoData);
-                window.showToast('Producto actualizado exitosamente.', 'success');
-            } else {
-                await this.productoService.createProducto(productoData);
-                window.showToast('Producto creado exitosamente.', 'success');
-            }
-            this.cerrarModalProducto();
-            // Recargar tipos de productos para incluir el nuevo tipo si se agregó uno
-            await this.loadTiposProductos();
+            // Call the reactivate endpoint
+            await this.productoService.reactivateProducto(id);
+            window.showToast('Producto restaurado exitosamente.', 'success');
             await this.loadProductos();
         } catch (error) {
-            window.showToast('Error al guardar el producto.', 'error');
+            console.error('Error restoring product:', error);
+            window.showToast('Error al restaurar el producto.', 'error');
         }
     }
 
@@ -1099,285 +902,8 @@ class ProductosManager {
     }
 
     hideLoading() {}
-
-    // MOVEMENT FUNCTIONALITY METHODS
-    async verMovimientosProducto(id) {
-        const allProductos = [...this.productosActivos, ...this.productosEliminados];
-        const producto = allProductos.find(p => String(p.id) === String(id));
-        if (!producto) {
-            window.showToast('Producto no encontrado.', 'error');
-            return;
-        }
-        this.renderMovimientosModal(producto);
-        document.getElementById('modalMovimientosProducto').classList.remove('hidden');
-    }
-
-    renderMovimientosModal(producto) {
-        document.getElementById('movimientosProductoTitle').textContent = `Movimientos de "${producto.nombre}"`;
-        document.getElementById('movimientosProductoBody').innerHTML = `
-            <div class="flex gap-2 mb-6">
-                <button id="tabRegistrar" class="px-4 py-2 rounded-lg bg-brand-brown text-white font-semibold activeTab">Registrar movimiento</button>
-                <button id="tabHistorial" class="px-4 py-2 rounded-lg bg-gray-200 text-brand-brown font-semibold">Ver historial</button>
-            </div>
-            <div id="movimientosProductoTabContent"></div>
-        `;
-
-        // Control del ancho del dialog
-        const dialog = document.getElementById('movimientosDialog');
-        if (dialog) {
-            dialog.classList.remove('max-w-3xl');
-            dialog.classList.add('max-w-lg');
-        }
-
-        document.getElementById('tabRegistrar').onclick = () => this.setMovimientoTab('registrar', producto);
-        document.getElementById('tabHistorial').onclick = () => this.setMovimientoTab('historial', producto);
-
-        this.setMovimientoTab('registrar', producto);
-    }
-
-    setMovimientoTab(tab, producto) {
-        document.getElementById('tabRegistrar').classList.remove('activeTab', 'bg-brand-brown', 'text-white');
-        document.getElementById('tabHistorial').classList.remove('activeTab', 'bg-brand-brown', 'text-white');
-        document.getElementById('tabRegistrar').classList.add('bg-gray-200', 'text-brand-brown');
-        document.getElementById('tabHistorial').classList.add('bg-gray-200', 'text-brand-brown');
-
-        if (tab === 'registrar') {
-            document.getElementById('tabRegistrar').classList.add('activeTab', 'bg-brand-brown', 'text-white');
-            document.getElementById('tabRegistrar').classList.remove('bg-gray-200', 'text-brand-brown');
-            this.renderMovimientoRegistrar(producto);
-        } else {
-            document.getElementById('tabHistorial').classList.add('activeTab', 'bg-brand-brown', 'text-white');
-            document.getElementById('tabHistorial').classList.remove('bg-gray-200', 'text-brand-brown');
-            this.renderMovimientoHistorial(producto);
-        }
-    }
-
-    renderMovimientoRegistrar(producto) {
-        document.getElementById('movimientosProductoTabContent').innerHTML = `
-            <div class="mb-6">
-                <h4 class="font-semibold text-gray-700 mb-2">Cantidades actuales</h4>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Disponible:</strong> ${producto.cantidadDisponible ?? 0}</div>
-                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Almacén:</strong> ${producto.cantidadAlmacen ?? 0}</div>
-                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Reservada:</strong> ${producto.cantidadReservada ?? 0}</div>
-                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Dañada:</strong> ${producto.cantidadDanada ?? 0}</div>
-                    <div class="bg-gray-100 rounded px-3 py-1"><strong>Devuelta:</strong> ${producto.cantidadDevuelta ?? 0}</div>
-                </div>
-            </div>
-            <form id="formMovimientoTipoSimple" class="mb-4">
-                <label class="block text-gray-700 mb-1 font-medium">Tipo de movimiento</label>
-                <select id="movimientoTipoSimple" name="tipoSimple" class="border rounded px-3 py-2 w-full" required>
-                    <option value="">Seleccione...</option>
-                    <option value="INGRESO">Ingreso (Aumenta cantidad)</option>
-                    <option value="REBAJA">Rebaja (Disminuye cantidad)</option>
-                    <option value="TRANSFERENCIA">Transferencia (Entre estados)</option>
-                </select>
-            </form>
-            <div id="movimientoFormContainer"></div>
-        `;
-        document.getElementById('movimientoTipoSimple').onchange = (e) => this.renderMovimientoForm(e.target.value, producto);
-    }
-
-    renderMovimientoForm(tipoSimple, producto) {
-        const container = document.getElementById('movimientoFormContainer');
-        const estados = [
-            { value: 'disponible', label: 'Disponible' },
-            { value: 'almacen', label: 'Almacén' },
-            { value: 'danada', label: 'Dañada' },
-            { value: 'reservada', label: 'Reservada' },
-            { value: 'devuelta', label: 'Devuelta' }
-        ];
-        let html = '';
-        if (!tipoSimple) {
-            container.innerHTML = '';
-            return;
-        }
-        if (tipoSimple === 'INGRESO' || tipoSimple === 'REBAJA') {
-            html = `
-            <form id="formMovimientoProducto">
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">Estado</label>
-                    <select id="movimientoEstado" name="estado" class="border rounded px-3 py-2 w-full" required>
-                        <option value="">Seleccione...</option>
-                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">Cantidad</label>
-                    <input type="number" id="movimientoCantidad" name="cantidad" min="1" class="border rounded px-3 py-2 w-full" required>
-                    <span id="cantidadError" class="text-xs text-red-600 hidden"></span>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">Motivo u observación</label>
-                    <textarea id="movimientoMotivo" name="motivo" class="border rounded px-3 py-2 w-full"></textarea>
-                </div>
-                <div class="flex gap-2 justify-end">
-                    <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Registrar movimiento</button>
-                </div>
-            </form>
-        `;
-        } else if (tipoSimple === 'TRANSFERENCIA') {
-            html = `
-            <form id="formMovimientoProducto">
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">De</label>
-                    <select id="movimientoEstadoOrigen" name="estadoOrigen" class="border rounded px-3 py-2 w-full" required>
-                        <option value="">Seleccione...</option>
-                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">A</label>
-                    <select id="movimientoEstadoDestino" name="estadoDestino" class="border rounded px-3 py-2 w-full" required>
-                        <option value="">Seleccione...</option>
-                        ${estados.map(e => `<option value="${e.value}">${e.label}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">Cantidad</label>
-                    <input type="number" id="movimientoCantidad" name="cantidad" min="1" class="border rounded px-3 py-2 w-full" required>
-                    <span id="cantidadError" class="text-xs text-red-600 hidden"></span>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-1 font-medium">Motivo u observación</label>
-                    <textarea id="movimientoMotivo" name="motivo" class="border rounded px-3 py-2 w-full"></textarea>
-                </div>
-                <div class="flex gap-2 justify-end">
-                    <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Registrar movimiento</button>
-                </div>
-            </form>
-        `;
-        }
-        container.innerHTML = html;
-        document.getElementById('formMovimientoProducto').onsubmit = (e) => this.handleMovimientoProducto(e, producto, tipoSimple);
-    }
-
-    async renderMovimientoHistorial(producto) {
-        const container = document.getElementById('movimientosProductoTabContent');
-        container.innerHTML = `<div class="mb-4 text-gray-700 font-semibold">Historial de movimientos para <span class="font-bold">${producto.nombre}</span>:</div>
-            <div id="movimientosHistorialList" class="space-y-2"></div>
-            <div class="mt-4 flex justify-end">
-                <button type="button" onclick="productosManager.cerrarModalMovimientos()" class="bg-gray-300 px-4 py-2 rounded">Cerrar</button>
-            </div>
-        `;
-
-        // Ampliar el diálogo para historial
-        const dialog = document.getElementById('movimientosDialog');
-        if (dialog) {
-            dialog.classList.remove('max-w-lg');
-            dialog.classList.add('max-w-3xl');
-        }
-
-        try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch(`/api/movimientos/producto/${producto.id}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const movimientos = await response.json();
-            if (movimientos.length === 0) {
-                document.getElementById('movimientosHistorialList').innerHTML = '<div class="text-gray-500">No hay movimientos registrados para este producto.</div>';
-            } else {
-                document.getElementById('movimientosHistorialList').innerHTML = movimientos.map(mov =>
-                    `<div class="bg-gray-50 border rounded px-4 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
-                        <div>
-                            <span class="font-medium">${mov.tipoSimple}</span>
-                            <span class="text-xs text-gray-500">(${mov.tipo})</span>
-                            <span class="mx-2">Cantidad: <span class="font-bold">${mov.cantidad}</span></span>
-                            <span class="mx-2">Usuario: <span class="text-gray-700">${mov.idUsuario || ''}</span></span>
-                        </div>
-                        <div class="text-xs text-gray-600">${mov.fecha ? new Date(mov.fecha).toLocaleString() : ''}</div>
-                        <div class="text-xs text-gray-600 italic">${mov.motivo || ''}</div>
-                    </div>`
-                ).join('');
-            }
-        } catch (err) {
-            document.getElementById('movimientosHistorialList').innerHTML = `<div class="text-red-500">Error al cargar movimientos.</div>`;
-        }
-    }
-
-    async handleMovimientoProducto(e, producto, tipoSimple) {
-        e.preventDefault();
-        let tipo, cantidad, motivo, estado, estadoOrigen, estadoDestino;
-        cantidad = parseInt(document.getElementById('movimientoCantidad').value, 10);
-        motivo = document.getElementById('movimientoMotivo').value;
-        let cantidadError = document.getElementById('cantidadError');
-
-        if (tipoSimple === 'INGRESO' || tipoSimple === 'REBAJA') {
-            estado = document.getElementById('movimientoEstado').value;
-            if (!estado || isNaN(cantidad)) {
-                window.showToast('Debes seleccionar un estado y cantidad válida.', 'error');
-                return;
-            }
-            const disponible = producto[`cantidad${estado.charAt(0).toUpperCase() + estado.slice(1)}`] ?? 0;
-            if (tipoSimple === 'REBAJA' && Math.abs(cantidad) > disponible) {
-                cantidadError.textContent = 'No puedes rebajar más cantidad de la que hay disponible.';
-                cantidadError.classList.remove('hidden');
-                return;
-            }
-            cantidadError.classList.add('hidden');
-            tipo = `ajuste_${estado}`;
-            if (tipoSimple === 'REBAJA') cantidad = cantidad * -1;
-        } else if (tipoSimple === 'TRANSFERENCIA') {
-            estadoOrigen = document.getElementById('movimientoEstadoOrigen').value;
-            estadoDestino = document.getElementById('movimientoEstadoDestino').value;
-            if (!estadoOrigen || !estadoDestino || estadoOrigen === estadoDestino || isNaN(cantidad)) {
-                window.showToast('Selecciona ambos estados distintos y una cantidad válida.', 'error');
-                return;
-            }
-            const disponibleOrigen = producto[`cantidad${estadoOrigen.charAt(0).toUpperCase() + estadoOrigen.slice(1)}`] ?? 0;
-            if (cantidad > disponibleOrigen) {
-                cantidadError.textContent = 'No puedes transferir más cantidad de la que hay en el origen.';
-                cantidadError.classList.remove('hidden');
-                return;
-            }
-            cantidadError.classList.add('hidden');
-            tipo = `${estadoOrigen}_a_${estadoDestino}`;
-        }
-
-        try {
-            const token = localStorage.getItem('authToken');
-            await fetch('/api/movimientos', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    productoId: producto.id,
-                    tipo,
-                    cantidad,
-                    motivo,
-                    tipoSimple,
-                    idUsuario: window.currentUserId
-                })
-            });
-            window.showToast('Movimiento registrado correctamente.', 'success');
-            this.cerrarModalMovimientos();
-            await this.loadProductos();
-        } catch (error) {
-            window.showToast('Error al registrar el movimiento.', 'error');
-        }
-    }
-
-    cerrarModalMovimientos() {
-        const modal = document.getElementById('modalMovimientosProducto');
-        modal.classList.add('hidden');
-        document.getElementById('movimientosProductoTitle').textContent = '';
-        document.getElementById('movimientosProductoBody').innerHTML = '';
-
-        // Restaura el ancho del diálogo por defecto
-        const dialog = document.getElementById('movimientosDialog');
-        if (dialog) {
-            dialog.classList.remove('max-w-3xl');
-            dialog.classList.add('max-w-lg');
-        }
-    }
 }
+
 const productosManager = new ProductosManager();
 window.productosManager = productosManager;
 
