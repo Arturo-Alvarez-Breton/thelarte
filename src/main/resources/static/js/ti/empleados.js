@@ -26,19 +26,8 @@ class EmpleadosManager {
                     handler: 'empleadosManager.verEmpleado',
                     className: 'text-brand-brown hover:text-brand-light-brown',
                     title: 'Ver detalles'
-                },
-                {
-                    icon: 'fas fa-edit',
-                    handler: 'empleadosManager.editEmpleado',
-                    className: 'text-green-600 hover:text-green-700',
-                    title: 'Editar'
-                },
-                {
-                    icon: 'fas fa-trash-alt',
-                    handler: 'empleadosManager.deleteEmpleado',
-                    className: 'text-red-600 hover:text-red-700',
-                    title: 'Eliminar'
                 }
+                // Eliminados: Editar y Eliminar
             ],
             searchFields: ['cedula', 'nombre', 'apellido', 'telefono', 'rol', 'email'],
             idField: 'cedula',
@@ -430,7 +419,7 @@ class EmpleadosManager {
         if (empleado.deleted) {
             return `
                 <div class="space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-1 gap-2">
                         <button 
                             data-cedula="${empleado.cedula}" 
                             class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
@@ -440,15 +429,6 @@ class EmpleadosManager {
                             <i class="fas fa-eye text-xs"></i>
                             <span>Ver</span>
                         </button>
-                        <button 
-                            data-cedula="${empleado.cedula}" 
-                            class="reactivate-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                            title="Restaurar empleado"
-                            type="button"
-                        >
-                            <i class="fas fa-undo text-xs"></i>
-                            <span>Restaurar</span>
-                        </button>
                     </div>
                 </div>
             `;
@@ -456,7 +436,7 @@ class EmpleadosManager {
 
         return `
             <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 gap-2">
                     <button 
                         data-cedula="${empleado.cedula}" 
                         class="ver-btn flex items-center justify-center gap-1.5 bg-brand-brown text-white px-3 py-2.5 rounded-lg hover:bg-brand-light-brown transition-colors text-sm font-medium"
@@ -466,57 +446,12 @@ class EmpleadosManager {
                         <i class="fas fa-eye text-xs"></i>
                         <span>Ver</span>
                     </button>
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="edit-btn flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                        title="Editar empleado"
-                        type="button"
-                    >
-                        <i class="fas fa-edit text-xs"></i>
-                        <span>Editar</span>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 gap-2">
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="delete-btn flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2.5 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                        title="Eliminar empleado"
-                        type="button"
-                    >
-                        <i class="fas fa-trash-alt text-xs"></i>
-                        <span>Eliminar</span>
-                    </button>
                 </div>
             </div>
         `;
     }
 
     renderTabletButtons(empleado) {
-        if (empleado.deleted) {
-            return `
-                <div class="flex flex-wrap gap-1.5 justify-center">
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="ver-btn flex items-center gap-1 bg-brand-brown text-white px-2.5 py-1.5 rounded-md hover:bg-brand-light-brown transition-colors text-xs font-medium"
-                        title="Ver detalles"
-                        type="button"
-                    >
-                        <i class="fas fa-eye"></i>
-                        <span>Ver</span>
-                    </button>
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="reactivate-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
-                        title="Restaurar empleado"
-                        type="button"
-                    >
-                        <i class="fas fa-undo"></i>
-                        <span>Restaurar</span>
-                    </button>
-                </div>
-            `;
-        }
-
         return `
             <div class="flex flex-wrap gap-1.5 justify-center">
                 <button 
@@ -528,54 +463,11 @@ class EmpleadosManager {
                     <i class="fas fa-eye"></i>
                     <span>Ver</span>
                 </button>
-                <button 
-                    data-cedula="${empleado.cedula}" 
-                    class="edit-btn flex items-center gap-1 bg-green-600 text-white px-2.5 py-1.5 rounded-md hover:bg-green-700 transition-colors text-xs font-medium"
-                    title="Editar empleado"
-                    type="button"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Edit</span>
-                </button>
-                <button 
-                    data-cedula="${empleado.cedula}" 
-                    class="delete-btn flex items-center gap-1 bg-red-600 text-white px-2.5 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
-                    title="Eliminar empleado"
-                    type="button"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Del</span>
-                </button>
             </div>
         `;
     }
 
     renderDesktopButtons(empleado) {
-        if (empleado.deleted) {
-            return `
-                <div class="flex flex-wrap gap-2">
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium"
-                        title="Ver detalles"
-                        type="button"
-                    >
-                        <i class="fas fa-eye"></i>
-                        <span>Detalles</span>
-                    </button>
-                    <button 
-                        data-cedula="${empleado.cedula}" 
-                        class="reactivate-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
-                        title="Restaurar empleado"
-                        type="button"
-                    >
-                        <i class="fas fa-undo"></i>
-                        <span>Restaurar</span>
-                    </button>
-                </div>
-            `;
-        }
-
         return `
             <div class="flex flex-wrap gap-2">
                 <button 
@@ -586,24 +478,6 @@ class EmpleadosManager {
                 >
                     <i class="fas fa-eye"></i>
                     <span>Detalles</span>
-                </button>
-                <button 
-                    data-cedula="${empleado.cedula}" 
-                    class="edit-btn flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Editar empleado"
-                    type="button"
-                >
-                    <i class="fas fa-edit"></i>
-                    <span>Editar</span>
-                </button>
-                <button 
-                    data-cedula="${empleado.cedula}" 
-                    class="delete-btn flex items-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
-                    title="Eliminar empleado"
-                    type="button"
-                >
-                    <i class="fas fa-trash-alt"></i>
-                    <span>Eliminar</span>
                 </button>
             </div>
         `;
@@ -729,14 +603,6 @@ class EmpleadosManager {
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Rol</label>
                     <p class="mt-1 text-sm text-gray-900">${empleado.rol || 'N/A'}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Salario</label>
-                    <p class="mt-1 text-sm text-gray-900">${empleado.salario != null ? '$' + empleado.salario.toLocaleString() : 'N/A'}</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Comisión</label>
-                    <p class="mt-1 text-sm text-gray-900">${empleado.comision != null ? empleado.comision + '%' : 'N/A'}</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
