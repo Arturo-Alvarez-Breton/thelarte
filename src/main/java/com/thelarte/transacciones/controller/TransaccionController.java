@@ -528,4 +528,32 @@ public class TransaccionController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
+    // === ENDPOINTS PARA REPORTES ===
+
+    @GetMapping("/reportes/ventas-dia")
+    public ResponseEntity<Map<String, Object>> obtenerReporteVentasDelDia(
+            @RequestParam(required = false) String fecha) {
+        try {
+            Map<String, Object> reporte = transaccionService.obtenerReporteVentasDelDia(fecha);
+            return new ResponseEntity<>(reporte, HttpStatus.OK);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error al obtener reporte de ventas diarias: " + e.getMessage());
+            return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/reportes/productos-mas-vendidos")
+    public ResponseEntity<List<Map<String, Object>>> obtenerProductosMasVendidos(
+            @RequestParam(required = false) String fechaDesde,
+            @RequestParam(required = false) String fechaHasta,
+            @RequestParam(defaultValue = "5") Integer limite) {
+        try {
+            List<Map<String, Object>> productos = transaccionService.obtenerProductosMasVendidos(fechaDesde, fechaHasta, limite);
+            return new ResponseEntity<>(productos, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

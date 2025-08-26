@@ -809,33 +809,43 @@ public class TransaccionService {
             dto.setPagos(pagosDTO);
         }
 
-        // Líneas de la transacción
-        if (transaccion.getLineas() != null) {
-            List<LineaTransaccionDTO> lineasDto = transaccion.getLineas().stream().map(linea -> {
-                LineaTransaccionDTO lDto = new LineaTransaccionDTO();
-                lDto.setId(linea.getId());
-                lDto.setProductoId(linea.getProductoId());
-                lDto.setCantidad(linea.getCantidad());
-                lDto.setPrecioUnitario(linea.getPrecioUnitario());
-                lDto.setSubtotal(linea.getSubtotal());
-                lDto.setImpuestoPorcentaje(linea.getImpuestoPorcentaje());
-                lDto.setImpuestoMonto(linea.getImpuestoMonto());
-                lDto.setTotal(linea.getTotal());
-                lDto.setDescuentoPorcentaje(linea.getDescuentoPorcentaje());
-                lDto.setDescuentoMonto(linea.getDescuentoMonto());
-                lDto.setObservaciones(linea.getObservaciones());
+        // Líneas de la transacción - Manejo seguro de colecciones lazy
+        try {
+            List<LineaTransaccion> lineas = transaccion.getLineas();
+            if (lineas != null && !lineas.isEmpty()) {
+                List<LineaTransaccionDTO> lineasDto = lineas.stream().map(linea -> {
+                    LineaTransaccionDTO lDto = new LineaTransaccionDTO();
+                    lDto.setId(linea.getId());
+                    lDto.setProductoId(linea.getProductoId());
+                    lDto.setCantidad(linea.getCantidad());
+                    lDto.setPrecioUnitario(linea.getPrecioUnitario());
+                    lDto.setSubtotal(linea.getSubtotal());
+                    lDto.setImpuestoPorcentaje(linea.getImpuestoPorcentaje());
+                    lDto.setImpuestoMonto(linea.getImpuestoMonto());
+                    lDto.setTotal(linea.getTotal());
+                    lDto.setDescuentoPorcentaje(linea.getDescuentoPorcentaje());
+                    lDto.setDescuentoMonto(linea.getDescuentoMonto());
+                    lDto.setObservaciones(linea.getObservaciones());
 
-                if (linea.getProductoNombre() != null && !linea.getProductoNombre().isEmpty()) {
-                    lDto.setProductoNombre(linea.getProductoNombre());
-                } else if (linea.getProductoId() != null) {
-                    Producto producto = productoRepository.findById(linea.getProductoId()).orElse(null);
-                    lDto.setProductoNombre(producto != null ? producto.getNombre() : null);
-                } else {
-                    lDto.setProductoNombre(null);
-                }
-                return lDto;
-            }).collect(Collectors.toList());
-            dto.setLineas(lineasDto);
+                    if (linea.getProductoNombre() != null && !linea.getProductoNombre().isEmpty()) {
+                        lDto.setProductoNombre(linea.getProductoNombre());
+                    } else if (linea.getProductoId() != null) {
+                        try {
+                            Producto producto = productoRepository.findById(linea.getProductoId()).orElse(null);
+                            lDto.setProductoNombre(producto != null ? producto.getNombre() : null);
+                        } catch (Exception e) {
+                            lDto.setProductoNombre("Producto no encontrado");
+                        }
+                    } else {
+                        lDto.setProductoNombre(null);
+                    }
+                    return lDto;
+                }).collect(Collectors.toList());
+                dto.setLineas(lineasDto);
+            }
+        } catch (Exception e) {
+            // Si hay problemas con la carga lazy, crear una lista vacía
+            dto.setLineas(List.of());
         }
         return dto;
     }
@@ -1366,5 +1376,144 @@ public class TransaccionService {
         resultado.put("montoPorMetodo", totalesPorMetodo);
 
         return resultado;
+    }
+
+    /**
+     * Obtiene reporte de ventas del día
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> obtenerReporteVentasDelDia(String fecha) {
+        LocalDateTime fechaInicio;
+        LocalDateTime fechaFin;
+
+        if (fecha != null && !fecha.isEmpty()) {
+            try {
+                LocalDate fechaLocal = LocalDate.parse(fecha);
+                fechaInicio = fechaLocal.atStartOfDay();
+                fechaFin = fechaLocal.atTime(23, 59, 59);
+            } catch (Exception e) {
+                // Si la fecha no es válida, usar el día actual
+                LocalDate hoy = LocalDate.now();
+                fechaInicio = hoy.atStartOfDay();
+                fechaFin = hoy.atTime(23, 59, 59);
+            }
+        } else {
+            // Usar el día actual
+            LocalDate hoy = LocalDate.now();
+            fechaInicio = hoy.atStartOfDay();
+            fechaFin = hoy.atTime(23, 59, 59);
+        }
+
+        // Obtener transacciones del período y filtrar por tipo VENTA
+        List<Transaccion> todasLasTransacciones = transaccionRepository.findByFechaBetween(fechaInicio, fechaFin);
+        List<Transaccion> ventas = todasLasTransacciones.stream()
+                .filter(t -> t.getTipo() == Transaccion.TipoTransaccion.VENTA && !t.isDeleted())
+                .collect(Collectors.toList());
+
+        // Calcular estadísticas
+        BigDecimal totalVentas = ventas.stream()
+                .filter(t -> t.getEstado() == Transaccion.EstadoTransaccion.COMPLETADA ||
+                            t.getEstado() == Transaccion.EstadoTransaccion.ENTREGADA ||
+                            t.getEstado() == Transaccion.EstadoTransaccion.COBRADA ||
+                            t.getEstado() == Transaccion.EstadoTransaccion.FACTURADA)
+                .map(Transaccion::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        int totalTransacciones = ventas.size();
+
+        Map<String, Object> reporte = new HashMap<>();
+        reporte.put("fecha", fechaInicio.toLocalDate().toString());
+        reporte.put("totalTransacciones", totalTransacciones);
+        reporte.put("totalVentas", totalVentas);
+        reporte.put("ventasPorEstado", ventas.stream()
+                .collect(Collectors.groupingBy(t -> t.getEstado().toString(), Collectors.counting())));
+
+        return reporte;
+    }
+
+    /**
+     * Obtiene productos más vendidos en un período
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> obtenerProductosMasVendidos(String fechaDesde, String fechaHasta, Integer limite) {
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+
+        if (fechaDesde != null && !fechaDesde.isEmpty()) {
+            try {
+                inicio = LocalDate.parse(fechaDesde).atStartOfDay();
+            } catch (Exception e) {
+                // Usar fecha por defecto si hay error
+                inicio = LocalDate.now().minusDays(30).atStartOfDay();
+            }
+        } else {
+            inicio = LocalDate.now().minusDays(30).atStartOfDay();
+        }
+
+        if (fechaHasta != null && !fechaHasta.isEmpty()) {
+            try {
+                fin = LocalDate.parse(fechaHasta).atTime(23, 59, 59);
+            } catch (Exception e) {
+                fin = LocalDate.now().atTime(23, 59, 59);
+            }
+        } else {
+            fin = LocalDate.now().atTime(23, 59, 59);
+        }
+
+        // Obtener transacciones del período y filtrar por tipo VENTA
+        List<Transaccion> todasLasTransacciones = transaccionRepository.findByFechaBetween(inicio, fin);
+        List<Transaccion> ventas = todasLasTransacciones.stream()
+                .filter(t -> t.getTipo() == Transaccion.TipoTransaccion.VENTA && !t.isDeleted())
+                .collect(Collectors.toList());
+
+        // Agrupar por producto y calcular totales
+        Map<Long, Map<String, Object>> productosVendidos = new HashMap<>();
+
+        for (Transaccion venta : ventas) {
+            if (venta.getEstado() == Transaccion.EstadoTransaccion.COMPLETADA ||
+                venta.getEstado() == Transaccion.EstadoTransaccion.ENTREGADA ||
+                venta.getEstado() == Transaccion.EstadoTransaccion.COBRADA ||
+                venta.getEstado() == Transaccion.EstadoTransaccion.FACTURADA) {
+
+                if (venta.getLineas() != null) {
+                    for (LineaTransaccion linea : venta.getLineas()) {
+                        if (linea.getProductoId() != null) {
+                            Long productoId = linea.getProductoId();
+                            int cantidad = linea.getCantidad() != null ? linea.getCantidad() : 0;
+                            BigDecimal total = linea.getTotal() != null ? linea.getTotal() : BigDecimal.ZERO;
+
+                            productosVendidos.computeIfAbsent(productoId, k -> {
+                                Map<String, Object> producto = new HashMap<>();
+                                producto.put("productoId", productoId);
+                                producto.put("cantidadVendida", 0);
+                                producto.put("totalVendido", BigDecimal.ZERO);
+                                return producto;
+                            });
+
+                            // Actualizar totales
+                            Map<String, Object> producto = productosVendidos.get(productoId);
+                            producto.put("cantidadVendida", (Integer) producto.get("cantidadVendida") + cantidad);
+                            producto.put("totalVendido", ((BigDecimal) producto.get("totalVendido")).add(total));
+
+                            // Agregar nombre del producto si no está
+                            if (!producto.containsKey("nombreProducto")) {
+                                try {
+                                    Producto prod = productoRepository.findById(productoId).orElse(null);
+                                    producto.put("nombreProducto", prod != null ? prod.getNombre() : "Producto " + productoId);
+                                } catch (Exception e) {
+                                    producto.put("nombreProducto", "Producto " + productoId);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Convertir a lista y ordenar por cantidad vendida
+        return productosVendidos.values().stream()
+                .sorted((p1, p2) -> ((Integer) p2.get("cantidadVendida")).compareTo((Integer) p1.get("cantidadVendida")))
+                .limit(limite != null ? limite : 5)
+                .collect(Collectors.toList());
     }
 }
