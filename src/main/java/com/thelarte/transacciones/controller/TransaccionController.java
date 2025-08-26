@@ -68,6 +68,30 @@ public class TransaccionController {
         return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
+    // Nuevo endpoint para transacciones filtradas y paginadas
+    @GetMapping("/filtered")
+    public ResponseEntity<List<TransaccionDTO>> obtenerTransaccionesFiltradas(
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        try {
+            List<Transaccion> transacciones = transaccionService.getTransaccionesFiltered(
+                tipo, estado, null, null, page, size);
+            
+            List<TransaccionDTO> dtos = transacciones.stream()
+                    .map(transaccionService::toDTO)
+                    .collect(Collectors.toList());
+            
+            return new ResponseEntity<>(dtos, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Error al obtener transacciones filtradas: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<TransaccionDTO> obtenerPorId(@PathVariable Long id) {
         Optional<Transaccion> transaccion = transaccionService.obtenerPorId(id);

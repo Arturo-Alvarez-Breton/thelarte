@@ -11,9 +11,17 @@ export class TransaccionService {
     async obtenerTransacciones(filters = {}) {
         console.log('Fetching transactions with filters:', filters);
         try {
+            // Check if filters are provided
+            const hasFilters = filters.tipo || filters.estado || filters.busqueda || filters.page !== undefined || filters.size !== undefined;
+            
+            let endpoint = `${this.baseUrl}/transacciones`;
+            if (hasFilters) {
+                endpoint = `${this.baseUrl}/transacciones/filtered`;
+            }
+            
             const queryParams = new URLSearchParams(filters).toString();
             const authToken = this.getAuthToken();
-            const response = await fetch(`${this.baseUrl}/transacciones?${queryParams}`, {
+            const response = await fetch(`${endpoint}?${queryParams}`, {
                 headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
             });
             if (!response.ok) {
