@@ -40,6 +40,7 @@ class TransaccionesManager {
         });
 
         this.init();
+
     }
 
     // Fragmento para que el tipo de transacción se vea correctamente en la tabla (TableViewManager)
@@ -690,9 +691,6 @@ class TransaccionesManager {
             'COMPLETADA': 'green',    // En lugar de COBRADA
             'CANCELADA': 'red',
             'FACTURADA': 'purple',
-            'RECIBIDA': 'indigo',
-            'PAGADA': 'green',
-            'ENTREGADA': 'teal',
             'DEVUELTA': 'emerald',
             'PARCIALMENTE_DEVUELTA': 'yellow'
         };
@@ -1110,6 +1108,7 @@ class TransaccionesManager {
                         <input type="number" id="montoPago" class="w-full border rounded-lg p-2" min="0" max="${montoMaximo}" step="0.01" value="${montoMaximo}">
                         <p class="text-sm text-gray-500 mt-1">Saldo pendiente: ${this.formatCurrency(montoMaximo)}</p>
                     </div>
+                    <div id="montoPagoErrorMsg" class="text-red-600 text-sm font-semibold mt-1"></div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
                         <select id="metodoPago" class="w-full border rounded-lg p-2">
@@ -1144,15 +1143,20 @@ class TransaccionesManager {
                     const montoPago = parseFloat(document.getElementById('montoPago').value);
                     const metodoPago = document.getElementById('metodoPago').value;
                     const observaciones = document.getElementById('observacionesPago').value;
+                    const montoErrorDiv = document.getElementById('montoPagoErrorMsg');
+                    // Limpia el mensaje de error antes de validar
+                    if (montoErrorDiv) montoErrorDiv.textContent = '';
 
                     // Validaciones
                     if (!fechaPago || isNaN(montoPago) || montoPago <= 0) {
                         window.showToast('Ingrese una fecha y monto válidos', 'error');
+                        if (montoErrorDiv) montoErrorDiv.textContent = 'Ingrese una fecha y monto válidos.';
                         return;
                     }
 
                     if (montoPago > saldoPendiente) {
                         window.showToast(`El monto no puede exceder el saldo pendiente (${this.formatCurrency(saldoPendiente)})`, 'error');
+                        if (montoErrorDiv) montoErrorDiv.textContent = `El monto no puede exceder el saldo pendiente (${this.formatCurrency(saldoPendiente)})`;
                         return;
                     }
 
@@ -1191,8 +1195,16 @@ class TransaccionesManager {
                 } catch (error) {
                     console.error('Error al registrar pago:', error);
                     window.showToast('Error al registrar el pago: ' + (error.message || error), 'error');
+                    const montoErrorDiv = document.getElementById('montoPagoErrorMsg');
+                    if (montoErrorDiv) montoErrorDiv.textContent = error.message || 'Error al registrar el pago.';
                 }
             };
+
+
+            document.getElementById('montoPago').addEventListener('input', () => {
+                const montoErrorDiv = document.getElementById('montoPagoErrorMsg');
+                if (montoErrorDiv) montoErrorDiv.textContent = '';
+            });
         } catch (error) {
             console.error('Error al verificar el estado de pagos:', error);
             window.showToast('Error al verificar el estado de los pagos', 'error');
