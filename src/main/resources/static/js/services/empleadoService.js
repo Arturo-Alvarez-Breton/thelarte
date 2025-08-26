@@ -11,12 +11,25 @@ export class EmpleadoService {
             }
 
             const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                console.warn('No JWT token found, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+
             const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
+            
+            if (response.status === 401) {
+                console.warn('Authentication failed, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+            
             if (!response.ok) {
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
             }

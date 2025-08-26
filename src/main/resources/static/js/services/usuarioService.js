@@ -1,13 +1,26 @@
 export class UsuarioService {
     async getUsuarios() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
+            if (!token) {
+                console.warn('No JWT token found, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+
             const response = await fetch(`/api/usuarios`, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
             });
+            
+            if (response.status === 401) {
+                console.warn('Authentication failed, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+            
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return await response.json();
         } catch (error) {
@@ -17,7 +30,7 @@ export class UsuarioService {
     }
     async getUsuarioByUsername(username) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -34,7 +47,7 @@ export class UsuarioService {
     }
     async createUsuario(usuarioData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/register`, {
                 method: 'POST',
                 headers: {
@@ -55,7 +68,7 @@ export class UsuarioService {
     }
     async updateUsuario(username, usuarioData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}`, {
                 method: 'PUT',
                 headers: {
@@ -76,7 +89,7 @@ export class UsuarioService {
     }
     async deleteUsuario(username) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}`, {
                 method: 'DELETE',
                 headers: {
@@ -96,7 +109,7 @@ export class UsuarioService {
     }
     async deactivateUsuario(username) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}/deactivate`, {
                 method: 'PUT',
                 headers: {
@@ -116,7 +129,7 @@ export class UsuarioService {
     }
     async activateUsuario(username) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/usuarios/${encodeURIComponent(username)}/activate`, {
                 method: 'PUT',
                 headers: {

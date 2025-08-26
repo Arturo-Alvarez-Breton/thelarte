@@ -292,12 +292,28 @@ public class TransaccionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
         try {
+            System.out.println("=== DEBUG: Obteniendo transacciones filtradas ===");
+            System.out.println("Tipo: " + tipo + ", Estado: " + estado + ", Busqueda: " + busqueda);
+            System.out.println("Page: " + page + ", Size: " + size);
+            
             List<Transaccion> transacciones = transaccionService.getTransaccionesFiltered(
                 tipo, estado, null, null, page, size);
             
+            System.out.println("=== DEBUG: Transacciones obtenidas: " + transacciones.size() + " ===");
+            
             List<TransaccionDTO> dtos = transacciones.stream()
-                    .map(transaccionService::toDTO)
+                    .map(transaccion -> {
+                        try {
+                            return transaccionService.toDTO(transaccion);
+                        } catch (Exception e) {
+                            System.err.println("Error al convertir transacción " + transaccion.getId() + ": " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .filter(dto -> dto != null)
                     .collect(Collectors.toList());
+            
+            System.out.println("=== DEBUG: DTOs creados: " + dtos.size() + " ===");
             
             return new ResponseEntity<>(dtos, HttpStatus.OK);
         } catch (Exception e) {

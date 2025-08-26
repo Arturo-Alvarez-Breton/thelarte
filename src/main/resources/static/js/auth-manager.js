@@ -73,7 +73,8 @@ class AuthManager {
 
         // Check if user is authenticated
         if (!this.isAuthenticated()) {
-            this.redirectToLogin();
+            // Don't redirect immediately, let the page load and handle auth errors
+            console.warn('User not authenticated, but allowing page to load');
             return false;
         }
 
@@ -91,7 +92,7 @@ class AuthManager {
             for (const path of allowedPaths) {
                 if (currentPath.startsWith(path)) {
                     if (!this.hasRole(role)) {
-                        this.redirectToLogin();
+                        console.warn('User does not have required role, but allowing page to load');
                         return false;
                     }
                     return true;
@@ -278,7 +279,7 @@ class AuthManager {
         } else if (roles.includes('TI')) {
             return '/pages/ti/usuarios.html';
         } else if (roles.includes('CONTABILIDAD')) {
-            return '/pages/contabilidad/reportes.html';
+            return '/pages/contabilidad/transacciones.html';
         } else if (roles.includes('CAJERO')) {
             return '/pages/cajero/transacciones.html';
         } else if (roles.includes('VENDEDOR')) {
@@ -298,9 +299,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (authManager.token) {
             await authManager.validateToken();
         }
-        authManager.checkPageAccess();
+        // Only check page access if we're not on login page
+        if (window.location.pathname !== '/pages/login.html') {
+            authManager.checkPageAccess();
+        }
     } catch (error) {
         console.error('Authentication check failed:', error);
+        // Only redirect if we're not already on login page
         if (window.location.pathname !== '/pages/login.html') {
             authManager.redirectToLogin();
         }

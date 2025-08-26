@@ -5,7 +5,7 @@ export class TransaccionService {
 
     // --- Helper para obtener el token ---
     getAuthToken() {
-        return localStorage.getItem('authToken');
+        return localStorage.getItem('jwt_token');
     }
 
     async obtenerTransacciones(filters = {}) {
@@ -21,9 +21,23 @@ export class TransaccionService {
             
             const queryParams = new URLSearchParams(filters).toString();
             const authToken = this.getAuthToken();
+            
+            if (!authToken) {
+                console.warn('No JWT token found, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+            
             const response = await fetch(`${endpoint}?${queryParams}`, {
-                headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+                headers: { 'Authorization': `Bearer ${authToken}` }
             });
+            
+            if (response.status === 401) {
+                console.warn('Authentication failed, redirecting to login');
+                window.location.href = '/pages/login.html';
+                return [];
+            }
+            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
