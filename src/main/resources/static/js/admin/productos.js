@@ -59,13 +59,20 @@ class ProductosManager {
         const isVerticalScreen = window.innerHeight > window.innerWidth;
 
         if (isVerticalScreen || this.isMobile) {
-            // Vertical screen or mobile: only show name and price
+            // Vertical screen or mobile: only show name, price and status
             return [
                 { header: 'Nombre', field: 'nombre' },
                 {
                     header: 'Precio',
                     field: 'precioVenta',
                     formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
+                },
+                {
+                    header: 'Estado',
+                    field: 'eliminado',
+                    formatter: (value) => !value ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Eliminado</span>'
                 }
             ];
         } else {
@@ -83,6 +90,18 @@ class ProductosManager {
                     header: 'Precio Compra',
                     field: 'precioCompra',
                     formatter: (value) => value ? `$${Number(value).toLocaleString('es-DO', { minimumFractionDigits: 2 })}` : '$0.00'
+                },
+                {
+                    header: 'Stock Disponible',
+                    field: 'cantidadDisponible',
+                    formatter: (value) => value || 0
+                },
+                {
+                    header: 'Estado',
+                    field: 'eliminado',
+                    formatter: (value) => !value ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Eliminado</span>'
                 }
             ];
         }

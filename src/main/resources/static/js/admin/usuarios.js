@@ -222,6 +222,13 @@ class UsuariosManager {
                     header: 'Rol',
                     field: 'roles',
                     formatter: (value) => Array.isArray(value) ? value.join(', ') : (value || 'N/A')
+                },
+                {
+                    header: 'Estado',
+                    field: 'active',
+                    formatter: (value) => value !== false ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
                 }
             ];
         } else {
@@ -241,6 +248,13 @@ class UsuariosManager {
                         }
                         return 'N/A';
                     }
+                },
+                {
+                    header: 'Estado',
+                    field: 'active',
+                    formatter: (value) => value !== false ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
                 }
             ];
         }

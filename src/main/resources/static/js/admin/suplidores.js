@@ -168,6 +168,13 @@ class SuplidoresManager {
                     formatter: (value, item) => {
                         return [item.ciudad, item.pais].filter(Boolean).join(', ') || 'N/A';
                     }
+                },
+                {
+                    header: 'Estado',
+                    field: 'activo',
+                    formatter: (value) => value !== false ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
                 }
             ];
         } else {
@@ -191,6 +198,13 @@ class SuplidoresManager {
                         }
                         return 'N/A';
                     }
+                },
+                {
+                    header: 'Estado',
+                    field: 'activo',
+                    formatter: (value) => value !== false ?
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>' :
+                        '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Inactivo</span>'
                 }
             ];
         }
