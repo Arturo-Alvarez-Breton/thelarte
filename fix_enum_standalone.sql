@@ -1,17 +1,23 @@
 -- ========================================================================================
--- MIGRACIÓN R__00: CORRECCIÓN DE ENUMS Y LIMPIEZA DE DATOS
+-- SCRIPT STANDALONE: CORRECCIÓN DE ENUMS Y LIMPIEZA DE DATOS
 -- Sistema de gestión de muebles y decoración - The Larte
 -- ========================================================================================
+-- Este script corrige el error de enum GERENTE y limpia datos excesivos
+-- EJECUTAR ESTE SCRIPT DIRECTAMENTE EN LA BASE DE DATOS DE RAILWAY
+-- ========================================================================================
+
+-- Deshabilitar temporalmente las restricciones de foreign key
+SET CONSTRAINTS ALL DEFERRED;
 
 -- ===== CORRECCIÓN DE ROLES EN USER_ROLES =====
 -- Convertir GERENTE a ADMINISTRADOR para que coincida con el enum Java
-UPDATE user_roles 
-SET role = 'ADMINISTRADOR' 
+UPDATE user_roles
+SET role = 'ADMINISTRADOR'
 WHERE role = 'GERENTE';
 
 -- ===== CORRECCIÓN DE ROLES EN EMPLEADOS =====
 -- Convertir roles antiguos a los nuevos valores del enum
-UPDATE empleados 
+UPDATE empleados
 SET rol = CASE
     WHEN rol = 'ADMIN' THEN 'ADMINISTRADOR'
     WHEN rol = 'COMERCIAL' THEN 'VENDEDOR'
@@ -56,6 +62,36 @@ SELECT setval('productos_id_seq', COALESCE((SELECT MAX(id) FROM productos), 1));
 SELECT setval('clientes_id_seq', COALESCE((SELECT MAX(id) FROM clientes), 1));
 SELECT setval('proveedores_id_seq', COALESCE((SELECT MAX(id) FROM proveedores), 1));
 
+-- Rehabilitar restricciones
+SET CONSTRAINTS ALL IMMEDIATE;
+
+-- ===== VERIFICACIÓN FINAL =====
+DO $$
+DECLARE
+    total_empleados INTEGER;
+    total_usuarios INTEGER;
+    total_roles_invalidos INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO total_empleados FROM empleados WHERE deleted = FALSE;
+    SELECT COUNT(*) INTO total_usuarios FROM users WHERE active = TRUE;
+    SELECT COUNT(*) INTO total_roles_invalidos FROM user_roles WHERE role NOT IN ('ADMINISTRADOR', 'TI', 'VENDEDOR', 'CAJERO', 'CONTABILIDAD');
+
+    RAISE NOTICE '=====================================';
+    RAISE NOTICE 'VERIFICACIÓN DE CORRECCIÓN:';
+    RAISE NOTICE '=====================================';
+    RAISE NOTICE 'Empleados activos: %', total_empleados;
+    RAISE NOTICE 'Usuarios activos: %', total_usuarios;
+    RAISE NOTICE 'Roles inválidos restantes: %', total_roles_invalidos;
+
+    IF total_roles_invalidos = 0 THEN
+        RAISE NOTICE '✅ ÉXITO: No hay roles inválidos';
+    ELSE
+        RAISE WARNING '⚠️  ALERTA: Aún hay % roles inválidos', total_roles_invalidos;
+    END IF;
+
+    RAISE NOTICE '=====================================';
+END $$;
+
 -- ========================================================================================
--- FIN MIGRACIÓN R__00
+-- FIN DEL SCRIPT STANDALONE
 -- ========================================================================================
