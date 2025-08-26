@@ -25,6 +25,7 @@ Este error ocurre porque la base de datos contiene roles `GERENTE` que no existe
 ### **Scripts Principales:**
 - ✅ `fix_enum_standalone.sql` - Script standalone para ejecutar directamente
 - ✅ `verificar_correccion.sql` - Verificación post-corrección
+- ✅ `test_fix_enum.sql` - Test rápido para verificar la corrección
 - ✅ `R__00_Fix_Enum_Roles.sql` - Migración corregida (ya actualizada)
 
 ### **Migraciones Optimizadas:**
@@ -75,13 +76,30 @@ Después de ejecutar la corrección:
 - ✅ **Listas de usuarios, empleados y transacciones funcionan**
 - ✅ **Base de datos optimizada y consistente**
 
+## 🚨 **Error Específico Corregido**
+```
+ERROR: relation "movimientos_inventario" does not exist
+Position: 102
+Location: R__00_Fix_Enum_Roles.sql, Line: 35
+```
+
+**Causa:** La migración referenciaba `movimientos_inventario` pero la tabla real es `movimientos_producto`.
+
+**Solución:** Se actualizaron todas las referencias para usar el nombre correcto de la tabla.
+
 ## 🚀 **Pasos para Railway**
 
+### **Opción 1: Test Rápido (Recomendado)**
 1. **Ir al panel de Railway** → Tu proyecto → **Data** → **Database**
 2. **Abrir Query Tab**
-3. **Ejecutar** `fix_enum_standalone.sql`
-4. **Ejecutar** `verificar_correccion.sql`
-5. **Reiniciar** la aplicación
+3. **Ejecutar** `test_fix_enum.sql` (para verificar que todo esté correcto)
+4. **Ejecutar** `fix_enum_standalone.sql`
+5. **Ejecutar** `verificar_correccion.sql`
+6. **Reiniciar** la aplicación
+
+### **Opción 2: Solo Corrección**
+1. **Ejecutar** `fix_enum_standalone.sql`
+2. **Reiniciar** la aplicación
 
 ## 📝 **Notas Importantes**
 - ⚠️ **Backup recomendado** antes de ejecutar

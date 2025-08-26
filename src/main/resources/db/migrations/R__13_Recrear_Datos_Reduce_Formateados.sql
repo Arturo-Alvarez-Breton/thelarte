@@ -82,8 +82,8 @@ INSERT INTO pagos (id, transaccion_id, fecha_pago, monto, metodo_pago, numero_re
 (3, 3, '2025-01-16 10:00:00', 55460.00, 'EFECTIVO', 'EF-001', 'COMPLETADO', 'Pago venta sofá y mesa'),
 (4, 4, '2025-01-22 15:45:00', 25960.00, 'TARJETA', 'TDC-001', 'COMPLETADO', 'Pago venta sillas');
 
--- ===== 11. MOVIMIENTOS DE INVENTARIO =====
-INSERT INTO movimientos_inventario (id, producto_id, tipo_movimiento, cantidad, fecha, usuario_id, motivo, numero_referencia) VALUES
+-- ===== 11. MOVIMIENTOS DE PRODUCTO =====
+INSERT INTO movimientos_producto (id, producto_id, tipo, cantidad, fecha, id_usuario, motivo, numero_referencia) VALUES
 (1, 1, 'ENTRADA', 2, '2025-01-15 09:00:00', 1, 'COMPRA', 'C001-001'),
 (2, 2, 'ENTRADA', 1, '2025-01-15 09:00:00', 1, 'COMPRA', 'C001-001'),
 (3, 3, 'ENTRADA', 4, '2025-01-20 14:30:00', 1, 'COMPRA', 'C001-002'),

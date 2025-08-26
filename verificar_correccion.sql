@@ -74,9 +74,9 @@ BEGIN
     LEFT JOIN transacciones t ON lt.transaccion_id = t.id
     WHERE t.id IS NULL;
 
-    -- Verificar movimientos huérfanos
+    -- Verificar movimientos huérfanos (usando el nombre correcto de la tabla)
     SELECT COUNT(*) INTO orphan_movimientos
-    FROM movimientos_inventario mi
+    FROM movimientos_producto mi
     LEFT JOIN productos p ON mi.producto_id = p.id
     WHERE p.id IS NULL;
 

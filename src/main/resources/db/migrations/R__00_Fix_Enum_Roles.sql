@@ -31,8 +31,14 @@ DELETE FROM pagos WHERE transaccion_id > 10;
 -- 2. Eliminar todas las líneas de transacción que referencian transacciones que se van a eliminar
 DELETE FROM lineas_transaccion WHERE transaccion_id > 10;
 
--- 3. Eliminar movimientos de inventario que referencian productos que se van a eliminar
-DELETE FROM movimientos_inventario WHERE producto_id > 15;
+-- 3. Eliminar movimientos de producto que referencian productos que se van a eliminar
+-- (Nota: La tabla se llama movimientos_producto, no movimientos_inventario)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'movimientos_producto') THEN
+        DELETE FROM movimientos_producto WHERE producto_id > 15;
+    END IF;
+END $$;
 
 -- 4. Eliminar transacciones
 DELETE FROM transacciones WHERE id > 10;
@@ -50,7 +56,15 @@ DELETE FROM proveedores WHERE id > 5;
 -- Ajustar las secuencias después de la limpieza
 SELECT setval('pagos_id_seq', COALESCE((SELECT MAX(id) FROM pagos), 1));
 SELECT setval('lineas_transaccion_id_seq', COALESCE((SELECT MAX(id) FROM lineas_transaccion), 1));
-SELECT setval('movimientos_inventario_id_seq', COALESCE((SELECT MAX(id) FROM movimientos_inventario), 1));
+
+-- Resetear secuencia de movimientos_producto si existe
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = 'movimientos_producto_id_seq') THEN
+        PERFORM setval('movimientos_producto_id_seq', COALESCE((SELECT MAX(id) FROM movimientos_producto), 1));
+    END IF;
+END $$;
+
 SELECT setval('transacciones_id_seq', COALESCE((SELECT MAX(id) FROM transacciones), 1));
 SELECT setval('productos_id_seq', COALESCE((SELECT MAX(id) FROM productos), 1));
 SELECT setval('clientes_id_seq', COALESCE((SELECT MAX(id) FROM clientes), 1));

@@ -55,7 +55,7 @@ SELECT 'Líneas Transacción', COUNT(*) FROM lineas_transaccion
 UNION ALL
 SELECT 'Pagos', COUNT(*) FROM pagos
 UNION ALL
-SELECT 'Movimientos Inventario', COUNT(*) FROM movimientos_inventario
+SELECT 'Movimientos Inventario', COUNT(*) FROM movimientos_producto
 ORDER BY total DESC;
 
 -- Mostrar resumen de transacciones por tipo

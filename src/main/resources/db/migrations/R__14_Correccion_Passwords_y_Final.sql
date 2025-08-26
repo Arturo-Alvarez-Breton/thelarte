@@ -29,7 +29,7 @@ BEGIN
     SELECT COUNT(*) INTO total_proveedores FROM proveedores WHERE activo = TRUE;
     SELECT COUNT(*) INTO total_transacciones FROM transacciones WHERE deleted = FALSE;
     SELECT COUNT(*) INTO total_pagos FROM pagos;
-    SELECT COUNT(*) INTO total_movimientos FROM movimientos_inventario;
+    SELECT COUNT(*) INTO total_movimientos FROM movimientos_producto;
 
     -- Mostrar resultados
     RAISE NOTICE '=====================================';
@@ -88,7 +88,7 @@ SELECT setval('proveedores_id_seq', COALESCE((SELECT MAX(id) FROM proveedores), 
 SELECT setval('transacciones_id_seq', COALESCE((SELECT MAX(id) FROM transacciones), 1));
 SELECT setval('lineas_transaccion_id_seq', COALESCE((SELECT MAX(id) FROM lineas_transaccion), 1));
 SELECT setval('pagos_id_seq', COALESCE((SELECT MAX(id) FROM pagos), 1));
-SELECT setval('movimientos_inventario_id_seq', COALESCE((SELECT MAX(id) FROM movimientos_inventario), 1));
+SELECT setval('movimientos_producto_id_seq', COALESCE((SELECT MAX(id) FROM movimientos_producto), 1));
 
 -- ===== MOSTRAR USUARIOS Y CONTRASEÑAS PARA TESTING =====
 DO $$

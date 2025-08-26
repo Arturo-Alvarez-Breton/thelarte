@@ -50,9 +50,9 @@ END $$;
 
 DO $$
 BEGIN
-    IF table_exists('movimientos_inventario') THEN
-        RAISE NOTICE 'Eliminando datos de movimientos_inventario...';
-        DELETE FROM movimientos_inventario;
+    IF table_exists('movimientos_producto') THEN
+        RAISE NOTICE 'Eliminando datos de movimientos_producto...';
+        DELETE FROM movimientos_producto;
     END IF;
 END $$;
 
@@ -123,7 +123,7 @@ BEGIN
     WHERE table_schema = 'public'
     AND table_name IN ('empleados', 'users', 'user_roles', 'clientes', 'proveedores',
                        'productos', 'transacciones', 'lineas_transaccion', 'pagos',
-                       'movimientos_inventario', 'devoluciones');
+                       'movimientos_producto', 'devoluciones');
 
     RAISE NOTICE 'Tablas encontradas: %', table_count;
     RAISE NOTICE 'Drop seguro completado. Las tablas están vacías y listas para recreación.';
