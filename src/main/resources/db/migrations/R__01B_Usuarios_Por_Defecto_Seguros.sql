@@ -4,27 +4,27 @@
 -- ========================================================================================
 
 -- ===== ACTUALIZACIÓN DE CONTRASEÑAS CON HASHES BCrypt REALES =====
--- Contraseña por defecto para todos los usuarios: "TheLarte2024!"
+-- Contraseña por defecto para todos los usuarios: "1234"
 
 -- Actualizar contraseñas con hashes BCrypt seguros
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'carlosmendoza';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'anagarcia';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'edwinbrito';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'luismartinez';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'arturobreton';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'mariasanchez';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'juanperez';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'mariarodriguez';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'carlasantos';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'pedrolopez';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'adminroot';
-UPDATE users SET password = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G' WHERE username = 'testuser';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'carlosmendoza';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'anagarcia';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'edwinbrito';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'luismartinez';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'arturobreton';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'mariasanchez';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'juanperez';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'mariarodriguez';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'carlasantos';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'pedrolopez';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'adminroot';
+UPDATE users SET password = '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu' WHERE username = 'testuser';
 
 -- ===== USUARIOS ADICIONALES POR DEFECTO =====
 
 -- Usuario administrador genérico
 INSERT INTO users (username, password, active, empleado_cedula)
-SELECT 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G', TRUE, NULL
+SELECT 'admin', '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu', TRUE, NULL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
 INSERT INTO user_roles (user_id, role)
@@ -33,7 +33,7 @@ WHERE NOT EXISTS (SELECT 1 FROM user_roles ur JOIN users u ON ur.user_id = u.id 
 
 -- Usuario supervisor
 INSERT INTO users (username, password, active, empleado_cedula)
-SELECT 'supervisor', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G', TRUE, NULL
+SELECT 'supervisor', '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu', TRUE, NULL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'supervisor');
 
 INSERT INTO user_roles (user_id, role)
@@ -46,7 +46,7 @@ WHERE NOT EXISTS (SELECT 1 FROM user_roles ur JOIN users u ON ur.user_id = u.id 
 
 -- Usuario cajero
 INSERT INTO users (username, password, active, empleado_cedula)
-SELECT 'cajero', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPjYfYfxI5v2G', TRUE, NULL
+SELECT 'cajero', '$2b$12$pZIXs.5Wk8LEuHV9g7BsZ.gaAZwftBCQDVwWtzG5ZS9q5h7AFzWqu', TRUE, NULL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'cajero');
 
 INSERT INTO user_roles (user_id, role)
@@ -85,26 +85,26 @@ ON CONFLICT (username) DO NOTHING;
 -- ========================================================================================
 -- INFORMACIÓN DE ACCESO
 -- ========================================================================================
--- Contraseña por defecto para todos los usuarios: "TheLarte2024!"
+-- Contraseña por defecto para todos los usuarios: "1234"
 --
 -- Usuarios principales:
--- - admin / TheLarte2024! (Administrador principal)
--- - adminroot / TheLarte2024! (Administrador root)
--- - supervisor / TheLarte2024! (Supervisor con múltiples roles)
--- - cajero / TheLarte2024! (Usuario de caja)
+-- - admin / 1234 (Administrador principal)
+-- - adminroot / 1234 (Administrador root)
+-- - supervisor / 1234 (Supervisor con múltiples roles)
+-- - cajero / 1234 (Usuario de caja)
 --
 -- Usuarios de empleados:
--- - carlosmendoza / TheLarte2024! (Gerente)
--- - anagarcia / TheLarte2024! (Gerente)
--- - edwinbrito / TheLarte2024! (Vendedor)
--- - luismartinez / TheLarte2024! (Vendedor)
--- - arturobreton / TheLarte2024! (Vendedor)
--- - mariasanchez / TheLarte2024! (Vendedor)
--- - juanperez / TheLarte2024! (TI)
--- - mariarodriguez / TheLarte2024! (TI)
--- - carlasantos / TheLarte2024! (Contabilidad)
--- - pedrolopez / TheLarte2024! (Contabilidad)
--- - testuser / TheLarte2024! (Usuario de pruebas)
+-- - carlosmendoza / 1234 (Gerente)
+-- - anagarcia / 1234 (Gerente)
+-- - edwinbrito / 1234 (Vendedor)
+-- - luismartinez / 1234 (Vendedor)
+-- - arturobreton / 1234 (Vendedor)
+-- - mariasanchez / 1234 (Vendedor)
+-- - juanperez / 1234 (TI)
+-- - mariarodriguez / 1234 (TI)
+-- - carlasantos / 1234 (Contabilidad)
+-- - pedrolopez / 1234 (Contabilidad)
+-- - testuser / 1234 (Usuario de pruebas)
 --
 -- ========================================================================================
 -- FIN MIGRACIÓN R__01B
