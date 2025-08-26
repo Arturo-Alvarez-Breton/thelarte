@@ -112,8 +112,8 @@ class StockAlertsWidget {
                                 <option value="only_almacen">Solo en almacén</option>
                                 <option value="only_tienda">Solo en tienda</option>
                                 <option value="damaged">Con unidades dañadas</option>
-                                <option value="reparacion">En reparación</option>
-                                <option value="desbalanceado">Distribución desbalanceada</option>
+<!--                                <option value="reparacion">En reparación</option>-->
+<!--                                <option value="desbalanceado">Distribución desbalanceada</option>-->
                             </select>
                         </div>
                         

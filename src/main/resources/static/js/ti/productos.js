@@ -745,6 +745,7 @@ class ProductosManager {
 
         // Llenar datos (sin precios)
         document.getElementById('detalleProductoNombre').textContent = producto.nombre || 'Sin nombre';
+        document.getElementById('detalleProductoCodigo').textContent = producto.codigo || 'N/A';
         document.getElementById('detalleProductoTipo').textContent = producto.tipo || 'N/A';
         document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
 

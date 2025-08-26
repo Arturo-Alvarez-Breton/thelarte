@@ -484,7 +484,7 @@ class ProductosContabilidadManager {
                         ` : ''}
                     </div>
                     
-                    <!-- Información del producto -->
+                    <!-- Informaci��n del producto -->
                     <div class="flex-1 flex flex-col p-3 sm:p-4 md:p-4">
                         <div class="flex items-start justify-between mb-2">
                             <h3 class="text-base md:text-lg font-semibold text-gray-900 truncate max-w-[70%]">
@@ -846,6 +846,7 @@ class ProductosContabilidadManager {
 
         // Llenar datos
         document.getElementById('detalleProductoNombre').textContent = producto.nombre || 'Sin nombre';
+        document.getElementById('detalleProductoCodigo').textContent = producto.codigo || 'Sin código';
         document.getElementById('detalleProductoTipo').textContent = producto.tipo || 'N/A';
         document.getElementById('detalleProductoDescripcion').textContent = producto.descripcion || 'N/A';
         document.getElementById('detalleProductoPrecioVenta').textContent =
