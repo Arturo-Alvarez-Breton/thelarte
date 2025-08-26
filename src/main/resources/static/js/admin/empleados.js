@@ -16,9 +16,10 @@ class EmpleadosManager {
         this.isMobile = window.innerWidth < 768;
         this.isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
         this.currentView = 'activos'; // 'activos' o 'eliminados'
+        this.displayMode = 'card'; // 'card' or 'table'
 
         // Initialize table view manager with responsive columns
-        this.tableViewManager = new TableViewManager('#empleadosListContainer', {
+        this.tableViewManager = new TableViewManager('#transaccionesTableContainer', {
             columns: this.getResponsiveColumns(),
             actions: [
                 {
@@ -92,6 +93,10 @@ class EmpleadosManager {
         document.getElementById('nuevoEmpleadoBtn')?.addEventListener('click', () => this.newEmpleado());
         document.getElementById('empleadoSearchInput')?.addEventListener('input', () => this.filterEmpleados());
         document.getElementById('formEmpleado')?.addEventListener('submit', (e) => this.handleSubmitEmpleado(e));
+
+        // View toggle buttons
+        document.getElementById('btnCardView')?.addEventListener('click', () => this.switchToCardView());
+        document.getElementById('btnTableView')?.addEventListener('click', () => this.switchToTableView());
 
         // Filter buttons for active/deleted employees
         document.getElementById('btnEmpleadosActivos')?.addEventListener('click', () => this.switchToActiveEmpleados());
@@ -291,6 +296,52 @@ class EmpleadosManager {
 
         // Cargar empleados eliminados
         this.loadEmpleados();
+    }
+
+    switchToCardView() {
+        if (this.displayMode === 'card') return;
+
+        this.displayMode = 'card';
+        this.updateViewToggleButtons();
+
+        // Show card container, hide table container
+        const cardContainer = document.getElementById('empleadosListContainer');
+        const tableContainer = document.getElementById('transaccionesTableContainer');
+        const pagination = document.getElementById('empleadosPagination');
+
+        if (cardContainer) cardContainer.classList.remove('hidden');
+        if (tableContainer) this.tableViewManager.switchToCardView();
+        if (pagination) pagination.classList.remove('hidden');
+    }
+
+    switchToTableView() {
+        if (this.displayMode === 'table') return;
+
+        this.displayMode = 'table';
+        this.updateViewToggleButtons();
+
+        // Hide card container, show table container
+        const cardContainer = document.getElementById('empleadosListContainer');
+        const pagination = document.getElementById('empleadosPagination');
+
+        if (cardContainer) cardContainer.classList.add('hidden');
+        if (pagination) pagination.classList.add('hidden');
+
+        // Switch to table view and update data
+        this.tableViewManager.switchToTableView();
+    }
+
+    updateViewToggleButtons() {
+        const btnCardView = document.getElementById('btnCardView');
+        const btnTableView = document.getElementById('btnTableView');
+
+        if (this.displayMode === 'card') {
+            btnCardView?.classList.add('active');
+            btnTableView?.classList.remove('active');
+        } else {
+            btnCardView?.classList.remove('active');
+            btnTableView?.classList.add('active');
+        }
     }
 
     updateFilterButtons() {
