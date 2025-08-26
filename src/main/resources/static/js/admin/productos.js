@@ -1315,7 +1315,7 @@ class ProductosManager {
         }
 
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/movimientos/producto/${producto.id}`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -1384,7 +1384,7 @@ class ProductosManager {
         }
 
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             await fetch('/api/movimientos', {
                 method: 'POST',
                 headers: {

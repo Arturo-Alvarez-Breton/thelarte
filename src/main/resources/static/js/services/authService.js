@@ -23,7 +23,7 @@ export async function makeAuthenticatedRequest(url, options = {}) {
     
     if (response.status === 401) {
       // Token is invalid, clear storage and redirect to login
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('jwt_token');
       localStorage.removeItem('userEmail');
       window.location.href = '/login.html';
       throw new Error('Session expired. Please log in again.');
@@ -124,7 +124,7 @@ export async function logout() {
 }
 
 export function getAuthToken() {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('jwt_token');
 }
 
 export function isAuthenticated() {

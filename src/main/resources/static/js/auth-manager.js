@@ -4,7 +4,7 @@
  */
 class AuthManager {
     constructor() {
-        this.token = localStorage.getItem('jwt_token');
+        this.token = localStorage.getItem('jwt_token') || localStorage.getItem('authToken');
         this.userInfo = null;
         this.initializeAuth();
     }
@@ -28,9 +28,11 @@ class AuthManager {
      */
     async validateToken() {
         if (!this.token) {
+            console.warn('AuthManager: No token found');
             throw new Error('No token found');
         }
 
+        console.log('AuthManager: Validating token...');
         try {
             const response = await fetch('/api/auth/user-info', {
                 method: 'GET',
@@ -40,16 +42,21 @@ class AuthManager {
                 }
             });
 
+            console.log('AuthManager: Token validation response:', response.status);
+
             if (response.ok) {
                 this.userInfo = await response.json();
+                console.log('AuthManager: User info:', this.userInfo);
                 if (!this.userInfo.authenticated) {
                     throw new Error('User not authenticated');
                 }
                 return true;
             } else {
+                console.error('AuthManager: Token validation failed with status:', response.status);
                 throw new Error('Token validation failed');
             }
         } catch (error) {
+            console.error('AuthManager: Token validation error:', error);
             throw error;
         }
     }

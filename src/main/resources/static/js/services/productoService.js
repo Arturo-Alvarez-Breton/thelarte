@@ -1,7 +1,7 @@
 export class ProductoService {
     async getProductos() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ export class ProductoService {
     // Método para obtener todos los productos (incluyendo eliminados) para administración
     async getAllProductosIncludeDeleted() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/all-inclusive`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -37,7 +37,7 @@ export class ProductoService {
     // Método para obtener solo productos eliminados
     async getDeletedProductos() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/deleted`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -55,7 +55,7 @@ export class ProductoService {
     // Método para reactivar un producto eliminado
     async reactivateProducto(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/${encodeURIComponent(id)}/reactivate`, {
                 method: 'POST',
                 headers: {
@@ -76,7 +76,7 @@ export class ProductoService {
 
     async getProductoById(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/${encodeURIComponent(id)}`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ export class ProductoService {
 
     async createProducto(productoData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos`, {
                 method: 'POST',
                 headers: {
@@ -116,7 +116,7 @@ export class ProductoService {
 
     async updateProducto(id, productoData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: {
@@ -138,7 +138,7 @@ export class ProductoService {
 
     async deleteProducto(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/${encodeURIComponent(id)}`, {
                 method: 'DELETE',
                 headers: {
@@ -160,7 +160,7 @@ export class ProductoService {
     // Método para obtener tipos únicos de productos
     async getTiposProductos() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/productos/tipos`, {
                 headers: {
                     'Content-Type': 'application/json',

@@ -221,9 +221,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await login({ username, password });
       
       // Store auth data
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('jwt_token', data.token);
+      localStorage.setItem('userEmail', data.username); // Store username instead of email
       localStorage.setItem('userRole', data.role); // Store user role
+
+      console.log('Login successful:', {
+        token: data.token ? 'Present' : 'Missing',
+        username: data.username,
+        role: data.role
+      });
 
       // Success feedback with popup
       showPopup('¡Inicio de Sesión Exitoso!', 'Redirigiendo al panel de control...', 'success');
@@ -297,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-focus username input
   usernameInput.focus();
   // Check if user is already logged in
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('jwt_token');
   const role = localStorage.getItem('userRole');
   if (token && role) {
     console.log('User already has a token, redirecting based on role:', role);

@@ -280,6 +280,33 @@
     </div>
 </div>
 
+<script>
+    // Debug script
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('=== DEBUG TRANSACCIONES PAGE ===');
+        console.log('LocalStorage contents:');
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            console.log(`${key}: ${localStorage.getItem(key)}`);
+        }
+
+        // Check if we have the right token
+        const jwtToken = localStorage.getItem('jwt_token');
+        const authToken = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+
+        console.log('Token status:', {
+            jwt_token: jwtToken ? 'Present' : 'Missing',
+            authToken: authToken ? 'Present' : 'Missing',
+            userRole: userRole || 'Not set'
+        });
+
+        if (!jwtToken && !authToken) {
+            console.warn('No authentication tokens found - redirecting to login');
+            window.location.href = '/pages/login.html';
+        }
+    });
+</script>
 <script src="/js/components/sidebar.js" type="module"></script>
 <script src="/js/components/header.js" type="module"></script>
 

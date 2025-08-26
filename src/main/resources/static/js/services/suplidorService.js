@@ -1,7 +1,7 @@
 export class SuplidorService {
     async getSuplidores() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/todos`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -18,7 +18,7 @@ export class SuplidorService {
 
     async getSuplidoresActivos() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -35,7 +35,7 @@ export class SuplidorService {
 
     async getSuplidoresInactivos() {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/inactivos`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ export class SuplidorService {
 
     async getSuplidorById(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/${id}`, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export class SuplidorService {
 
     async createSuplidor(suplidorData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores`, {
                 method: 'POST',
                 headers: {
@@ -92,7 +92,7 @@ export class SuplidorService {
 
     async updateSuplidor(id, suplidorData) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/${id}`, {
                 method: 'PUT',
                 headers: {
@@ -114,7 +114,7 @@ export class SuplidorService {
 
     async deleteSuplidor(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/${id}`, {
                 method: 'DELETE',
                 headers: {
@@ -135,7 +135,7 @@ export class SuplidorService {
 
     async desactivarSuplidor(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/${id}/desactivar`, {
                 method: 'PUT',
                 headers: {
@@ -156,7 +156,7 @@ export class SuplidorService {
 
     async activarSuplidor(id) {
         try {
-            const token = localStorage.getItem('authToken');
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`/api/suplidores/${id}/activar`, {
                 method: 'PUT',
                 headers: {

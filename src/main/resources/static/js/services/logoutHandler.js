@@ -50,7 +50,7 @@ async function performLogout(e) {
 
     // Clear all authentication data from localStorage
     localStorage.removeItem('jwt_token');
-    localStorage.removeItem('authToken'); // Legacy token
+    localStorage.removeItem('jwt_token'); // Main token
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
     localStorage.removeItem('userRoles');
