@@ -38,7 +38,7 @@ public class HomeController {
         } else if (authorities.contains("ROLE_TI")) {
             return "/pages/ti/usuarios.html";
         } else if (authorities.contains("ROLE_CONTABILIDAD")) {
-            return "/pages/contabilidad/reportes.html";
+            return "/pages/contabilidad/transacciones.html";
         } else if (authorities.contains("ROLE_CAJERO")) {
             return "/pages/cajero/transacciones.html";
         } else if (authorities.contains("ROLE_VENDEDOR")) {

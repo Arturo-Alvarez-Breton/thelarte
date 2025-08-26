@@ -59,7 +59,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/suplidores/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR")
                 .requestMatchers("/api/productos/**").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
                 .requestMatchers("/api/transacciones/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD", "CAJERO")
-                .requestMatchers("/api/reportes/**").hasAnyRole("ADMINISTRADOR", "CONTABILIDAD")
+
                 .requestMatchers("/api/dashboard/validate").hasAnyRole("ADMINISTRADOR", "TI", "VENDEDOR", "CAJERO", "CONTABILIDAD")
 
                 // All other requests require authentication

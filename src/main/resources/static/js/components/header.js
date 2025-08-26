@@ -61,14 +61,7 @@ export const headerComponent = {
                     <i class="fas fa-plus mr-2"></i>Nuevo Suplidor
                 </button>
             `;
-        } else if (url.includes('/reportes')) {
-            title = 'Reportes';
-            subtitle = 'Generación y visualización de informes contables';
-            quickActionsHtml = `
-                <button class="bg-brand-brown text-white px-4 py-2 rounded-lg hover:bg-brand-light-brown">
-                    <i class="fas fa-file-export mr-2"></i>Exportar Reporte
-                </button>
-            `;
+
         } else if (url.includes('/config')) {
             title = 'Configuración';
             subtitle = 'Ajustes generales del módulo de contabilidad';

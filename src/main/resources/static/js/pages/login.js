@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '/pages/cajero/transacciones.html';
             break;
           case 'CONTABILIDAD':
-            window.location.href = '/pages/contabilidad/reportes.html';
+            window.location.href = '/pages/contabilidad/transacciones.html';
             break;
           case 'TI':
             window.location.href = '/pages/ti/clientes.html';

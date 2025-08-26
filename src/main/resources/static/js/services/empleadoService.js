@@ -10,7 +10,13 @@ export class EmpleadoService {
                 url += `?busqueda=${encodeURIComponent(busqueda)}`;
             }
 
-            const response = await fetch(url);
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
@@ -28,7 +34,13 @@ export class EmpleadoService {
                 url += `?busqueda=${encodeURIComponent(busqueda)}`;
             }
 
-            const response = await fetch(url);
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
             }
@@ -41,7 +53,13 @@ export class EmpleadoService {
 
     async getEmpleadoByCedula(cedula) {
         try {
-            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`);
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
                 if (response.status === 404) {
                     throw new Error('Empleado no encontrado');
@@ -57,10 +75,12 @@ export class EmpleadoService {
 
     async createEmpleado(empleadoData) {
         try {
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(this.baseURL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(empleadoData)
             });
@@ -79,10 +99,12 @@ export class EmpleadoService {
 
     async updateEmpleado(cedula, empleadoData) {
         try {
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(empleadoData)
             });
@@ -101,8 +123,13 @@ export class EmpleadoService {
 
     async deleteEmpleado(cedula) {
         try {
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
 
             if (!response.ok) {
@@ -119,8 +146,13 @@ export class EmpleadoService {
 
     async restaurarEmpleado(cedula) {
         try {
+            const token = localStorage.getItem('jwt_token');
             const response = await fetch(`${this.baseURL}/${encodeURIComponent(cedula)}/restaurar`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
 
             if (!response.ok) {

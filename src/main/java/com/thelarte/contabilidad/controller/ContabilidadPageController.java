@@ -38,10 +38,7 @@ public class ContabilidadPageController {
         return "forward:/pages/contabilidad/suplidores.html";
     }
 
-    @GetMapping("/reportes")
-    public String reportesPage() {
-        return "forward:/pages/contabilidad/reportes.html";
-    }
+
 
     @GetMapping("/config")
     public String configPage() {
