@@ -7,21 +7,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Transacciones</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="/css/output.css" rel="stylesheet">
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'brand-brown': '#4A3228',
-                        'brand-beige': '#F5F5DC',
-                        'brand-light-brown': '#8B4513',
-                        'brand-accent': '#D2B48C',
-                        'brandGold': '#7B5222'
+        // Define tailwind object for configuration
+        window.tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        colors: {
+                            'brand-brown': '#4A3228',
+                            'brand-beige': '#F5F5DC',
+                            'brand-light-brown': '#8B4513',
+                            'brand-accent': '#D2B48C',
+                            'brandGold': '#7B5222'
+                        }
                     }
                 }
             }
-        }
+        };
     </script>
     <style>
         .transaction-card {

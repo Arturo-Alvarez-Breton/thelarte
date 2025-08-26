@@ -1,6 +1,6 @@
 // src/main/resources/static/js/contabilidad/main.js
 
-import { setupContabilidadNavigation } from './contabilidad-router.js';
+import { setupContabilidadNavigation } from '../contabilidad/contabilidad-router.js';
 import { sidebarComponent } from '../components/sidebar.js';
 import { headerComponent } from '../components/header.js';
 import { TransactionWizard } from '../components/transactionWizard.js';
