@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Inicio</title>
+    <link href="/css/contabilidad.css" rel="stylesheet">
+    <link href="/css/stockAlertsWidget.css" rel="stylesheet">
+    <link href="/css/inventoryDashboard.css" rel="stylesheet">
+    <link href="/css/salesDashboard.css" rel="stylesheet">
+    <link href="/css/employeeStatusDashboard.css" rel="stylesheet">
+    <link href="/css/financialHealthWidget.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Quick actions hover effects and responsive optimizations */
+        .quick-action {
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        /* Widget responsive adjustments - more compact */
+        .widget-container {
+            transition: all 0.3s ease;
+        }
+
+        /* Compact design for 1080p screens */
+        @media (min-width: 1024px) and (max-height: 1200px) {
+            .widget-container {
+                margin-bottom: 0.75rem;
+            }
+
+            .financial-health-widget,
+            .sales-dashboard,
+            .inventory-dashboard,
+            .employee-status-dashboard {
+                padding: 16px !important;
+            }
+
+            .dashboard-header,
+            .widget-header {
+                margin-bottom: 16px !important;
+                padding-bottom: 12px !important;
+            }
+
+            .metrics-row {
+                margin-bottom: 20px !important;
+                gap: 12px !important;
+            }
+
+            .metric-card {
+                padding: 16px !important;
+            }
+
+            .financial-metrics,
+            .financial-secondary {
+                margin-bottom: 16px !important;
+                gap: 16px !important;
+            }
+
+            .health-indicators {
+                gap: 16px !important;
+            }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .widget-container {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 overflow-x-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
+    <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
+    <nav class="flex-1">
+        <ul class="space-y-2">
+            <li>
+                <a href="/pages/admin/index.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-home flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Inicio Admin</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/clientes.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-users flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Clientes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/empleados.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-briefcase flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Empleados</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/usuarios.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fa-regular fa-user flex-shrink-0 w-6 h-6 text-white group-hover:text-brand-beige transition duration-75"></i>
+                    <span class="ml-3">Usuarios</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/suplidores.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-truck flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Suplidores</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/admin/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+
+
+        </ul>
+    </nav>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6"></i>
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <header class="bg-white shadow p-2 md:p-3 flex justify-between items-center">
+        <!-- Mobile hamburger and quick actions -->
+        <div class="flex items-center lg:hidden">
+            <button id="hamburgerBtn" class="mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Welcome Header - Will be populated by welcomeHeader.js -->
+        <div class="flex-1 max-w-full" id="welcome-header-container">
+            <!-- Welcome header content will be dynamically inserted here -->
+        </div>
+    </header>
+
+    <main id="cont-main-content" class="flex-1 p-2 md:p-3 overflow-auto">
+        <section class="p-2 md:p-3 bg-white rounded-lg shadow">
+            <!-- Financial Health Widget -->
+            <div id="financialHealthWidget" class="widget-container mb-3 md:mb-4 lg:mb-5">
+                <!-- Financial health widget will be rendered here -->
+            </div>
+
+            <!-- Dashboard Widgets Grid -->
+            <div class="space-y-3 md:space-y-4 lg:space-y-5">
+                <!-- Stock Alerts Widget - First priority -->
+                <div id="stockAlertsWidget" class="widget-container">
+                    <!-- Stock alerts widget will be rendered here -->
+                </div>
+
+                <!-- Sales Dashboard Component -->
+                <div id="salesDashboard" class="widget-container">
+                    <!-- Sales dashboard will be rendered here -->
+                </div>
+
+<!--                &lt;!&ndash; Employee Status Dashboard Component &ndash;&gt;-->
+<!--                <div id="employeeStatusDashboard" class="widget-container">-->
+<!--                    &lt;!&ndash; Employee status dashboard will be rendered here &ndash;&gt;-->
+<!--                </div>-->
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/components/welcomeHeader.js" type="module"></script>
+<script src="/js/components/stockAlertsWidget.js"></script>
+<script src="/js/components/inventoryDashboard.js"></script>
+<script src="/js/components/salesDashboard.js"></script>
+<script src="/js/components/employeeStatusDashboard.js"></script>
+<script src="/js/components/financialHealthWidget.js"></script>
+<script src="/js/contabilidad/main.js" type="module"></script>
+<script src="/js/components/notifications.js"></script>
+<script src="/js/components/transactionWizard.js" type="module"></script>
+<script src="/js/services/transaccionService.js" type="module"></script>
+
+<script>
+    // Mobile sidebar functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mobile sidebar controls
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebar = document.getElementById('sidebar');
+
+        // Toggle mobile sidebar
+        function toggleMobileSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
+            // Prevent body scroll when sidebar is open
+            document.body.classList.toggle('overflow-hidden', !sidebar.classList.contains('-translate-x-full'));
+        }
+
+        // Close mobile sidebar
+        function closeMobileSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Event listeners
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', toggleMobileSidebar);
+        }
+
+        if (closeSidebarBtn) {
+            closeSidebarBtn.addEventListener('click', closeMobileSidebar);
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeMobileSidebar);
+        }
+
+        // Handle escape key for sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Close mobile sidebar on desktop resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                closeMobileSidebar();
+            }
+        });
+
+        // Initialize the stock alerts widget
+        const stockAlertsWidget = new StockAlertsWidget('stockAlertsWidget');
+        window.stockAlerts = stockAlertsWidget; // Hacer accesible globalmente
+
+        // Initialize the inventory dashboard component
+        const inventoryDashboard = new InventoryDashboard('inventoryDashboard');
+
+        // Initialize the sales dashboard component
+        const salesDashboard = new SalesDashboard('salesDashboard');
+
+        // Initialize the employee status dashboard component
+        const employeeStatusDashboard = new EmployeeStatusDashboard('employeeStatusDashboard');
+
+        // Initialize the financial health widget
+        const financialHealthWidget = new FinancialHealthWidget('financialHealthWidget');
+
+        // Optional: Add refresh button functionality
+        window.refreshStockAlerts = () => {
+            if (stockAlertsWidget) {
+                stockAlertsWidget.refresh();
+            }
+        };
+
+        window.refreshInventory = () => {
+            if (inventoryDashboard) {
+                inventoryDashboard.refresh();
+            }
+        };
+
+        window.refreshSales = () => {
+            if (salesDashboard) {
+                salesDashboard.refresh();
+            }
+        };
+
+        window.refreshEmployees = () => {
+            if (employeeStatusDashboard) {
+                employeeStatusDashboard.refresh();
+            }
+        };
+
+        window.refreshFinancialHealth = () => {
+            if (financialHealthWidget) {
+                financialHealthWidget.refresh();
+            }
+        };
+
+        // Refresh all dashboards
+        window.refreshDashboards = () => {
+            if (inventoryDashboard) inventoryDashboard.refresh();
+            if (salesDashboard) salesDashboard.refresh();
+            if (employeeStatusDashboard) employeeStatusDashboard.refresh();
+            if (financialHealthWidget) financialHealthWidget.refresh();
+        };
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (inventoryDashboard) {
+                inventoryDashboard.destroy();
+            }
+            if (salesDashboard) {
+                salesDashboard.destroy();
+            }
+            if (employeeStatusDashboard) {
+                employeeStatusDashboard.destroy();
+            }
+            if (financialHealthWidget) {
+                financialHealthWidget.destroy();
+            }
+        });
+
+        // Make global references available
+        window.employeeStatus = employeeStatusDashboard;
+        window.financialHealth = financialHealthWidget;
+        window.salesDashboard = salesDashboard;
+        window.inventoryDashboard = inventoryDashboard;
+    });
+</script>
+<!-- Modal Ver Producto para Stock Alerts -->
+<div id="modalVerProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden">
+            <!-- Header -->
+            <div class="bg-brand-brown text-white p-5 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Detalles del Producto</h3>
+                <button onclick="stockAlerts.closeProductModal()" class="text-white hover:text-gray-300">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido -->
+            <div class="p-6">
+                <div id="detallesProducto" class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                    <!-- Imagen -->
+                    <div class="w-full md:w-1/2 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img id="detalleProductoImg" src="/images/product-placeholder.png"
+                             class="object-contain w-full h-full max-h-[400px]"
+                             alt="Foto producto">
+                    </div>
+
+                    <!-- Información -->
+                    <div class="w-full md:w-1/2 space-y-4">
+                        <h4 id="detalleProductoNombre" class="text-2xl font-bold text-brand-brown"></h4>
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div><span class="font-semibold text-gray-700">Tipo:</span> <span id="detalleProductoTipo" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Descripción:</span> <span id="detalleProductoDescripcion" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Venta:</span> <span id="detalleProductoPrecioVenta" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Compra:</span> <span id="detalleProductoPrecioCompra" class="text-gray-600"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 border-t border-gray-200">
+                <button onclick="stockAlerts.viewProductInAdmin('${productId}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                    <i class="fas fa-edit mr-2"></i> Ir a Editar
+                </button>
+                <button onclick="stockAlerts.closeProductModal()" class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/js/services/logoutHandler.js"></script>
+</body>
+</html>

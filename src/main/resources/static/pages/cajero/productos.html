@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cajero - Productos</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-brown': '#4A3228',
+                        'brand-beige': '#F5F5DC',
+                        'brand-light-brown': '#8B4513',
+                        'brand-accent': '#D2B48C',
+                        'brandGold': '#7B5222'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Product card hover effects and desktop optimizations */
+        .producto-card {
+            transition: all 0.3s ease;
+            max-width: 420px;
+        }
+
+        .producto-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* Filter buttons styling */
+        .filter-btn {
+            position: relative;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background: white;
+            color: black;
+            border: 2px solid #e5e7eb;
+        }
+
+        .filter-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .filter-btn:hover:before {
+            left: 100%;
+        }
+
+        .filter-btn:hover {
+            background: #f3f4f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn.active {
+            background: #8B4513 !important;
+            color: white !important;
+            border-color: #8B4513;
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .count-badge {
+            transition: all 0.3s ease;
+            animation: pulse-count 0.5s ease-in-out;
+        }
+
+        @keyframes pulse-count {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 overflow-x-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-brown text-white p-4 space-y-4 flex flex-col transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0">
+    <!-- Close button for mobile -->
+    <button id="closeSidebarBtn" class="lg:hidden absolute top-4 right-4 text-white hover:text-gray-300">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
+    <div class="text-2xl font-bold text-center mb-8">Thelarte</div>
+    <nav class="flex-1">
+        <ul class="space-y-2">
+            <li>
+                <a href="/pages/cajero/transacciones.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+                    <i class="fas fa-exchange-alt flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Transacciones</span>
+                </a>
+            </li>
+            <li>
+                <a href="/pages/cajero/productos.html" class="group flex items-center p-2 text-base font-normal text-white rounded-lg bg-brand-light-brown">
+                    <i class="fas fa-box-open flex-shrink-0 w-6 h-6"></i>
+                    <span class="ml-3">Productos</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="mt-auto">
+        <a href="#" id="logoutBtn" class="group flex items-center p-2 text-base font-normal text-white rounded-lg hover:bg-brand-light-brown">
+            <i class="fas fa-sign-out-alt flex-shrink-0 w-6 h-6"></i>
+            <span class="ml-3">Cerrar Sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="flex-1 flex flex-col min-w-0 lg:ml-0">
+    <header class="bg-white shadow p-2 md:p-4 flex justify-between items-center">
+        <!-- Mobile hamburger menu -->
+        <div class="flex items-center">
+            <button id="hamburgerBtn" class="lg:hidden mr-3 text-gray-600 hover:text-gray-900">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+            <div>
+                <h1 id="cont-header-title" class="text-lg md:text-2xl font-bold text-gray-800">Productos</h1>
+                <p id="cont-header-subtitle" class="text-xs md:text-sm text-gray-600 hidden sm:block">Consulta el inventario de productos.</p>
+            </div>
+        </div>
+        <div id="cont-quick-actions" class="flex space-x-2">
+        </div>
+    </header>
+
+    <main id="cont-main-content" class="flex-1 p-2 md:p-4 overflow-auto">
+        <section class="p-3 md:p-4 bg-white rounded-lg shadow">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                <h2 class="text-lg md:text-xl font-semibold text-gray-700">Listado de Productos</h2>
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <!-- Filtro de estado -->
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button id="btnProductosActivos" class="filter-btn active px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-activos">
+                            <i class="fas fa-box mr-1"></i>
+                            <span class="hidden sm:inline">Activos</span>
+                            <span id="countActivos" class="count-badge ml-1 bg-white text-brand-brown px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                        <button id="btnProductosEliminados" class="filter-btn px-3 py-1 rounded-md text-sm font-medium transition-colors filter-btn-eliminados">
+                            <i class="fas fa-trash-alt mr-1"></i>
+                            <span class="hidden sm:inline">Eliminados</span>
+                            <span id="countEliminados" class="count-badge ml-1 bg-gray-300 text-gray-700 px-1.5 py-0.5 rounded text-xs font-bold">0</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input type="text" id="productoSearchInput" placeholder="Buscar productos..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm md:text-base">
+                <select id="productoTipoFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                    <option value="">Todos los tipos</option>
+                    <option value="muebles">Muebles</option>
+                    <option value="iluminacion">Iluminación</option>
+                    <option value="oficina">Oficina</option>
+                    <option value="decoracion">Decoración</option>
+                    <option value="otro">Otro</option>
+                </select>
+                <div></div>
+            </div>
+            <div id="productosListContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 lg:gap-3">
+                <!-- Productos se cargarán aquí -->
+            </div>
+            <div id="productosPagination" class="flex justify-center mt-6"></div>
+        </section>
+    </main>
+</div>
+
+<div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-brand-beige loading-spinner" role="status">
+        <span class="visually-hidden">Cargando...</span>
+    </div>
+</div>
+
+<!-- Modal Nuevo/Editar Producto -->
+<div id="modalProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+            <div class="bg-brand-brown text-white p-6">
+                <div class="flex items-center justify-between">
+                    <h3 id="modalProductoTitle" class="text-xl font-bold">Nuevo Producto</h3>
+                    <button onclick="cerrarModalProducto()" class="text-white hover:text-gray-300">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <form id="formProducto" class="p-6 space-y-4" novalidate>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="productoNombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <input type="text" id="productoNombre" name="nombre" required placeholder="Nombre del producto"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="productoNombreError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="productoTipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                        <select id="productoTipo" name="tipo" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                            <option value="">Seleccione un tipo</option>
+                            <!-- Los tipos se cargarán dinámicamente -->
+                        </select>
+                        <p id="productoTipoError" class="text-xs text-red-500 mt-1 hidden"></p>
+                        <!-- Campo para tipo personalizado que aparece cuando se selecciona "otro" -->
+                        <div id="otroTipoContainer" class="mt-2 hidden">
+                            <input type="text" id="otroTipoInput" name="otroTipo" placeholder="Especifique el tipo de producto"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown text-sm">
+                            <p class="text-xs text-gray-500 mt-1">Ingrese el nuevo tipo de producto</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label for="productoDescripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <textarea id="productoDescripcion" name="descripcion" placeholder="Descripción"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown"></textarea>
+                    <p id="productoDescripcionError" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="productoPrecioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio Venta *</label>
+                        <input type="number" id="productoPrecioVenta" name="precioVenta" required placeholder="0.00" step="0.01"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="productoPrecioVentaError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                    <div>
+                        <label for="productoPrecioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio Compra *</label>
+                        <input type="number" id="productoPrecioCompra" name="precioCompra" required placeholder="0.00" step="0.01"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown">
+                        <p id="productoPrecioCompraError" class="text-xs text-red-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                <div>
+                    <label for="productoFoto" class="block text-sm font-medium text-gray-700 mb-1">Foto</label>
+                    <input type="file" id="productoFoto" name="foto" accept="image/*"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-brown focus:border-brand-brown bg-white">
+                    <div class="mt-2 flex justify-center">
+                        <img id="productoFotoPreview" src="#" alt="Previsualización de la imagen" class="max-h-32 rounded shadow border border-gray-200 hidden"/>
+                    </div>
+                </div>
+            </form>
+            <div class="bg-gray-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-gray-200">
+                <button type="button" onclick="cerrarModalProducto()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                    Cancelar
+                </button>
+                <button type="submit" form="formProducto" class="px-4 py-2 bg-brand-brown text-white rounded-lg hover:bg-brand-light-brown transition-colors">
+                    <i id="btnProductoIcon" class="fas fa-plus mr-2"></i>
+                    <span id="btnProductoText">Crear Producto</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver Producto -->
+<div id="modalVerProducto" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full overflow-hidden">
+            <!-- Header -->
+            <div class="bg-brand-brown text-white p-5 flex justify-between items-center">
+                <h3 class="text-xl font-bold">Detalles del Producto</h3>
+                <button onclick="cerrarModalVerProducto()" class="text-white hover:text-gray-300">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Contenido -->
+            <div class="p-6">
+                <div id="detallesProducto" class="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                    <!-- Imagen -->
+                    <div class="w-full md:w-1/2 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img id="detalleProductoImg" src="/images/product-placeholder.png"
+                             class="object-contain w-full h-full max-h-[400px]"
+                             alt="Foto producto">
+                    </div>
+
+                    <!-- Información -->
+                    <div class="w-full md:w-1/2 space-y-4">
+                        <h4 id="detalleProductoNombre" class="text-2xl font-bold text-brand-brown"></h4>
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div><span class="font-semibold text-gray-700">Código:</span> <span id="detalleProductoCodigo" class="text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded"></span></div>
+                            <div><span class="font-semibold text-gray-700">Tipo:</span> <span id="detalleProductoTipo" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Descripción:</span> <span id="detalleProductoDescripcion" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Venta:</span> <span id="detalleProductoPrecioVenta" class="text-gray-600"></span></div>
+                            <div><span class="font-semibold text-gray-700">Precio Compra:</span> <span id="detalleProductoPrecioCompra" class="text-gray-600"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row sm:justify-end sm:items-center gap-3 border-t border-gray-200">
+<!--                <button onclick="editarProductoDesdeDetalle()"-->
+<!--                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">-->
+<!--                    <i class="fas fa-edit mr-2"></i> Editar-->
+<!--                </button>-->
+                <button onclick="cerrarModalVerProducto()"
+                        class="ver-btn flex items-center gap-2 bg-brand-brown text-white px-3 py-2 rounded-lg hover:bg-brand-light-brown transition-colors shadow-sm text-sm font-medium">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Movimientos de Producto (centrado y responsive) -->
+<div id="modalMovimientosProducto"
+     class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4 overflow-y-auto">
+    <div id="movimientosDialog"
+         class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-auto transform transition-all max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-white z-10">
+            <h2 id="movimientosProductoTitle" class="text-xl font-semibold text-brand-brown">Movimientos de producto</h2>
+            <button onclick="productosManager.cerrarModalMovimientos()" class="text-gray-500 hover:text-red-600 text-2xl">&times;</button>
+        </div>
+        <div id="movimientosProductoBody" class="p-6"></div>
+    </div>
+</div>
+
+
+<script src="/js/components/sidebar.js" type="module"></script>
+<script src="/js/components/header.js" type="module"></script>
+<script src="/js/components/notifications.js" type="module"></script>
+<script src="/js/services/productoService.js" type="module"></script>
+<script src="/js/limitado/productos.js" type="module"></script>
+<script src="/js/services/logoutHandler.js"></script>
+<script src="/js/services/logoutHandler.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,398 @@
+/* Inventory Dashboard Styles */
+.inventory-dashboard {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dashboard-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.last-updated {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.metric-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 1024px) {
+    .inventory-dashboard {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .metric-card {
+        padding: 16px;
+    }
+
+    .chart-section,
+    .low-stock-section {
+        padding: 16px;
+    }
+
+    .chart-container {
+        height: 200px;
+    }
+
+    .low-stock-list {
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metrics-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .inventory-dashboard {
+        padding: 10px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+    }
+
+    .dashboard-title {
+        font-size: 1.1rem;
+    }
+
+    .metrics-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .metric-card {
+        padding: 10px;
+        font-size: 0.95rem;
+    }
+
+    .metric-value {
+        font-size: 1.2rem;
+    }
+
+    .chart-section,
+    .low-stock-section {
+        padding: 10px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .chart-container {
+        height: 120px;
+    }
+
+    .low-stock-list {
+        max-height: 120px;
+    }
+
+    .low-stock-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .product-info {
+        width: 100%;
+    }
+
+    .stock-info {
+        font-size: 0.8rem;
+    }
+}
+
+.chart-section,
+.low-stock-section {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-container {
+    position: relative;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.low-stock-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.low-stock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.low-stock-item:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.low-stock-item:last-child {
+    margin-bottom: 0;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.product-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+    margin-bottom: 2px;
+}
+
+.product-category {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.stock-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.stock-info.stock-zero {
+    color: #dc2626;
+}
+
+.stock-info.stock-critical {
+    color: #f59e0b;
+}
+
+.stock-info.stock-low {
+    color: #10b981;
+}
+
+.stock-value {
+    min-width: 24px;
+    text-align: right;
+}
+
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    color: #9ca3af;
+}
+
+.error-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+}
+
+.error-message {
+    text-align: center;
+    color: #6b7280;
+}
+
+.retry-btn {
+    margin-top: 16px;
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    transition: background-color 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: #2563eb;
+}
+
+/* Scrollbar personalizada para la lista */
+.low-stock-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.low-stock-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+}
+
+.low-stock-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.low-stock-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.inventory-dashboard {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.metric-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.low-stock-item {
+    animation: fadeIn 0.2s ease-out;
+}

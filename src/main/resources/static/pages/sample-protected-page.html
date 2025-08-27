@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Protegida - TheLarte</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar with User Info and Logout -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">TheLarte</a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3" id="userInfo">Cargando usuario...</span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Página Protegida</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Esta es una página protegida que requiere autenticación y roles específicos.</p>
+                        <div id="userDetails" class="mt-3"></div>
+
+                        <!-- Example of role-based content visibility -->
+                        <div id="adminContent" class="mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Contenido de Administrador:</strong> Solo visible para usuarios con rol ADMINISTRADOR.
+                            </div>
+                        </div>
+
+                        <div id="tiContent" class="mt-3" style="display: none;">
+                            <div class="alert alert-success">
+                                <strong>Contenido de TI:</strong> Solo visible para usuarios con rol TI.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Load authentication manager first -->
+    <script src="/js/auth-manager.js"></script>
+
+    <script>
+        // Page-specific initialization
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Wait for auth manager to initialize
+            await new Promise(resolve => {
+                const checkAuth = () => {
+                    if (window.authManager && window.authManager.userInfo !== null) {
+                        resolve();
+                    } else {
+                        setTimeout(checkAuth, 100);
+                    }
+                };
+                checkAuth();
+            });
+
+            // Display user information
+            displayUserInfo();
+
+            // Show role-based content
+            showRoleBasedContent();
+        });
+
+        function displayUserInfo() {
+            const userInfoElement = document.getElementById('userInfo');
+            const userDetailsElement = document.getElementById('userDetails');
+
+            if (authManager.isAuthenticated()) {
+                const username = authManager.getUsername();
+                const roles = authManager.getUserRoles();
+
+                userInfoElement.textContent = `Bienvenido, ${username}`;
+                userDetailsElement.innerHTML = `
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">Información del Usuario</h6>
+                            <p class="card-text">
+                                <strong>Usuario:</strong> ${username}<br>
+                                <strong>Roles:</strong> ${roles.join(', ')}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function showRoleBasedContent() {
+            // Show content based on user roles
+            if (authManager.hasRole('ADMINISTRADOR')) {
+                document.getElementById('adminContent').style.display = 'block';
+            }
+
+            if (authManager.hasRole('TI')) {
+                document.getElementById('tiContent').style.display = 'block';
+            }
+
+            // You can add more role-based content visibility here
+        }
+
+        // Example of making authenticated API requests
+        async function makeAuthenticatedRequest() {
+            try {
+                const response = await authManager.apiRequest('/api/some-endpoint', {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('API Response:', data);
+                } else {
+                    console.error('API request failed');
+                }
+            } catch (error) {
+                console.error('Error making authenticated request:', error);
+            }
+        }
+    </script>
+</body>
+</html>

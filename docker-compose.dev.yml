@@ -1,0 +1,64 @@
+services:
+  # PostgreSQL Database for Development
+  postgres:
+    image: postgres:15-alpine
+    container_name: thelarte-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thelarte
+      POSTGRES_USER: thelarte_user
+      POSTGRES_PASSWORD: thelarte123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thelarte_user -d thelarte"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - thelarte-dev-network
+
+  # Spring Boot Application (con Flyway integrado)
+  app:
+    build: .
+    container_name: thelarte-app-dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: thelarte
+      DB_USERNAME: thelarte_user
+      POSTGRES_PASSWORD: thelarte123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_FLYWAY_ENABLED: true  # Flyway habilitado para migraciones
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migrations
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: true
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: true
+      LOGGING_LEVEL_COM_THELARTE: DEBUG
+      LOGGING_LEVEL_ORG_HIBERNATE_SQL: DEBUG
+      LOGGING_LEVEL_ORG_HIBERNATE_TYPE: TRACE
+      LOGGING_LEVEL_ORG_FLYWAYDB: DEBUG
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_uploads:/app/uploads
+      - ./src:/app/src  # Enable live reload during development
+    networks:
+      - thelarte-dev-network
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  thelarte-dev-network:
+    driver: bridge
